@@ -61,6 +61,6 @@ for (const t of spec.teammates) {
   writeFileSync(resolve(dir, 'preset.yml'), yaml.dump({ name: t.name, description: t.description, order: t.order }, { lineWidth: 1000 }))
   // skills: copied per teammate from desk-skills/ so each preset's roster is explicit
   const skillsDir = resolve(dir, 'skills'); if (existsSync(skillsDir)) rmSync(skillsDir, { recursive: true })
-  for (const name of t.skills ?? []) cpSync(resolve(presetsDir, 'desk-skills', name), resolve(skillsDir, name), { recursive: true })
+  for (const name of t.skills ?? []) cpSync(resolve(presetsDir, '..', 'desk-skills', name), resolve(skillsDir, name), { recursive: true })
   console.log(`preset ${t.id}: shell=${t.shell} asks=${spec.teammates.filter(x => x.id !== t.id).length} skills=${(t.skills ?? []).length}`)
 }
