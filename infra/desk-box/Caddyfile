@@ -22,6 +22,9 @@
 		reverse_proxy 127.0.0.1:8090
 	}
 	# Files page + API over the Desk folder (deskd checks the session itself too).
+	handle /connections* {
+		reverse_proxy 127.0.0.1:8090
+	}
 	handle /files* {
 		reverse_proxy 127.0.0.1:8090
 	}

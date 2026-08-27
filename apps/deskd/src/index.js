@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url'
 import { OAuth2Client } from 'google-auth-library'
 import { google } from 'googleapis'
 import * as files from './files.js'
+import * as connections from './connections.js'
 import { findUser, checkPassword, issueSession, verifySession, cookieHeader, cookieOf, loginPage } from './auth.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -92,6 +93,11 @@ const server = createServer(async (req, res) => {
       if (!user) { res.writeHead(403, { 'content-type': 'text/html; charset=utf-8' }); return res.end(loginPage({ business: BUSINESS, google: true, error: `${email ?? 'That account'} is not an owner of this Desk.` })) }
       res.writeHead(302, { location: safeNext(u.searchParams.get('state')), 'set-cookie': cookieHeader(issueSession(user)) }); return res.end()
     }
+    if (u.pathname === '/connections' || u.pathname.startsWith('/connections/')) {
+      if (!verifySession(cookieOf(req))) { res.writeHead(302, { location: `/login?next=${encodeURIComponent(u.pathname)}` }); return res.end() }
+      const saveClient = raw => { mkdirSync(dirname(cfg.CLIENT_SECRET), { recursive: true, mode: 0o700 }); writeFileSync(cfg.CLIENT_SECRET, JSON.stringify(raw, null, 2), { mode: 0o600 }); chmodSync(cfg.CLIENT_SECRET, 0o600) }
+      if (await connections.handle(req, res, u, { business: BUSINESS, host: HOST, cfg: { ...cfg, saveClient }, readBody, status }) !== false) return
+    }
     if (u.pathname === '/files' || u.pathname.startsWith('/files/')) {
       if (!verifySession(cookieOf(req))) { res.writeHead(302, { location: `/login?next=${encodeURIComponent(u.pathname)}` }); return res.end() }
       if (await files.handle(req, res, u, { business: BUSINESS }) !== false) return
@@ -118,8 +124,7 @@ const server = createServer(async (req, res) => {
       const me = await google.oauth2({ version: 'v2', auth: oauth }).userinfo.get()
       const email = me.data.email; if (!email) throw new Error('Google returned no email address')
       cfg.writeToken(email, tokens)
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
-      return res.end(page('Connected', `<p><strong>${email}</strong> is now connected to this Desk. You can close this tab and go back to Desk.</p>`))
+      res.writeHead(303, { location: `/connections?msg=${encodeURIComponent(email + ' connected.')}` }); return res.end()
     }
     res.writeHead(404); res.end('not found')
   } catch (e) {
