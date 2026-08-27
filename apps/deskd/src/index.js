@@ -12,6 +12,7 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { OAuth2Client } from 'google-auth-library'
 import { google } from 'googleapis'
+import * as files from './files.js'
 import { findUser, checkPassword, issueSession, verifySession, cookieHeader, cookieOf, loginPage } from './auth.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -90,6 +91,10 @@ const server = createServer(async (req, res) => {
       const user = email && findUser({ email })
       if (!user) { res.writeHead(403, { 'content-type': 'text/html; charset=utf-8' }); return res.end(loginPage({ business: BUSINESS, google: true, error: `${email ?? 'That account'} is not an owner of this Desk.` })) }
       res.writeHead(302, { location: safeNext(u.searchParams.get('state')), 'set-cookie': cookieHeader(issueSession(user)) }); return res.end()
+    }
+    if (u.pathname === '/files' || u.pathname.startsWith('/files/')) {
+      if (!verifySession(cookieOf(req))) { res.writeHead(302, { location: `/login?next=${encodeURIComponent(u.pathname)}` }); return res.end() }
+      if (await files.handle(req, res, u, { business: BUSINESS }) !== false) return
     }
     if (u.pathname === '/healthz') { res.writeHead(200, { 'content-type': 'text/plain' }); return res.end('ok') }
     if (u.pathname === '/deskd/status') { res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify(status())) }

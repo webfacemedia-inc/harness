@@ -10,3 +10,4 @@
   text-decoration: none;
 }
 .link:hover { background: var(--dsw-bg-hover, rgba(127, 127, 127, 0.12)); color: inherit; }
+.stack { display: flex; flex-direction: column; width: 100%; }

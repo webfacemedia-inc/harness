@@ -77,7 +77,7 @@ export type WorkspaceKey = keyof typeof zh
 export const en = {
   'group.ungrouped': 'Ungrouped',
   'session.new': 'New Session',
-  'section.workspaces': 'Workspaces',
+  'section.workspaces': 'Sessions',
   'section.sessions': 'Sessions',
   'viewOptions.label': 'View options',
   'groupBy.label': 'Group by',
