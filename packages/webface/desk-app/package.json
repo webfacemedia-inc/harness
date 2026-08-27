@@ -1,0 +1,34 @@
+{
+  "name": "@webface/dsh-desk-app",
+  "description": "webfaCe Desk composition bundle: persona, teammates default, browse workspace picker (host + client), Team panel, routines, and the Google connector row",
+  "version": "0.1.0",
+  "private": true,
+  "repository": { "type": "git", "url": "git+https://github.com/webfacemedia-inc/harness.git", "directory": "packages/webface/desk-app" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": ["lib/index.js", "cordis.patch.yml", "lib/types/**/*.d.ts"],
+  "license": "MIT",
+  "dsh": { "bundle": { "patch": "./cordis.patch.yml" } },
+  "dependencies": {
+    "@deepseek-ai/dsh-agent-presets": "workspace:^",
+    "@deepseek-ai/dsh-client-ui-directory-picker-browse": "workspace:^",
+    "@deepseek-ai/dsh-host-directory-picker-browse": "workspace:^",
+    "@deepseek-ai/dsh-mcp-client": "workspace:^",
+    "@deepseek-ai/dsh-schedule": "workspace:^",
+    "@deepseek-ai/dsh-system-prompt": "workspace:^",
+    "@deepseek-ai/dsh-time-context": "workspace:^",
+    "@webface/dsh-client-ui-team": "workspace:^"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis-plugin-include": "workspace:^",
+    "js-yaml": "^4.1.0",
+    "vitest": "^3.2.4"
+  }
+}

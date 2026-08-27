@@ -1,0 +1,73 @@
+# @webface/dsh-desk-app — the webfaCe Desk composition, applied after
+# dsh-base, dsh-web-app and @webface/dsh-desk-models. A patch replaces the
+# targeted row's whole `config`, so every row below restates every key it
+# owns. Per-Desk facts (paths, the customer's persona) stay in the profile's
+# own cordis.patch.yml; nothing secret lives here.
+
+# ── identity ────────────────────────────────────────────────────────────────
+- id: system-prompt
+  config:
+    persona: >-
+      You are Desk, the working assistant for the business this Desk belongs to,
+      running on the {{model}} model in {{cwd}}. You do real work: read and draft
+      email, prepare quotes and documents, research, write and run code, and
+      operate the connected tools. Ask before anything consequential — sending,
+      publishing, paying, deleting, or changing a live system — and say plainly
+      what you are about to do. Customer-facing copy never says "AI" or
+      "generated". Never invent prices, durations, or facts; when you don't know,
+      say so and offer the next step.
+
+# ── teammates ───────────────────────────────────────────────────────────────
+- id: agent-presets
+  config:
+    default: desk-operator
+
+# ── workspace picker: in-app browsing (both halves) ─────────────────────────
+- id: directory-picker
+  disabled: true
+
+- insert:
+    - id: directory-picker-browse
+      name: '@deepseek-ai/dsh-host-directory-picker-browse'
+    - id: ui-directory-picker-browse
+      name: '@deepseek-ai/dsh-client-ui-directory-picker-browse'
+
+    # Team panel: teammates as a first-class sidebar list.
+    - id: ui-team
+      name: '@webface/dsh-client-ui-team'
+
+    # Routines: durable reminders/intervals plus the time context.
+    - id: time-context
+      name: '@deepseek-ai/dsh-time-context'
+    - id: schedule
+      name: '@deepseek-ai/dsh-schedule'
+
+    # Google connector over the customer's own OAuth client. The profile
+    # supplies DESK_HARNESS_DIR / DESK_GOOGLE_HOME via env (see README).
+    - id: mcp-google
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: google
+        transport: stdio
+        command: !!js process.execPath
+        args: !!js '[`${process.env.DESK_HARNESS_DIR ?? process.cwd()}/apps/google-mcp/src/index.js`]'
+        cwd: !!js '`${process.env.DESK_HARNESS_DIR ?? process.cwd()}/apps/google-mcp`'
+        env:
+          GOOGLE_MCP_HOME: !!js 'process.env.DESK_GOOGLE_HOME ?? `${process.env.HOME}/.config/webface-desk/google`'
+        toolCallTimeoutMs: 60000
+
+# ── modes: Guided (read-only, asks) and Full (workspace-write, asks) ────────
+# Machine names render as labels ("guided" → "Guided"). danger-full-access is
+# kept for operators; the composer shows it as "Full access" with a warning.
+- id: permission
+  config:
+    presets:
+      guided:
+        sandbox: read-only
+        approval: ask
+      full:
+        sandbox: workspace-write
+        approval: ask
+      danger-full-access:
+        sandbox: danger-full-access
+        approval: never
