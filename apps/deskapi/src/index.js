@@ -143,6 +143,13 @@ const server = createServer(async (req, res) => {
       if (!o || !o.boxToken || tok !== o.boxToken) return json(res, 401, { error: 'no' })
       o.lastHeartbeat = new Date().toISOString(); o.heartbeat = JSON.parse((await body(req)).toString() || '{}'); save(); return json(res, 200, { ok: true })
     }
+    const rs = u.pathname.match(/^\/api\/orders\/(ord_[a-f0-9]+)\/resend$/)
+    if (rs && req.method === 'POST') {
+      const tok = (req.headers.authorization ?? '').replace(/^Bearer /, '')
+      if (!process.env.DESKAPI_ADMIN_TOKEN || tok !== process.env.DESKAPI_ADMIN_TOKEN) return json(res, 401, { error: 'no' })
+      const o = orders[rs[1]]; if (!o || o.status !== 'ready') return json(res, 404, { error: 'no ready order' })
+      try { await email(o); return json(res, 200, { ok: true }) } catch (e) { return json(res, 502, { error: e.message }) }
+    }
     if (u.pathname === '/api/health') return json(res, 200, { ok: true, stripe: Boolean(STRIPE), provisioning: Boolean(process.env.DIGITALOCEAN_TOKEN), dns: Boolean(process.env.CLOUDFLARE_API_TOKEN), orders: Object.keys(orders).length })
     res.writeHead(404); res.end('not found')
   } catch (e) { console.error(e); json(res, 500, { error: e.message }) }
