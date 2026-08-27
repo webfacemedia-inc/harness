@@ -13,7 +13,7 @@
 		copy_headers X-Desk-User
 		@bad status 401
 		handle_response @bad {
-			redir /login?next={uri} 302
+			redir https://{http.request.host}/login?next={http.request.uri} 302
 		}
 	}
 	# Google sends the owner back here after consent; deskd stores the token on this box.
