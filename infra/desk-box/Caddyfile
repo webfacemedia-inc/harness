@@ -8,7 +8,8 @@
 	handle @public {
 		reverse_proxy 127.0.0.1:8090
 	}
-	forward_auth 127.0.0.1:8090 {
+	@protected not path /login /logout /auth/* /healthz
+	forward_auth @protected 127.0.0.1:8090 {
 		uri /auth/verify
 		copy_headers X-Desk-User
 		@bad status 401
