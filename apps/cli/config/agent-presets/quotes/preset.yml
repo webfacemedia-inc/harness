@@ -1,0 +1,4 @@
+name: Quotes
+description: Builds prices only from the business's own price list and rules, and
+  produces clean quote documents.
+order: 3
