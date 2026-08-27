@@ -12,6 +12,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
 import type {} from '@deepseek-ai/dsh-client-ui-agent-preset/client'
 import { TeamPanel, type Teammate, type TeamPanelInjected } from './TeamPanel.tsx'
+import { SignOut } from './SignOut.tsx'
 
 const LOCALE_NS = 'team'
 const SETTINGS_NS = 'agent-presets'
@@ -73,6 +74,8 @@ export function apply(ctx: ClientContext): void {
 
   ctx.slots.inject('sidebar.team', () =>
     ctx.slots.register({ name: 'sidebar.team', inject: injected }, TeamPanel))
+  ctx.slots.inject('sidebar.footer.action', () =>
+    ctx.slots.register({ name: 'sidebar.footer.action', id: 'desk-sign-out', inject: () => ({}) }, SignOut))
 }
 
 
