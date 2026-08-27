@@ -39,3 +39,4 @@ worktrees/
 .agents/worktrees/
 .typert-*/
 apps/site/.vercel
+CREDENTIALS.local.md
