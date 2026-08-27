@@ -19,6 +19,10 @@
 	handle_path /vnc/* {
 		reverse_proxy 127.0.0.1:6080
 	}
+	# noVNC opens its socket at the root, not under /vnc/.
+	handle /websockify {
+		reverse_proxy 127.0.0.1:6080
+	}
 	# The harness itself. Its /api fence pins settings/credentials to a
 	# loopback same-origin call, so the front door presents as loopback —
 	# whoever holds the owner password holds the settings plane (v1).
