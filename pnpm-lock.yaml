@@ -353,6 +353,15 @@ importers:
         specifier: ^10.0.0
         version: 10.0.0
 
+  apps/deskd:
+    dependencies:
+      google-auth-library:
+        specifier: ^10.7.0
+        version: 10.7.0
+      googleapis:
+        specifier: ^170.0.0
+        version: 170.1.0
+
   apps/google-mcp:
     dependencies:
       '@modelcontextprotocol/sdk':

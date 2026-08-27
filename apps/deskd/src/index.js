@@ -1,0 +1,91 @@
+#!/usr/bin/env node
+// deskd — the small agent that runs on every Desk computer.
+//   GET  /healthz                      liveness
+//   GET  /deskd/status                 what this box is (slug, host, ready, accounts)
+//   GET  /oauth/google/start           send the owner to Google consent (their own app)
+//   GET  /oauth/google/callback        store the token on this box, never centrally
+//   POST /deskd/google/client          save the owner's pasted OAuth client JSON
+// Heartbeats to DESK_API_URL every 60s when set. Loopback only; Caddy fronts it.
+import { createServer } from 'node:http'
+import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync } from 'node:fs'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { OAuth2Client } from 'google-auth-library'
+import { google } from 'googleapis'
+
+const here = dirname(fileURLToPath(import.meta.url))
+const cfg = await import(join(here, '..', '..', 'google-mcp', 'src', 'config.js'))
+
+const PORT = Number(process.env.DESKD_PORT ?? 8090)
+const HOST = process.env.DESK_HOST ?? 'localhost'
+const SLUG = process.env.DESK_SLUG ?? 'desk'
+const API = process.env.DESK_API_URL
+const READY = process.env.DESK_READY_FILE ?? '/srv/desk/READY'
+const REDIRECT = `https://${HOST}/oauth/google/callback`
+const started = Date.now()
+
+const page = (title, body) => `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>webfaCe Desk</title><body style="font-family:-apple-system,Segoe UI,sans-serif;padding:48px;max-width:560px;margin:auto;color:#1b2430"><h2 style="margin:0 0 12px">${title}</h2>${body}</body>`
+
+function status() {
+  let accounts = []
+  try { accounts = cfg.listAccounts() } catch {}
+  return {
+    slug: SLUG, host: HOST, ready: existsSync(READY), uptimeSec: Math.round((Date.now() - started) / 1000),
+    google: { clientConfigured: existsSync(cfg.CLIENT_SECRET), redirectUri: REDIRECT, accounts },
+  }
+}
+
+function oauthClient() {
+  const { clientId, clientSecret } = cfg.readClient()
+  return new OAuth2Client(clientId, clientSecret, REDIRECT)
+}
+
+async function readBody(req) {
+  const chunks = []; for await (const c of req) chunks.push(c)
+  return Buffer.concat(chunks).toString('utf8')
+}
+
+const server = createServer(async (req, res) => {
+  const u = new URL(req.url, `http://${HOST}`)
+  try {
+    if (u.pathname === '/healthz') { res.writeHead(200, { 'content-type': 'text/plain' }); return res.end('ok') }
+    if (u.pathname === '/deskd/status') { res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify(status())) }
+    if (u.pathname === '/deskd/google/client' && req.method === 'POST') {
+      const raw = JSON.parse(await readBody(req))
+      const c = raw.web ?? raw.installed
+      if (!c?.client_id || !c?.client_secret) { res.writeHead(400); return res.end('That is not a Google OAuth client JSON (expected a "web" client).') }
+      mkdirSync(dirname(cfg.CLIENT_SECRET), { recursive: true, mode: 0o700 })
+      writeFileSync(cfg.CLIENT_SECRET, JSON.stringify(raw, null, 2), { mode: 0o600 }); chmodSync(cfg.CLIENT_SECRET, 0o600)
+      res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify({ ok: true, redirectUri: REDIRECT }))
+    }
+    if (u.pathname === '/oauth/google/start') {
+      const url = oauthClient().generateAuthUrl({ access_type: 'offline', prompt: 'consent', scope: cfg.SCOPES })
+      res.writeHead(302, { location: url }); return res.end()
+    }
+    if (u.pathname === '/oauth/google/callback') {
+      const code = u.searchParams.get('code'); const err = u.searchParams.get('error')
+      if (!code) { res.writeHead(400, { 'content-type': 'text/html; charset=utf-8' }); return res.end(page('Not connected', `<p>${err ?? 'Google sent no code.'}</p>`)) }
+      const oauth = oauthClient()
+      const { tokens } = await oauth.getToken(code); oauth.setCredentials(tokens)
+      const me = await google.oauth2({ version: 'v2', auth: oauth }).userinfo.get()
+      const email = me.data.email; if (!email) throw new Error('Google returned no email address')
+      cfg.writeToken(email, tokens)
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
+      return res.end(page('Connected', `<p><strong>${email}</strong> is now connected to this Desk. You can close this tab and go back to Desk.</p>`))
+    }
+    res.writeHead(404); res.end('not found')
+  } catch (e) {
+    console.error(e)
+    res.writeHead(500, { 'content-type': 'text/html; charset=utf-8' })
+    res.end(page('Something went wrong', `<p>${String(e.message ?? e)}</p><p>Try again from Desk's Connections page.</p>`))
+  }
+})
+server.listen(PORT, '127.0.0.1', () => console.log(`deskd on 127.0.0.1:${PORT} for ${SLUG} (${HOST})`))
+
+if (API) {
+  const beat = async () => {
+    try { await fetch(`${API}/v1/boxes/${SLUG}/heartbeat`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${process.env.DESK_BOX_TOKEN ?? ''}` }, body: JSON.stringify(status()) }) }
+    catch (e) { console.error('heartbeat failed:', e.message) }
+  }
+  beat(); setInterval(beat, 60_000).unref()
+}

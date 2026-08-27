@@ -1,0 +1,12 @@
+{
+  "name": "@webface/deskd",
+  "version": "0.1.0",
+  "private": true,
+  "description": "webfaCe Desk box agent: health, heartbeat, Google OAuth callback for the customer's own app.",
+  "type": "module",
+  "bin": { "deskd": "src/index.js" },
+  "dependencies": {
+    "google-auth-library": "^10.7.0",
+    "googleapis": "^170.0.0"
+  }
+}

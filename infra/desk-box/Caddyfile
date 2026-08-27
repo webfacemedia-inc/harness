@@ -1,0 +1,31 @@
+# webfaCe Desk box front door. One password for the owner (v1); the phone
+# route split (conversation/approvals only for paired phones) is owed.
+{$DESK_HOST} {
+	encode zstd gzip
+	basic_auth {
+		owner {$DESK_OWNER_HASH}
+	}
+	# Google sends the owner back here after consent; deskd stores the token on this box.
+	handle /oauth/* {
+		reverse_proxy 127.0.0.1:8090
+	}
+	handle /deskd/* {
+		reverse_proxy 127.0.0.1:8090
+	}
+	handle /healthz {
+		reverse_proxy 127.0.0.1:8090
+	}
+	# The Desk browser, watched and taken over from any window (noVNC).
+	handle_path /vnc/* {
+		reverse_proxy 127.0.0.1:6080
+	}
+	# The harness itself. Its /api fence pins settings/credentials to a
+	# loopback same-origin call, so the front door presents as loopback —
+	# whoever holds the owner password holds the settings plane (v1).
+	handle {
+		reverse_proxy 127.0.0.1:3080 {
+			header_up Host 127.0.0.1:3080
+			header_up Origin http://127.0.0.1:3080
+		}
+	}
+}
