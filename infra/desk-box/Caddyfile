@@ -21,6 +21,10 @@
 	handle /oauth/* {
 		reverse_proxy 127.0.0.1:8090
 	}
+	# Files page + API over the Desk folder (deskd checks the session itself too).
+	handle /files* {
+		reverse_proxy 127.0.0.1:8090
+	}
 	handle /deskd/* {
 		reverse_proxy 127.0.0.1:8090
 	}
