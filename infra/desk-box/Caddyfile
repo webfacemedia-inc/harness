@@ -42,3 +42,6 @@
 		}
 	}
 }
+
+# Extra sites for this box (the demo box also serves webfacedesk.app itself).
+import /etc/caddy/conf.d/*.caddy
