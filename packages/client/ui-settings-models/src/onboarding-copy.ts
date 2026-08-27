@@ -8,18 +8,18 @@ export const WELCOME_NOTICE_ACK_FIELD = 'welcomeNoticeVersion'
  * Bump only when the notice changes materially and every user should see it
  * again. The acknowledgement is compared for exact equality.
  */
-export const WELCOME_NOTICE_VERSION = '2026-08-13.1'
+export const WELCOME_NOTICE_VERSION = '2026-08-27.desk'
 
-/** The complete editable internal-testing notice in both supported GUI locales. */
+/** The complete editable welcome notice in both supported GUI locales. */
 export const WELCOME_NOTICE_COPY = {
   zh: {
-    title: '内测声明',
-    body: 'DeepSeek Harness 目前的 0.1 版本仍处在面向 Harness 开发者进行测试的阶段，还有许多地方需要持续改进和打磨，希望听取广大开发者的反馈建议。预计 DeepSeek Harness 的核心插件以及基础 API 都会在接下来的一段时间内快速迭代、持续演化。\n\n我们期待与全球开发者一起，在开源、开放、可复用、可组合的基础设施之上，共同探索智能上限。欢迎全球 Harness 开发者加入 DSH 插件生态。',
-    continueLabel: '继续',
+    title: '欢迎使用 webfaCe Desk',
+    body: '这是 webfaCe Desk 的早期版本，专为您的业务而建。Desk 会阅读并起草邮件、准备报价和文件、进行研究、编写和运行代码，并通过已连接的工具处理工作。任何会产生实际影响的操作（发送、发布、付款、删除或更改线上系统）都会先征得您的同意。\n\n遇到问题或有建议，请直接告诉 Tommy。',
+    continueLabel: '开始',
   },
   en: {
-    title: 'Internal Testing Notice',
-    body: "DeepSeek Harness 0.1 remains in testing for Harness developers. Many areas need further improvement, and we welcome feedback from the developer community. DeepSeek Harness's core plugins and foundational APIs will continue to evolve rapidly over the coming months.\n\nWe look forward to exploring the limits of intelligence with developers around the world, building on open-source, open, reusable, and composable infrastructure. We welcome Harness developers everywhere to join the DSH plugin ecosystem.",
-    continueLabel: 'Continue',
+    title: 'Welcome to webfaCe Desk',
+    body: 'This is an early build of webfaCe Desk, set up for your business. Desk reads and drafts email, prepares quotes and documents, researches, writes and runs code, and works through the tools you connect. Anything that matters — sending, publishing, paying, deleting, or changing a live system — waits for your approval first.\n\nIf something looks wrong or you want it to work differently, tell Tommy directly.',
+    continueLabel: 'Get started',
   },
 } as const
