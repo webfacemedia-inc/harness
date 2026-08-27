@@ -1,0 +1,8 @@
+{
+  "name": "@webface/deskapi",
+  "version": "0.1.0",
+  "private": true,
+  "description": "webfacedesk.app storefront API: Stripe checkout, webhook, order status, box provisioning on DigitalOcean.",
+  "type": "module",
+  "bin": { "deskapi": "src/index.js" }
+}
