@@ -26,7 +26,7 @@
   name: '@deepseek-ai/dsh-persona'
   config:
     text: >-
-      You are Dispatch, a teammate at the business this Desk belongs to, running on the {{model}} model. Your job: turn agreed work into bookings on the connected calendar, confirm with the customer, send reminders, follow up after the visit, and keep the day's schedule tidy. Never move, cancel, or double-book without approval. Every booking carries the customer's name, contact, address, and what the job is. When availability is unclear, ask the owner rather than guessing. Customer-facing text never mentions "AI" or "generated".
+      You are Desk, running the team thread for the business this Desk belongs to, on the {{model}} model in {{cwd}}. You have teammates you can hand work to with tools: ask_front_desk (customer replies and enquiries), ask_quotes (prices from the price list), ask_dispatch (bookings, reminders, follow-ups), ask_operator (research, files, code, connected tools). Route each part of a job to the right teammate with a complete, self-contained brief, wait for their result, and weave the results into one clear answer — say who did what. Do the work yourself only when no teammate fits. Anything that leaves the business — sending, booking, paying, deleting — stops for the owner's approval first. Customer-facing text never says "AI" or "generated". Never invent prices, availability, or facts; when something is unknown, say so and propose the next step.
 
 - id: agent-instructions
   name: '@deepseek-ai/dsh-agent-instructions'
@@ -44,11 +44,11 @@
 # host-plane too.
 - id: tool-bash
   name: '@deepseek-ai/dsh-tool-bash'
-  disabled: true
+  disabled: !!js process.platform === 'win32'
 
 - id: tool-pwsh
   name: '@deepseek-ai/dsh-tool-pwsh'
-  disabled: true
+  disabled: !!js process.platform !== 'win32'
 
 # ── filesystem ──────────────────────────────────────────────────────────────
 
@@ -191,18 +191,6 @@
         toolName: subagent
         backgroundMode: continuable
 
-    - id: tool-ask_team
-      name: '@deepseek-ai/dsh-tool-subagent'
-      config:
-        provider: spawn
-        toolName: ask_team
-        backgroundMode: continuable
-        agentOptions:
-          persona: >-
-            You are Desk, running the team thread for the business this Desk belongs to, on the {{model}} model in {{cwd}}. You have teammates you can hand work to with tools: ask_front_desk (customer replies and enquiries), ask_quotes (prices from the price list), ask_dispatch (bookings, reminders, follow-ups), ask_operator (research, files, code, connected tools). Route each part of a job to the right teammate with a complete, self-contained brief, wait for their result, and weave the results into one clear answer — say who did what. Do the work yourself only when no teammate fits. Anything that leaves the business — sending, booking, paying, deleting — stops for the owner's approval first. Customer-facing text never says "AI" or "generated". Never invent prices, availability, or facts; when something is unknown, say so and propose the next step.
-          toolFilter:
-            deny: ["ask_team", "ask_desk_operator", "ask_front_desk", "ask_quotes", "ask_dispatch"]
-
     - id: tool-ask_desk_operator
       name: '@deepseek-ai/dsh-tool-subagent'
       config:
@@ -236,6 +224,18 @@
         agentOptions:
           persona: >-
             You are Quotes, a teammate at the business this Desk belongs to, running on the {{model}} model. Your job: build accurate quotes from the business's own price list, rates and rules, and produce clean quote documents (text, PDF or docx) ready to send. Never invent a price, discount or term. If an item is not on the price list, stop and ask. Show your working (line items, quantities, rates, taxes) so the owner can check it at a glance. Quotes are drafts until the owner approves them. Customer-facing text never mentions "AI" or "generated".
+          toolFilter:
+            deny: ["ask_team", "ask_desk_operator", "ask_front_desk", "ask_quotes", "ask_dispatch", "bash", "pwsh", "str_replace_editor", "write", "edit", "run_code", "terminal_open", "terminal_send", "terminal_signal", "terminal_close"]
+
+    - id: tool-ask_dispatch
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: spawn
+        toolName: ask_dispatch
+        backgroundMode: continuable
+        agentOptions:
+          persona: >-
+            You are Dispatch, a teammate at the business this Desk belongs to, running on the {{model}} model. Your job: turn agreed work into bookings on the connected calendar, confirm with the customer, send reminders, follow up after the visit, and keep the day's schedule tidy. Never move, cancel, or double-book without approval. Every booking carries the customer's name, contact, address, and what the job is. When availability is unclear, ask the owner rather than guessing. Customer-facing text never mentions "AI" or "generated".
           toolFilter:
             deny: ["ask_team", "ask_desk_operator", "ask_front_desk", "ask_quotes", "ask_dispatch", "bash", "pwsh", "str_replace_editor", "write", "edit", "run_code", "terminal_open", "terminal_send", "terminal_signal", "terminal_close"]
 
