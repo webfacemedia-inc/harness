@@ -120,6 +120,10 @@ DESK_HOST=$DESK_HOST
 DESK_SLUG=$DESK_SLUG
 DESK_API_URL=${DESK_API_URL:-}
 DESK_BOX_TOKEN=${DESK_BOX_TOKEN:-}
+DESK_BUSINESS=$DESK_BUSINESS
+DESK_AUTH_FILE=$D/auth.json
+DESK_SIGNIN_CLIENT_ID=${DESK_SIGNIN_CLIENT_ID:-}
+DESK_SIGNIN_CLIENT_SECRET=${DESK_SIGNIN_CLIENT_SECRET:-}
 DISPLAY=:1
 HOME=$D
 PATH=/usr/local/bin:/usr/bin:/bin
@@ -209,14 +213,15 @@ RestartSec=3
 WantedBy=multi-user.target
 UNIT
 
+echo "==> owner account"
+sudo -u desk -H env DESK_AUTH_FILE=$D/auth.json node $D/harness/apps/deskd/src/cli.js set "${DESK_OWNER_USER:-owner}" "${DESK_OWNER_EMAIL:-}" "$DESK_OWNER_PASSWORD" >/dev/null
+
 echo "==> caddy front door"
-OWNER_HASH=$(caddy hash-password --plaintext "$DESK_OWNER_PASSWORD")
 cp $D/harness/infra/desk-box/Caddyfile /etc/caddy/Caddyfile
 mkdir -p /etc/systemd/system/caddy.service.d
 cat > /etc/systemd/system/caddy.service.d/desk.conf <<UNIT
 [Service]
 Environment=DESK_HOST=$DESK_HOST
-Environment=DESK_OWNER_HASH=$OWNER_HASH
 UNIT
 systemctl daemon-reload
 systemctl enable --now desk-xvfb desk-vnc desk-novnc desk-harness deskd

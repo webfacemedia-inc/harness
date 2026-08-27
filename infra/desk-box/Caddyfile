@@ -2,17 +2,25 @@
 # route split (conversation/approvals only for paired phones) is owed.
 {$DESK_HOST} {
 	encode zstd gzip
-	basic_auth {
-		owner {$DESK_OWNER_HASH}
+	# Sign-in lives in deskd (username+password, optional Google). Everything
+	# except the sign-in routes asks deskd whether the session cookie is good.
+	@public path /login /logout /auth/* /healthz
+	handle @public {
+		reverse_proxy 127.0.0.1:8090
+	}
+	forward_auth 127.0.0.1:8090 {
+		uri /auth/verify
+		copy_headers X-Desk-User
+		@bad status 401
+		handle_response @bad {
+			redir /login?next={uri} 302
+		}
 	}
 	# Google sends the owner back here after consent; deskd stores the token on this box.
 	handle /oauth/* {
 		reverse_proxy 127.0.0.1:8090
 	}
 	handle /deskd/* {
-		reverse_proxy 127.0.0.1:8090
-	}
-	handle /healthz {
 		reverse_proxy 127.0.0.1:8090
 	}
 	# The Desk browser, watched and taken over from any window (noVNC).
