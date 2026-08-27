@@ -10,6 +10,7 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 // Type-only: the SlotMap merges declaring `sidebar.team` and the workspace service.
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
+import type {} from '@deepseek-ai/dsh-client-ui-agent-preset/client'
 import { TeamPanel, type Teammate, type TeamPanelInjected } from './TeamPanel.tsx'
 
 const LOCALE_NS = 'team'
@@ -18,7 +19,7 @@ const SETTINGS_NS = 'agent-presets'
 export type { Teammate, TeamPanelInjected } from './TeamPanel.tsx'
 
 /** Required services (cordis fiber inject). */
-export const inject = ['slots', 'locale', 'connection', 'remote', 'workspaces', 'sessions']
+export const inject = ['slots', 'locale', 'connection', 'remote', 'sessions', 'agentPresetSeat']
 
 /**
  * Client plugin body: dictionaries, then the sidebar occupant.
@@ -58,30 +59,13 @@ export function apply(ctx: ClientContext): void {
       }
     },
     message: async (id: string) => {
-      // The default governs later sessions; the session in front of the user
-      // is re-composed only while blank — a started session keeps its own.
+      // The default governs later sessions; the seat (ui-agent-preset) owns
+      // which session the pick lands on — blank now, or the one it starts.
       await api.settings.update({ ns: SETTINGS_NS, patch: { default: id } })
-      const currentBlank = () => {
-        const state = ctx.sessions.list.getSnapshot()
-        const summary = state.current === undefined ? undefined : state.byId[state.current]
-        return summary !== undefined && summary.blank ? summary : undefined
-      }
-      const blank = currentBlank()
-      if (blank !== undefined) {
-        if (blank.agentPreset !== id) await api.agentPresets.select({ sessionId: blank.id, agentPreset: id })
-        return
-      }
-      const before = ctx.sessions.list.getSnapshot().current
-      ctx.workspaces.startSession()
-      await new Promise<void>((resolve) => {
-        const done = () => { stop(); clearTimeout(timer); resolve() }
-        const stop = ctx.sessions.list.subscribe(() => {
-          const next = currentBlank()
-          if (next === undefined || next.id === before) return
-          void api.agentPresets.select({ sessionId: next.id, agentPreset: id }).finally(done)
-        })
-        const timer = setTimeout(done, 5000)
-      })
+      const state = ctx.sessions.list.getSnapshot()
+      const current = state.current === undefined ? undefined : state.byId[state.current]
+      if (current !== undefined && current.blank) await ctx.agentPresetSeat.select(id)
+      else ctx.agentPresetSeat.stageAndStart(id)
     },
     subscribe: (read) => { readers.add(read); return () => { readers.delete(read) } },
     t: ctx.locale.bind(LOCALE_NS) as unknown as TeamPanelInjected['t'],

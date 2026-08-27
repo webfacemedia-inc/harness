@@ -43,6 +43,9 @@
     },
     {
       "path": "../ui-workspace"
+    },
+    {
+      "path": "../ui-agent-preset"
     }
   ]
 }

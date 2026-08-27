@@ -162,6 +162,13 @@ export function apply(ctx: ClientContext): void {
         seat.stage('cordis', true)
         scope.workspaces.startSession()
       }
+      // webfaCe Desk: one writer for "which teammate runs the next session".
+      // Other surfaces (the Team panel) route through the seat instead of
+      // racing it with their own select/stage.
+      scope.provide('agentPresetSeat', {
+        select: (id: string) => seat.select(id),
+        stageAndStart: (id: string) => { seat.stage(id, true); scope.workspaces.startSession() },
+      })
       const chip = scope.slots.register({
         name: 'conversation.hero.agentPreset',
         locale: 'settings.agentPreset',
@@ -221,4 +228,19 @@ export function apply(ctx: ClientContext): void {
     locale: 'settings.agentPreset',
     inject: sectionInjected,
   }, AgentPresetSection))
+}
+
+/** The staged-choice controller other surfaces route teammate picks through. */
+export interface AgentPresetSeatService {
+  /** Stage a preset and apply it to the current session when that session is blank. */
+  select: (id: string) => Promise<void>
+  /** Stage a preset and start a session for it to land on. */
+  stageAndStart: (id: string) => void
+}
+
+declare module '@deepseek-ai/cordis' {
+  interface Context {
+    /** Provided inside the conversation scope by this package. */
+    agentPresetSeat: AgentPresetSeatService
+  }
 }
