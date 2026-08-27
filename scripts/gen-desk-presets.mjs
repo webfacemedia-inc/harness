@@ -3,7 +3,7 @@
 // Each teammate becomes a preset derived from dsh's `standard` composition with its own
 // persona; every Desk preset gets one delegation tool per teammate (ask_<id>) so teammates
 // can hand work to each other. Idempotent: run after editing desk-team.yml.
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
+import { readFileSync, writeFileSync, mkdirSync, rmSync, cpSync, existsSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import yaml from 'js-yaml'
@@ -54,5 +54,8 @@ for (const t of spec.teammates) {
   const dir = resolve(presetsDir, t.id); mkdirSync(dir, { recursive: true })
   writeFileSync(resolve(dir, 'agent.cordis.yml'), header + y)
   writeFileSync(resolve(dir, 'preset.yml'), yaml.dump({ name: t.name, description: t.description, order: t.order }, { lineWidth: 1000 }))
-  console.log(`preset ${t.id}: shell=${t.shell} asks=${spec.teammates.filter(x => x.id !== t.id).length}`)
+  // skills: copied per teammate from desk-skills/ so each preset's roster is explicit
+  const skillsDir = resolve(dir, 'skills'); if (existsSync(skillsDir)) rmSync(skillsDir, { recursive: true })
+  for (const name of t.skills ?? []) cpSync(resolve(presetsDir, 'desk-skills', name), resolve(skillsDir, name), { recursive: true })
+  console.log(`preset ${t.id}: shell=${t.shell} asks=${spec.teammates.filter(x => x.id !== t.id).length} skills=${(t.skills ?? []).length}`)
 }

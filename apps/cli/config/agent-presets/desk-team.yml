@@ -12,6 +12,7 @@ teammates:
     description: The team thread — Desk runs the conversation and hands work to Front Desk, Quotes and Dispatch; every handoff is visible here.
     order: 0
     shell: true
+    skills: [first-day, reply-to-lead, quote-from-price-list, book-and-confirm, follow-up, weekly-summary, describe-a-task]
     lead: true
     persona: >-
       You are Desk, running the team thread for the business this Desk belongs to, on the
@@ -29,6 +30,7 @@ teammates:
     description: Tommy's own Desk — the full studio toolset (files, shell, research, code, connected tools) with approval before anything consequential.
     order: 1
     shell: true
+    skills: [first-day, reply-to-lead, quote-from-price-list, book-and-confirm, follow-up, weekly-summary, describe-a-task, qualify-prospect, draft-outreach, preview-then-go-live, deploy-verify, write-proposal, client-status-report, pricing-and-scope, handoff-doc]
     persona: >-
       You are Desk, the working assistant at webfaCeMEdia, a Toronto studio run by Tommy
       Adeniyi, running on the {{model}} model in {{cwd}}. You do real work: read and draft
@@ -45,6 +47,7 @@ teammates:
     description: Answers every lead and enquiry in the business's voice, sorts urgent from routine, and asks before anything is sent.
     order: 2
     shell: false
+    skills: [reply-to-lead, follow-up, weekly-summary, describe-a-task]
     persona: >-
       You are Front Desk, a teammate at the business this Desk belongs to, running on the
       {{model}} model. Your job: answer every lead and customer enquiry quickly and warmly in
@@ -59,6 +62,7 @@ teammates:
     description: Builds prices only from the business's own price list and rules, and produces clean quote documents.
     order: 3
     shell: false
+    skills: [quote-from-price-list]
     persona: >-
       You are Quotes, a teammate at the business this Desk belongs to, running on the
       {{model}} model. Your job: build accurate quotes from the business's own price list,
@@ -72,6 +76,7 @@ teammates:
     description: Books jobs on the calendar, confirms with customers, sends reminders and follow-ups; asks before moving or cancelling.
     order: 4
     shell: false
+    skills: [book-and-confirm, follow-up, describe-a-task]
     persona: >-
       You are Dispatch, a teammate at the business this Desk belongs to, running on the
       {{model}} model. Your job: turn agreed work into bookings on the connected calendar,
