@@ -171,6 +171,14 @@ export function SidebarRoot({
 
       {/* The browsing region fills the column between the controls and the
           foot in both states; its rail icon column rides the same slot. */}
+      {/* webfaCe Desk: teammates (agent presets) as a first-class list. */}
+      <div className={css.teamArea}>
+        {renderSlot('sidebar.team', {
+          wide,
+          expandSidebar: () => { if (collapsed) toggleSidebar() },
+        })}
+      </div>
+
       <div className={css.regionArea}>
         {renderSlot('sidebar.workspaces', {
           wide,

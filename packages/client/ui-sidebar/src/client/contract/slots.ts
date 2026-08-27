@@ -21,6 +21,8 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
      * package's 'sidebar' entry (declaring is claiming); ui-workspace
      * registers the browser.
      */
+    /** webfaCe Desk: the teammates list above the browsing region; ui-team registers it. */
+    'sidebar.team': { kind: 'single'; scope: 'root'; owner: SidebarSectionOwnerProps }
     'sidebar.workspaces': { kind: 'single'; scope: 'root'; owner: SidebarSectionOwnerProps }
     /**
      * The settings seat at the sidebar foot. Declared by this package's
@@ -85,5 +87,5 @@ export type SidebarRootInjected = {
  */
 export type SidebarRootComponentProps =
   PropsRuntime<'sidebar'>
-  & PropsRenderSlots<'sidebar.workspaces' | 'sidebar.settings' | 'sidebar.footer.action'>
+  & PropsRenderSlots<'sidebar.team' | 'sidebar.workspaces' | 'sidebar.settings' | 'sidebar.footer.action'>
   & SidebarRootInjected & PropsLocale<'sidebar'>

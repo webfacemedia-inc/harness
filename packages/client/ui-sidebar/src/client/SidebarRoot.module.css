@@ -282,3 +282,9 @@
     animation: none;
   }
 }
+
+/* webfaCe Desk: teammates list between the controls and the browsing region. */
+.teamArea {
+  flex: 0 0 auto;
+  min-height: 0;
+}
