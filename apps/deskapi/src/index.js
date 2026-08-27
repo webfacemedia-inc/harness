@@ -86,10 +86,12 @@ async function fulfil(o) {
 }
 async function email(o) {
   if (!process.env.BREVO_API_KEY) return
-  await fetch('https://api.brevo.com/v3/smtp/email', { method: 'POST', headers: { 'api-key': process.env.BREVO_API_KEY, 'content-type': 'application/json' }, body: JSON.stringify({
+  const r = await fetch('https://api.brevo.com/v3/smtp/email', { method: 'POST', headers: { 'api-key': process.env.BREVO_API_KEY, 'content-type': 'application/json' }, body: JSON.stringify({
     sender: { name: 'webfaCe Desk', email: process.env.DESK_FROM_EMAIL ?? 'desk@webfacemedia.com' }, to: [{ email: o.email }], subject: `${o.business}: your Desk is ready`,
     htmlContent: `<p>Your Desk is ready.</p><p><a href="https://${o.host}/">Open your Desk</a> — username <b>owner</b>, password <b>${o.password}</b>.</p><p>Sign in, press Get started, and tell your team about the business. Reply to this email if anything is unclear.</p><p>— webfaCeMEdia, Toronto</p>`,
   }) })
+  if (!r.ok) throw new Error(`brevo ${r.status}: ${await r.text()}`)
+  console.log('welcome email sent to', o.email, 'for', o.slug)
 }
 
 const server = createServer(async (req, res) => {
