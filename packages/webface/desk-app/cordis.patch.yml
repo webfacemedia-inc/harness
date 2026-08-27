@@ -56,6 +56,20 @@
           GOOGLE_MCP_HOME: !!js 'process.env.DESK_GOOGLE_HOME ?? `${process.env.HOME}/.config/webface-desk/google`'
         toolCallTimeoutMs: 60000
 
+    - id: mcp-browser
+      # The Desk browser: a real Chrome with a persistent profile, headed so the
+      # owner can watch and take the mouse for logins/2FA. On a cloud Desk the
+      # same window is streamed; on this machine it simply opens on screen.
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: browser
+        transport: stdio
+        command: npx
+        args: !!js '["--yes", "@playwright/mcp@0.0.79", "--browser", "chrome", "--user-data-dir", process.env.DESK_BROWSER_HOME ?? `${process.env.HOME}/.config/webface-desk/browser`, "--output-dir", `${process.env.DSH_HOME ?? process.env.HOME + "/.desk"}/browser-output`]'
+        env:
+          PATH: !!js process.env.PATH
+        toolCallTimeoutMs: 90000
+
 # ── modes: Guided (read-only, asks) and Full (workspace-write, asks) ────────
 # Machine names render as labels ("guided" → "Guided"). danger-full-access is
 # kept for operators; the composer shows it as "Full access" with a warning.
