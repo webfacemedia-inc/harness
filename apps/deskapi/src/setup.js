@@ -32,5 +32,5 @@ const url = `${PUBLIC}/api/stripe/webhook`
 const hooks = (await api('GET', 'webhook_endpoints?limit=100')).data.filter(h => h.url === url)
 let secretLine
 if (hooks.length) { console.error(`webhook exists: ${hooks[0].id} (secret shown only at creation — reuse the one you saved, or delete it in the dashboard and re-run)`); secretLine = 'STRIPE_WEBHOOK_SECRET=<existing>' }
-else { const h = await api('POST', 'webhook_endpoints', { url, 'enabled_events[]': ['checkout.session.completed', 'invoice.payment_failed', 'customer.subscription.deleted'], description: 'webfaCe Desk storefront' }); console.error(`webhook created: ${h.id}`); secretLine = `STRIPE_WEBHOOK_SECRET=${h.secret}` }
+else { const h = await api('POST', 'webhook_endpoints', { url, 'enabled_events[0]': 'checkout.session.completed', 'enabled_events[1]': 'invoice.payment_failed', 'enabled_events[2]': 'customer.subscription.deleted', description: 'webfaCe Desk storefront' }); console.error(`webhook created: ${h.id}`); secretLine = `STRIPE_WEBHOOK_SECRET=${h.secret}` }
 console.log([`STRIPE_SECRET_KEY=${KEY}`, secretLine, ...out].join('\n'))
