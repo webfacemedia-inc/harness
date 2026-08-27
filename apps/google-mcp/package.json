@@ -1,0 +1,16 @@
+{
+  "name": "@webface/google-mcp",
+  "description": "webfaCe Desk Google connector: Gmail, Calendar, Drive and Contacts as an MCP server over the customer's own Google OAuth client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "bin": { "google-mcp": "./src/cli.js" },
+  "scripts": { "start": "node src/index.js", "auth": "node src/cli.js auth" },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "google-auth-library": "^10.7.0",
+    "googleapis": "^170.0.0",
+    "zod": "^4.4.3"
+  }
+}
