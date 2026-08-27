@@ -1,0 +1,44 @@
+{
+  "name": "@webface/dsh-desk-models",
+  "description": "webfaCe Desk model bundle: an OpenRouter route for DeepSeek, GLM, Kimi, Qwen, Anthropic and OpenAI models, the optional private gateway route, a Desk default model, and telemetry hard-disabled",
+  "version": "0.1.0",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/webfacemedia-inc/harness.git",
+    "directory": "packages/webface/desk-models"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "cordis.patch.yml",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh-agent-default-model": "workspace:^",
+    "@deepseek-ai/dsh-llm-pi-ai": "workspace:^",
+    "@deepseek-ai/dsh-session-telemetry-otel": "workspace:^"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis-plugin-include": "workspace:^",
+    "js-yaml": "^4.1.0",
+    "vitest": "^3.2.4"
+  }
+}
