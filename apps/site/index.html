@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>webfaCe Desk — your own team, on their own computer, in Canada</title>
+<meta name="description" content="Named teammates that live on a computer of their own, sign in to your tools once, read your email and calendar, draft quotes and replies, book and follow up, and ask before anything that matters. Built and hosted in Toronto.">
+<meta property="og:title" content="webfaCe Desk">
+<meta property="og:description" content="Your own team, on their own computer, in Canada.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://webfacedesk.app/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--blue:#3499cc;--blue-deep:#1f6f99;--ink:#152029;--mute:#5a6a78;--line:#dfe6ec;--bg:#ffffff;--tint:#eef6fb;--ok:#1f8a5b}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.55 "Inter Tight",-apple-system,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--blue-deep)}h1,h2,h3{font-family:Fraunces,Georgia,serif;font-weight:600;letter-spacing:-.01em;text-wrap:balance;margin:0}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+header{position:sticky;top:0;background:rgba(255,255,255,.92);backdrop-filter:saturate(1.4) blur(8px);border-bottom:1px solid var(--line);z-index:5}
+header .wrap{display:flex;align-items:center;justify-content:space-between;height:64px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:600;text-decoration:none;color:var(--ink);font-size:19px}.brand svg{width:30px;height:31px;color:var(--blue)}.brand b{font-weight:600}.brand span{font-weight:400}
+nav a{margin-left:22px;text-decoration:none;color:var(--mute);font-weight:500}nav a.cta{color:#fff;background:var(--blue);padding:9px 16px;border-radius:8px}nav a.cta:hover{background:var(--blue-deep)}
+.hero{padding:88px 0 64px}.hero .wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center}
+.eyebrow{display:inline-block;font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--blue-deep);background:var(--tint);padding:6px 10px;border-radius:999px;margin-bottom:18px}
+h1{font-size:clamp(38px,5.2vw,58px);line-height:1.05}
+.lead{font-size:20px;color:var(--mute);margin:22px 0 30px;max-width:34em}
+.btn{display:inline-block;padding:14px 22px;border-radius:10px;background:var(--blue);color:#fff;text-decoration:none;font-weight:600}.btn:hover{background:var(--blue-deep)}.btn.ghost{background:transparent;color:var(--blue-deep);border:1px solid var(--line);margin-left:10px}
+.window{border:1px solid var(--line);border-radius:14px;box-shadow:0 30px 60px -30px rgba(21,32,41,.35);overflow:hidden;background:#fff}
+.window .bar{display:flex;gap:6px;padding:10px 12px;border-bottom:1px solid var(--line);background:#f7f9fb}.window .bar i{width:10px;height:10px;border-radius:50%;background:#dfe6ec;display:block}
+.thread{padding:18px;display:grid;gap:12px;font-size:14px}
+.msg{display:flex;gap:10px;align-items:flex-start}.msg .av{width:26px;height:26px;border-radius:50%;background:var(--blue);color:#fff;font-size:11px;font-weight:600;display:grid;place-items:center;flex:none}.msg .av.you{background:var(--ink)}
+.msg p{margin:0;padding:9px 12px;border-radius:10px;background:#f3f6f8}.msg.you p{background:var(--tint)}
+.msg small{display:block;color:var(--mute);margin:0 0 4px;font-size:12px}
+.approve{margin-top:6px;display:flex;gap:8px}.approve span{font-size:12px;padding:5px 10px;border-radius:6px;border:1px solid var(--line)}.approve span.y{background:var(--ok);color:#fff;border-color:var(--ok)}
+section{padding:72px 0;border-top:1px solid var(--line)}
+section h2{font-size:clamp(28px,3.4vw,38px);margin-bottom:12px}section .sub{color:var(--mute);font-size:18px;max-width:38em;margin:0 0 36px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}.card{border:1px solid var(--line);border-radius:14px;padding:22px}.card h3{font-size:20px;margin-bottom:8px}.card p{margin:0;color:var(--mute);font-size:15.5px}
+.team{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}.mate{background:var(--tint);border-radius:14px;padding:20px}.mate .av{width:38px;height:38px;border-radius:50%;background:var(--blue);color:#fff;font-weight:600;display:grid;place-items:center;margin-bottom:12px}.mate h3{font-size:18px;font-family:"Inter Tight",sans-serif;font-weight:600}.mate p{margin:6px 0 0;font-size:14.5px;color:var(--mute)}
+.steps{counter-reset:s;display:grid;grid-template-columns:repeat(4,1fr);gap:22px}.step{position:relative;padding-top:44px}.step:before{counter-increment:s;content:counter(s);position:absolute;top:0;left:0;width:32px;height:32px;border-radius:50%;background:var(--ink);color:#fff;font-weight:600;display:grid;place-items:center;font-size:14px}.step h3{font-size:18px;font-family:"Inter Tight",sans-serif;font-weight:600}.step p{margin:6px 0 0;color:var(--mute);font-size:15px}
+.plans{display:grid;grid-template-columns:1fr 1fr;gap:22px;max-width:860px}.plan{border:1px solid var(--line);border-radius:16px;padding:28px}.plan.hi{border-color:var(--blue);box-shadow:0 0 0 4px var(--tint)}.plan h3{font-size:22px}.price{font-family:Fraunces,serif;font-size:40px;margin:10px 0 2px;font-variant-numeric:tabular-nums}.price small{font-family:"Inter Tight",sans-serif;font-size:15px;color:var(--mute);font-weight:400}.setup{color:var(--mute);font-size:14.5px;margin-bottom:16px}
+.plan ul{list-style:none;padding:0;margin:0 0 22px;display:grid;gap:8px;font-size:15px}.plan li:before{content:"✓";color:var(--ok);font-weight:700;margin-right:8px}
+.addons{color:var(--mute);font-size:14.5px;margin-top:18px}
+.fine{font-size:14px;color:var(--mute)}
+footer{padding:40px 0;border-top:1px solid var(--line);color:var(--mute);font-size:14px}footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+@media(max-width:860px){.hero .wrap{grid-template-columns:1fr}.grid,.team,.steps,.plans{grid-template-columns:1fr}nav a:not(.cta){display:none}.btn.ghost{margin:10px 0 0}}
+@media(prefers-reduced-motion:no-preference){.window{transition:transform .3s}.window:hover{transform:translateY(-2px)}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+<a class="brand" href="/"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 171.28 177.92">    <path fill="currentColor" d="M170.38,128.74l.45-.99.36-.72v-.77l.09-.52-.2-.97-.29-.81-.49-.77-.45-.67-46.66-64.72-.23-.36,37.44-22.82.95-2.83-.29-.45-.14-.22v-.14l-.65-.77-.58-.83-.68-.74-.45-.52-.32-.38-.81-.9-.31-.29-.14-.16h0l-.43-.43-.99-.9-2.31-2.56-2.31-2.23-2.54-2.16-2.54-2.11-.9-.67-.9-.45-.9-.29h-1.78l-.92.22-.9.38-.74.67-52.22,33.35-1.33-.38,19.02-40.59-.4-2.7-1.53-1.04-1.66-.81-1.93-.83-2-.67-2.32-.68-2.38-.52-2.61-.52-2.76-.38-1.71-.07-.74.23-.67.36-.67.38-.52.67-.45.88-.38.97-.14.45-34.02,80.01-.38.31-.36.43-.52.31-.67.43-36.48-18.08-2.9.38-.43.68-.27.88-.76,1.94-.88,2.32-.79,2.79-.95,3.6-.83,3.37-.65,3.06-.4,2.92-.14,1.01v.95l.22.9.4.9.43.68.76.61.79.61.97.5.16.09.67.36,1.04.52,1.57.83,1.8.97,2.45,1.26,2.76,1.42,3.26,1.8,1.8.83,1.8.97,1.93.95,2.16,1.13,4.47,2.32,4.99,2.61,5.28,2.77,2.83,1.4,3.06,1.58,6.18,3.21,6.77,3.6.14,1.49-44.26,3.71-2.11,1.8-.13,1.64v1.8l.23,2.03.36,2.16.54,2.16.74,2.47.83,2.54,1.1,2.77.31.74.52.67.5.54.77.36.67.23.88.16h2.09l78.41-10.5,2.81,1.49.74,33.19.97.97.99,1.35.58-.09h.81l.9-.16,1.12-.14,1.12-.31,1.33-.31,1.42-.36,1.57-.31,3.6-1.04,1.8-.45,1.62-.45,1.51-.52,1.4-.43,2.67-.9.97-.61.38-.29.43-.22.31-.38.38-.31.29-.36.31-.31.14-.45v-.22h0l.14-.16v-.45l.14-.38v-1.93l-2.72-62.11,1.19-.97,25.34,36.63,2.59,1.13,1.26-.85,1.51-.95,1.46-1.28,1.66-1.35,1.64-1.64,1.8-1.8,1.8-2.09,2.02-2.18.14-.22.11.02Z"/></svg><b>webfaCe</b>&nbsp;<span>Desk</span></a>
+<nav><a href="#how">How it works</a><a href="#team">Your team</a><a href="#pricing">Pricing</a><a class="cta" href="mailto:tommy@webfacemedia.com?subject=webfaCe%20Desk">Get your Desk</a></nav>
+</div></header>
+
+<section class="hero" style="border:0"><div class="wrap">
+<div>
+<span class="eyebrow">Built and hosted in Toronto</span>
+<h1>Your own team, on their own computer, in Canada.</h1>
+<p class="lead">Named teammates that sign in to your tools once, read your email and calendar, know your business and your website, draft quotes, replies and documents, book and follow up, run on a schedule — and ask before anything that matters. They keep working when your laptop is closed.</p>
+<a class="btn" href="mailto:tommy@webfacemedia.com?subject=webfaCe%20Desk">Get your Desk</a><a class="btn ghost" href="#how">See how it works</a>
+</div>
+<div class="window" aria-label="A Desk team thread">
+<div class="bar"><i></i><i></i><i></i></div>
+<div class="thread">
+<div class="msg you"><div class="av you">D</div><div><small>Dana · owner</small><p>Sarah in Oakville wants a water heater replaced this week. Get her a price and a slot.</p></div></div>
+<div class="msg"><div class="av">Q</div><div><small>Quotes</small><p>From your price list: 50-gal gas tank, install and haul-away — $2,340 + HST. Draft quote attached.</p></div></div>
+<div class="msg"><div class="av">D</div><div><small>Dispatch</small><p>Thursday 9–11am is open for van 2. Confirmation drafted for Sarah.</p><div class="approve"><span class="y">Approve &amp; send</span><span>Edit</span></div></div></div>
+</div>
+</div>
+</div></section>
+
+<section id="how"><div class="wrap">
+<h2>What you get</h2>
+<p class="sub">Not a chat window. A working team with a computer of its own.</p>
+<div class="grid">
+<div class="card"><h3>Their own computer</h3><p>Every Desk runs on its own always-on machine in Toronto with a browser, files and a schedule. Close your laptop; the work continues.</p></div>
+<div class="card"><h3>Signed in to your tools</h3><p>Gmail, Calendar, Drive, your website, your booking page — connected once with your own accounts. You do the logins; your team reuses them.</p></div>
+<div class="card"><h3>A browser you can watch</h3><p>See what your team is doing on screen and take the mouse whenever a site asks for a password or a code.</p></div>
+<div class="card"><h3>Asks before it matters</h3><p>Sending, booking, paying, deleting — every one stops for your approval. Nothing leaves your business unseen.</p></div>
+<div class="card"><h3>Routines</h3><p>"Every morning at 8, summarise new enquiries." Describe a task once and it becomes a routine your team runs on time.</p></div>
+<div class="card"><h3>Add anything</h3><p>Plug in any tool or service your business already uses, bring your own model account, or use ours.</p></div>
+</div>
+</div></section>
+
+<section id="team"><div class="wrap">
+<h2>Meet your team</h2>
+<p class="sub">Named teammates with clear jobs. Rename them, add more, or give them yours.</p>
+<div class="team">
+<div class="mate"><div class="av">FD</div><h3>Front Desk</h3><p>Answers every lead in your voice, sorts urgent from routine, gathers what's missing.</p></div>
+<div class="mate"><div class="av">Q</div><h3>Quotes</h3><p>Prices only from your price list and rules; clean quote documents ready to send.</p></div>
+<div class="mate"><div class="av">D</div><h3>Dispatch</h3><p>Books on your calendar, confirms, reminds, follows up; asks before moving anything.</p></div>
+<div class="mate"><div class="av">O</div><h3>Operator</h3><p>The full toolset for you: files, research, documents, code, every connected tool.</p></div>
+</div>
+</div></section>
+
+<section><div class="wrap">
+<h2>Set up once</h2>
+<p class="sub">One-time onboarding, then it's yours.</p>
+<div class="steps">
+<div class="step"><h3>Your computer is built</h3><p>Minutes after you sign up, your Desk is running at your own address with your sign-in.</p></div>
+<div class="step"><h3>Tell it about the business</h3><p>Your website, services, hours, how you take payment, your house rules. It remembers.</p></div>
+<div class="step"><h3>Connect your tools</h3><p>Google, your site, your booking page. Guided screens; you own every account.</p></div>
+<div class="step"><h3>Meet the team and start</h3><p>Upload a price list, confirm what they may do on their own, set the first routine.</p></div>
+</div>
+</div></section>
+
+<section id="pricing"><div class="wrap">
+<h2>Pricing</h2>
+<p class="sub">Canadian dollars. Your own computer is included; add teammates as your business grows.</p>
+<div class="plans">
+<div class="plan hi"><h3>Desk for Business</h3><div class="price">$249<small> / month</small></div><div class="setup">$1,500 one-time setup</div>
+<ul><li>Your own Desk computer in Toronto</li><li>Up to 6 named teammates</li><li>All connections: Google, website, bookings, add-your-own</li><li>Desktop, phone and web</li><li>Bring your own model account, or use ours</li><li>10 GB of files, nightly backups</li></ul>
+<a class="btn" href="mailto:tommy@webfacemedia.com?subject=Desk%20for%20Business">Get started</a></div>
+<div class="plan"><h3>Desk for Operators</h3><div class="price">$499<small> / month</small></div><div class="setup">$2,500 one-time setup · $149 / month per client Desk</div>
+<ul><li>Everything in Business</li><li>The studio playbook: prospect, profile, preview, provision, publish, bill</li><li>Provision a Desk for every client under your brand</li><li>Client sites and analytics connected</li></ul>
+<a class="btn ghost" style="margin:0" href="mailto:tommy@webfacemedia.com?subject=Desk%20for%20Operators">Talk to us</a></div>
+</div>
+<p class="addons">Add-ons: private models on Canadian hardware +$149 / month · bigger computer +$79 / month · model usage at cost +30% if you use our account.</p>
+</div></section>
+
+<section><div class="wrap">
+<h2>Where your data lives</h2>
+<p class="sub">Your Desk computer, its files and its backups are in Toronto. Your sign-ins and tokens stay on your own computer, never with us. Model calls go to the account you choose — yours, ours, or private hardware in Canada.</p>
+<p class="fine">webfaCe Desk is made by webfaCeMEdia, a Toronto studio. We write, design and build.</p>
+</div></section>
+
+<footer><div class="wrap"><span>© 2026 webfaCeMEdia Inc · Toronto</span><span><a href="mailto:tommy@webfacemedia.com">tommy@webfacemedia.com</a></span></div></footer>
+</body>
+</html>
