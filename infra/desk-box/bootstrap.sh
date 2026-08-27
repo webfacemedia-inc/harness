@@ -132,6 +132,18 @@ ln -sfn $D/harness/packages/webface/desk-app $D/home/profiles/node_modules/@webf
 ln -sfn $D/harness/packages/client/ui-team $D/home/profiles/node_modules/@webface/dsh-client-ui-team
 chown -R desk:desk $D/home/profiles
 
+echo "==> workspace (the Desk folder shows up in the sidebar on first sign-in)"
+mkdir -p $D/home/storages
+if ! grep -q '"$D/work"' $D/home/storages/workspace.json 2>/dev/null; then
+WS_ID=$(cat /proc/sys/kernel/random/uuid); NOW=$(date -u +%FT%T.000Z)
+cat > $D/home/storages/workspace.json <<JSON
+{ "unit": { "name": "workspace", "version": 2 },
+  "global": { "initialized": true, "workspaceIds": ["$WS_ID"], "archivedSessionIds": [] },
+  "tables": { "workspaces": { "$WS_ID": { "path": "$D/work", "title": "Desk", "sessionIds": [], "createdAt": "$NOW", "updatedAt": "$NOW" } } } }
+JSON
+fi
+chown -R desk:desk $D/home/storages
+
 echo "==> systemd"
 cat > /etc/systemd/system/desk-xvfb.service <<UNIT
 [Unit]
