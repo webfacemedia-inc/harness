@@ -34,16 +34,16 @@ export const en: Record<AgentPresetSettingsKey, string> = {
   builtIn: 'Built-in',
   setDefault: 'Set as default',
   view: 'View',
-  presetStandardName: 'Standard mode',
+  presetStandardName: 'Advanced · Standard',
   presetStandardDescription:
     'Full coding agent with file editing, shell, file and web search, skills, planning, goals, subagents, and workflows.',
-  presetCodeName: 'PTC mode',
+  presetCodeName: 'Advanced · Code mode',
   presetCodeDescription:
     'All Standard mode capabilities, with tools exposed through the Code Mode SDK so the model can combine multi-step operations in one TypeScript program.',
-  presetMinimalName: 'Minimal mode',
+  presetMinimalName: 'Advanced · Minimal',
   presetMinimalDescription:
     'Two-tool coding agent with persistent bash and str_replace_editor.',
-  presetCordisName: 'Creator mode',
+  presetCordisName: 'Advanced · Preset creator',
   presetCordisDescription:
     'Built for creating custom agent presets, with all Standard mode capabilities plus runtime inspection, plugin experiments, and preset-authoring guidance.',
   duplicate: 'Duplicate',
