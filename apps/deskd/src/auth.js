@@ -55,7 +55,7 @@ export function loginPage({ business, error = '', google = false, next = '/' }) 
 @media(prefers-color-scheme:dark){:root{--bg:#0f151b;--card:#161e26;--ink:#eef3f7;--mute:#9db0c0;--line:#25313c}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,"Segoe UI",Inter,system-ui,sans-serif;min-height:100vh;display:grid;place-items:center;padding:24px}
 .card{width:100%;max-width:400px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:32px}
-.brand{display:flex;align-items:center;gap:10px;margin-bottom:6px;font-weight:600;font-size:20px}h2{font-family:Fraunces,Georgia,serif;font-weight:600}.brand span{font-weight:400}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:6px;font-weight:600;font-size:20px}h2{font-family:Fraunces,Georgia,serif;font-weight:600}.brand .wm em{font-style:normal;font-family:Fraunces,Georgia,serif;font-weight:600;font-size:1.1em;color:var(--blue-deep,#1f6f99);margin-left:.22em}
 p.sub{margin:0 0 22px;color:var(--mute)}label{display:block;font-size:13px;font-weight:600;margin:14px 0 6px}
 input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:transparent;color:inherit;font:inherit}
 input:focus{outline:2px solid var(--blue);outline-offset:1px;border-color:var(--blue)}
@@ -67,7 +67,7 @@ a.g{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:1
 .chk{display:flex;gap:10px;align-items:flex-start;margin-top:14px;font-weight:500;font-size:14px}.chk input{width:auto;margin-top:3px}.chk small{display:block;font-weight:400;color:var(--mute)}
 </style>
 <body><form class="card" method="post" action="/login">
-<div class="brand">${LOGO}webfaCe <span>Desk</span></div>
+<div class="brand">${LOGO}<span class="wm">webfaCe<em>Desk</em></span></div>
 <p class="sub">${esc(business)}</p>
 ${error ? `<div class="err">${esc(error)}</div>` : ''}
 <input type="hidden" name="next" value="${esc(next)}">
