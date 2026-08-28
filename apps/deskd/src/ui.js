@@ -30,7 +30,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:15.5px/1.55 "Inter Tigh
 h1,h2{font-family:Fraunces,Georgia,serif;font-weight:600;letter-spacing:-.01em;text-wrap:balance;margin:0}
 h1{font-size:28px;line-height:1.15;margin-bottom:6px}h2{font-size:19px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 6px}
 .top{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--card)}
-.top .brand{display:flex;align-items:center;gap:10px;color:var(--ink);text-decoration:none;font-weight:600}.top .brand .mark{width:26px;height:27px;color:var(--blue)}.top .brand span{font-weight:400}
+.top .brand{display:flex;align-items:center;gap:8px;color:var(--ink);text-decoration:none;font-weight:600;letter-spacing:-.01em}.top .brand .mark{width:26px;height:27px;color:var(--blue);flex:none}.top .brand .wm{white-space:nowrap}.top .brand .wm em{font-style:normal;font-family:Fraunces,Georgia,serif;font-weight:600;font-size:1.1em;color:var(--blue-deep);margin-left:.22em}
 .top .who{color:var(--mute);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:45%}
 main{max-width:760px;margin:0 auto;padding:24px 20px 72px;overflow-x:hidden}
 p{margin:0 0 12px}p.sub{color:var(--mute);margin:0 0 22px;font-size:16px}p.h{color:var(--mute);font-size:14px;margin:0 0 8px}
@@ -70,5 +70,5 @@ export function layout({ title, business, body, back = '/', backLabel = 'Back to
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
 <style>${CSS}</style>${head}
-<body><div class="top"><a class="brand" href="${esc(back)}">${MARK}<b>webfaCe</b>&nbsp;<span>Desk</span></a><span class="who">${esc(business)}</span></div><main>${body}</main></body></html>`
+<body><div class="top"><a class="brand" href="${esc(back)}">${MARK}<span class="wm">webfaCe<em>Desk</em></span></a><span class="who">${esc(business)}</span></div><main>${body}</main></body></html>`
 }
