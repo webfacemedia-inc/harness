@@ -51,6 +51,9 @@ const started = Date.now()
 const json = (res, code, obj) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify(obj)) }
 const page = (title, body) => `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>webfaCe Desk</title><body style="font-family:-apple-system,Segoe UI,sans-serif;padding:48px;max-width:560px;margin:auto;color:#1b2430"><h2 style="margin:0 0 12px">${title}</h2>${body}</body>`
 
+let harnessUp = false
+async function probeHarness() { try { const r = await fetch('http://127.0.0.1:3080/', { signal: AbortSignal.timeout(2000) }); harnessUp = r.ok } catch { harnessUp = false } }
+probeHarness(); setInterval(probeHarness, 3000).unref()
 function status() {
   let accounts = []
   try { accounts = cfg.listAccounts() } catch {}
@@ -58,6 +61,7 @@ function status() {
     slug: SLUG, host: HOST, ready: existsSync(READY), uptimeSec: Math.round((Date.now() - started) / 1000),
     google: { clientConfigured: existsSync(cfg.CLIENT_SECRET), redirectUri: REDIRECT, accounts },
     billing: readBilling(),
+    harness: harnessUp,
   }
 }
 

@@ -48,14 +48,30 @@ function shell(title, inner, business) {
 main{max-width:760px;margin:0 auto;padding:22px 20px 60px}h1{font-size:24px;margin:0 0 4px}p.sub{color:var(--mute);margin:0 0 22px}
 section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:18px}section h2{font-size:18px;margin:0 0 6px;display:flex;align-items:center;gap:10px}
 .pill{font-size:12px;padding:3px 9px;border-radius:999px;background:rgba(31,138,91,.12);color:var(--ok);font-weight:600}.pill.off{background:rgba(91,107,122,.12);color:var(--mute)}
-ol{padding-left:20px;color:var(--mute)}ol li{margin:6px 0}ol code,pre code{font-size:13px;background:rgba(127,127,127,.12);padding:2px 6px;border-radius:5px}
+ol{padding-left:20px;color:var(--mute)}ol li{margin:6px 0}ol code,pre code{font-size:13px;background:rgba(127,127,127,.12);padding:2px 6px;border-radius:5px;overflow-wrap:anywhere;word-break:break-all}main{overflow-x:hidden}a{overflow-wrap:anywhere}.row small{overflow-wrap:anywhere}
 label{display:block;font-weight:600;font-size:13px;margin:14px 0 6px}input,textarea,select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:transparent;color:inherit;font:inherit}textarea{min-height:110px;font-family:ui-monospace,Menlo,monospace;font-size:13px}
 button,.btn{display:inline-block;margin-top:14px;padding:10px 16px;border:0;border-radius:8px;background:var(--blue);color:#fff;font:inherit;font-weight:600;cursor:pointer;text-decoration:none}button:hover,.btn:hover{background:var(--blue-ink)}button.quiet{background:transparent;color:var(--err);border:1px solid var(--line);padding:6px 10px;font-size:13px;margin:0}
 .row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--line)}.row:first-of-type{border-top:0}.row small{color:var(--mute);display:block}
 .msg{padding:10px 12px;border-radius:8px;margin-bottom:12px;font-size:14px}.msg.ok{background:rgba(31,138,91,.1);color:var(--ok)}.msg.err{background:rgba(180,35,24,.08);color:var(--err)}
 details{margin-top:10px}summary{cursor:pointer;color:var(--blue-ink);font-weight:600}
 </style><body>
-<div class="top"><a href="/">← Back to Desk</a><span style="color:var(--mute);font-size:13px">${esc(business)}</span></div><main>${inner}</main></body></html>`
+<div class="top"><a href="/">← Back to Desk</a><span style="color:var(--mute);font-size:13px">${esc(business)}</span></div><main>${inner}</main>
+<script>
+(function(){
+  if (location.search) history.replaceState(null, '', location.pathname)
+  var m = document.querySelector('.msg'); if (!m) return
+  var restarting = /restarting/i.test(m.textContent)
+  if (!restarting) { setTimeout(function(){ m.style.transition='opacity .6s'; m.style.opacity='0'; setTimeout(function(){ m.remove() }, 700) }, 8000); return }
+  var tries = 0
+  var t = setInterval(function(){
+    tries++
+    fetch('/deskd/status', {credentials:'same-origin'}).then(function(r){ return r.json() }).then(function(s){
+      if (s.harness === true) { clearInterval(t); m.textContent = 'Desk is back. Your tools are ready.'; setTimeout(function(){ m.style.transition='opacity .6s'; m.style.opacity='0'; setTimeout(function(){ m.remove() }, 700) }, 4000) }
+      else if (tries > 40) { clearInterval(t); m.className = 'msg err'; m.textContent = 'Desk is taking longer than usual to restart. Refresh in a minute; if it stays down, write to tommy@webfacemedia.com.' }
+    }).catch(function(){})
+  }, 3000)
+})()
+</script></body></html>`
 }
 
 export function page({ business, host, google, servers, msg, err }) {
