@@ -18,3 +18,8 @@
   .stack { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 6px; }
   .note { grid-column: 1 / -1; }
 }
+
+/* Phones, collapsed rail: the foot links live in the drawer too. */
+@media (max-width: 768px) {
+  .railStack { display: none; }
+}

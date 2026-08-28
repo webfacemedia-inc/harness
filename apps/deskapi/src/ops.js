@@ -51,7 +51,12 @@ export async function handle(req, res, u, ctx) {
   }
   if (u.pathname.startsWith('/ops') || u.pathname.startsWith('/api/ops')) {
     if (!auth(req)) {
-      if (u.pathname === '/ops') return html(res, 401, `<!doctype html><meta charset="utf-8"><body style="font-family:system-ui;padding:48px;max-width:420px;margin:auto"><h2>Operator console</h2><form method="post" action="/ops/login"><input name="key" type="password" placeholder="Ops key" style="width:100%;padding:10px;font:inherit"><button style="margin-top:10px;padding:10px 16px;font:inherit">Open</button></form></body>`)
+      if (u.pathname === '/ops') return html(res, 401, `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Operator console · webfaCe Desk</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<style>:root{--blue:#3499cc;--deep:#1f6f99;--ink:#152029;--mute:#5a6a78;--line:#dfe6ec;--bg:#f5f8fb}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--ink);font:16px/1.5 "Inter Tight",-apple-system,system-ui,sans-serif;padding:24px}
+.card{width:100%;max-width:400px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:32px}.brand{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:600;margin-bottom:6px}.brand span{font-weight:400}h1{font-family:Fraunces,serif;font-weight:600;font-size:26px;margin:14px 0 6px}p{color:var(--mute);margin:0 0 18px;font-size:15px}
+label{display:block;font-weight:600;font-size:13px;margin:12px 0 6px}input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;font:inherit}input:focus{outline:2px solid var(--blue);border-color:var(--blue)}button{width:100%;margin-top:18px;padding:12px;border:0;border-radius:10px;background:var(--blue);color:#fff;font:inherit;font-weight:600;cursor:pointer}button:hover{background:var(--deep)}</style>
+<body><form class="card" method="post" action="/ops/login"><div class="brand"><b>webfaCe</b>&nbsp;<span>Desk</span></div><h1>Operator console</h1><p>Every Desk this store runs — create, pause, resend, destroy. Operators only.</p><label for="k">Ops key</label><input id="k" name="key" type="password" autocomplete="current-password" autofocus required><button type="submit">Open the console</button></form></body></html>`)
       return json(res, 401, { error: 'ops key required' })
     }
   } else return false

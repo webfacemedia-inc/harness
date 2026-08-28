@@ -27,3 +27,8 @@
   .desc, .status { display: none; }
   .name { font-size: 12.5px; }
 }
+
+/* Phones, collapsed rail: the modes live in the drawer — the rail shows nothing for them. */
+@media (max-width: 768px) {
+  .rail { display: none; }
+}

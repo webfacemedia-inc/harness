@@ -3,6 +3,7 @@
  * Hidden on a Desk with no deskd (the Mac ones).
  */
 import { useEffect, useState } from 'react'
+import clsx from 'clsx'
 import css from './SignOut.module.css'
 import { isCloudDesk } from './cloud.ts'
 
@@ -46,7 +47,7 @@ export function CloudLinks({ wide }: { wide: boolean }) {
   }, [])
   if (!shown) return null
   return (
-    <div className={css.stack}>
+    <div className={clsx(css.stack, !wide && css.railStack)}>
       {billing?.state === 'past_due' ? <a className={css.warn} href={billing.portalUrl || 'mailto:tommy@webfacemedia.com'} target="_blank" rel="noreferrer">{wide ? <span>Payment failed — update your card. Desk is in Guided mode until then.</span> : <span>!</span>}</a> : null}
       {!pushOn ? <button type="button" className={css.link} title="Get a notification when Desk needs you" aria-label="Turn on notifications" onClick={() => { enableNotifications().then((m) => { setNotif(m); if (m.startsWith('On')) setPushOn(true) }).catch(e => setNotif(String(e?.message ?? e))) }}>{BELL}{wide ? <span>Turn on notifications</span> : null}</button> : null}
       {notif && wide ? <span className={css.note}>{notif}</span> : null}

@@ -296,3 +296,8 @@
   .root { height: auto; min-height: 100%; }
   .regionArea { flex: none; overflow: visible; }
 }
+
+/* Phones, collapsed: only the mark (opens the drawer) and New session remain. */
+@media (max-width: 768px) {
+  .collapsed .footArea, .collapsed .regionArea { display: none; }
+}
