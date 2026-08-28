@@ -1,7 +1,7 @@
 webfacedesk.app, www.webfacedesk.app {
 	encode zstd gzip
 	# storefront API (deskapi) — checkout, Stripe webhook, order status
-	@api path /api/* /checkout /welcome /oauth/*
+	@api path /api/* /checkout /welcome /ops* /oauth/*
 	handle @api {
 		reverse_proxy 127.0.0.1:8095
 	}

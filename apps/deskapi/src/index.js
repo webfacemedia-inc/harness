@@ -13,6 +13,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 import { join } from 'node:path'
 import { provision } from './provision.js'
+import * as ops from './ops.js'
 
 const PORT = Number(process.env.DESKAPI_PORT ?? 8095)
 const PUBLIC = process.env.DESK_PUBLIC_URL ?? 'https://webfacedesk.app'
@@ -92,6 +93,18 @@ async function tellBox(o, state) {
   if (!r.ok) throw new Error(`box said ${r.status}`)
   console.log('box', o.slug, 'billing →', state)
 }
+/** Delete a Desk's droplet and DNS record; the order stays as a record. */
+async function destroyBox(o) {
+  const tok = process.env.DIGITALOCEAN_TOKEN
+  if (o.dropletId && tok) await fetch(`https://api.digitalocean.com/v2/droplets/${o.dropletId}`, { method: 'DELETE', headers: { authorization: `Bearer ${tok}` } }).catch(e => console.error('droplet delete failed', e.message))
+  const cf = process.env.CLOUDFLARE_API_TOKEN; const zone = process.env.CLOUDFLARE_ZONE_ID ?? 'd3fc4cb5dfad60b2064472906607a170'
+  if (cf && o.host?.endsWith('.webfacedesk.app')) {
+    const h = { authorization: `Bearer ${cf}` }
+    const q = await (await fetch(`https://api.cloudflare.com/client/v4/zones/${zone}/dns_records?name=${o.host}`, { headers: h })).json().catch(() => ({}))
+    for (const r of q.result ?? []) await fetch(`https://api.cloudflare.com/client/v4/zones/${zone}/dns_records/${r.id}`, { method: 'DELETE', headers: h }).catch(() => {})
+  }
+  o.status = 'destroyed'; o.destroyedAt = new Date().toISOString(); save()
+}
 /** Nightly DigitalOcean snapshot per live box, keeping the newest three. */
 async function snapshots() {
   const tok = process.env.DIGITALOCEAN_TOKEN; if (!tok) return
@@ -121,6 +134,7 @@ async function email(o) {
 const server = createServer(async (req, res) => {
   const u = new URL(req.url, PUBLIC)
   try {
+    if (await ops.handle(req, res, u, { orders, save, json, html, body, slugify, fulfil, email, tellBox, destroyBox }) !== false) return
     if (u.pathname === '/checkout') return html(res, 200, checkoutPage(u.searchParams.get('plan')))
     if (u.pathname === '/welcome') return html(res, 200, welcomePage(orders[u.searchParams.get('order') ?? '']))
     if (u.pathname === '/api/checkout' && req.method === 'POST') {

@@ -32,7 +32,7 @@ teammates:
     description: The full toolset — files, research, documents, code, every connected tool — with approval before anything consequential.
     order: 1
     shell: true
-    skills: [first-day, reply-to-lead, quote-from-price-list, book-and-confirm, follow-up, weekly-summary, describe-a-task, qualify-prospect, draft-outreach, preview-then-go-live, deploy-verify, write-proposal, client-status-report, pricing-and-scope, handoff-doc, browser, studio, wordpress, which-platform, google-setup, google-business-profile]
+    skills: [first-day, reply-to-lead, quote-from-price-list, book-and-confirm, follow-up, weekly-summary, describe-a-task, qualify-prospect, draft-outreach, preview-then-go-live, deploy-verify, write-proposal, client-status-report, pricing-and-scope, handoff-doc, browser, studio, wordpress, which-platform, google-setup, google-business-profile, operator-provision]
     persona: >-
       You are Desk, the operator's own assistant for the business this Desk belongs to,
       running on the {{model}} model in {{cwd}}. You do real work: read and draft email,
