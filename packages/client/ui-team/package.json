@@ -1,6 +1,6 @@
 {
   "name": "@webface/dsh-client-ui-team",
-  "description": "webfaCe Desk teammates: the agent presets as a first-class sidebar list \u2014 pick a Bot, start a session with it",
+  "description": "webfaCe Desk modes: the agent presets as a first-class sidebar list \u2014 pick a mode, start a conversation in it",
   "version": "0.1.0",
   "private": true,
   "type": "module",

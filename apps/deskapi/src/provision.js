@@ -48,24 +48,30 @@ export async function provision(order, log = () => {}) {
     DESK_HARNESS_REF: process.env.DESK_HARNESS_REF ?? 'desk', DESK_SANDBOX: order.sandbox === 'full' ? 'workspace-write' : 'read-only', DESK_DEFAULT_PRESET: 'team', DESK_PLAN: order.plan ?? 'business',
     DESK_API_URL: process.env.DESK_PUBLIC_URL ? `${process.env.DESK_PUBLIC_URL}/api` : '', DESK_BOX_TOKEN: order.boxToken ?? '',
   }
-  log('creating', 'creating your Desk computer in Toronto')
+  log('creating', 'creating your Desk in Toronto')
   const keys = (await doApi('GET', '/account/keys?per_page=50')).ssh_keys.map(k => k.id)
   const { droplet } = await doApi('POST', '/droplets', { name: `desk-${order.slug}`, region: 'tor1', size: order.size ?? 's-2vcpu-4gb', image: 'ubuntu-24-04-x64', ssh_keys: keys, tags: ['webface-desk', `plan:${order.plan}`], user_data: userData(env), monitoring: true })
-  let ip
-  for (let i = 0; i < 60 && !ip; i++) {
-    await new Promise(r => setTimeout(r, 5000))
-    const d = (await doApi('GET', `/droplets/${droplet.id}`)).droplet
-    ip = d.networks?.v4?.find(n => n.type === 'public')?.ip_address
+  // From here a failure must not leave a droplet running and billed: tear it down and rethrow.
+  try {
+    let ip
+    for (let i = 0; i < 60 && !ip; i++) {
+      await new Promise(r => setTimeout(r, 5000))
+      const d = (await doApi('GET', `/droplets/${droplet.id}`)).droplet
+      ip = d.networks?.v4?.find(n => n.type === 'public')?.ip_address
+    }
+    if (!ip) throw new Error('droplet never got a public address')
+    const dns = dnsAble ? await cfDns(order.slug, ip) : false
+    const host = dns ? `${order.slug}.${DOMAIN}` : `${ip}.sslip.io`
+    if (dnsAble && !dns) log('dns-failed', `DNS for ${order.slug}.${DOMAIN} could not be written; using ${host}`)
+    log('installing', 'setting up your Desk')
+    for (let i = 0; i < 180; i++) {
+      await new Promise(r => setTimeout(r, 10000))
+      try { const r = await fetch(`https://${host}/healthz`, { signal: AbortSignal.timeout(5000) }); if (r.ok) break } catch {}
+      if (i === 179) throw new Error('box did not come up in 30 minutes')
+    }
+    return { ip, host, password, dropletId: droplet.id, dns }
+  } catch (e) {
+    await doApi('DELETE', `/droplets/${droplet.id}`).catch(err => console.error('cleanup of failed droplet failed', droplet.id, err.message))
+    throw e
   }
-  if (!ip) throw new Error('droplet never got a public address')
-  const dns = dnsAble ? await cfDns(order.slug, ip) : false
-  const host = dns ? `${order.slug}.${DOMAIN}` : `${ip}.sslip.io`
-  if (dnsAble && !dns) log('dns-failed', `DNS for ${order.slug}.${DOMAIN} could not be written; using ${host}`)
-  log('installing', 'setting up your Desk')
-  for (let i = 0; i < 180; i++) {
-    await new Promise(r => setTimeout(r, 10000))
-    try { const r = await fetch(`https://${host}/healthz`, { signal: AbortSignal.timeout(5000) }); if (r.ok) break } catch {}
-    if (i === 179) throw new Error('box did not come up in 30 minutes')
-  }
-  return { ip, host, password, dropletId: droplet.id, dns }
 }

@@ -36,7 +36,7 @@ describe('@webface/dsh-desk-app bundle', () => {
       '@deepseek-ai/dsh-mcp-client',
     ]) expect(names, name).toContain(name)
     expect(rows.find(row => row.id === 'directory-picker')?.disabled).toBe(true)
-    expect(rows.find(row => row.id === 'agent-presets')?.config).toEqual({ default: 'desk-operator' })
+    expect(rows.find(row => row.id === 'agent-presets')?.config).toEqual({ default: 'team' })
     const persona = String(rows.find(row => row.id === 'system-prompt')?.config?.['persona'])
     expect(persona).toContain('You are Desk')
     expect(persona).not.toMatch(/DeepSeek/)

@@ -38,6 +38,9 @@ setInterval(() => { try { copyFileSync(FILE, FILE + '.bak') } catch {} }, 360000
 const save = () => { writeFileSync(FILE + '.tmp', JSON.stringify(orders, null, 2), { mode: 0o600 }); renameSync(FILE + '.tmp', FILE) }
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
 const slugify = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 24) || 'desk'
+// An upstream timeout must not take the store down with it.
+process.on('unhandledRejection', e => console.error('unhandled rejection:', e instanceof Error ? e.message : e))
+process.on('uncaughtException', e => console.error('uncaught exception:', e instanceof Error ? e.stack ?? e.message : e))
 const cleanName = v => String(v ?? '').replace(/[^\x20-\x7e]/g, '').trim().slice(0, 80)
 const json = (res, code, obj) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify(obj)) }
 const html = (res, code, body) => { res.writeHead(code, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' }); res.end(body) }
@@ -125,6 +128,14 @@ async function destroyBox(o) {
     for (const r of q.result ?? []) await fetch(`https://api.cloudflare.com/client/v4/zones/${zone}/dns_records/${r.id}`, { method: 'DELETE', headers: h }).catch(() => {})
   }
   o.status = 'destroyed'; o.destroyedAt = new Date().toISOString(); save()
+}
+/** Usage watch: one alert per month to the operator when a Desk crosses the plan's token allowance (DESKAPI_MONTHLY_TOKEN_CAP, default 20M). */
+function usageWatch(o) {
+  const cap = Number(process.env.DESKAPI_MONTHLY_TOKEN_CAP ?? 20_000_000); const month = new Date().toISOString().slice(0, 7)
+  if (!cap || !o.usage?.monthTokens || o.usage.monthTokens < cap || o.usageAlerted === month) return
+  o.usageAlerted = month
+  const to = process.env.DESKAPI_ALERT_EMAIL ?? 'tommy@webfacemedia.com'
+  fetch('https://api.brevo.com/v3/smtp/email', { method: 'POST', headers: { 'api-key': process.env.BREVO_API_KEY ?? '', 'content-type': 'application/json' }, body: JSON.stringify({ sender: { name: 'webfaCe Desk', email: 'desk@webfacedesk.app' }, to: [{ email: to }], subject: `Desk ${o.slug} passed ${Math.round(cap / 1e6)}M tokens this month`, htmlContent: `<p>${esc(o.business ?? o.slug)} (${esc(o.slug)}) has used ${Math.round(o.usage.monthTokens / 1e6)}M tokens in ${month}. Plan: ${esc(o.plan ?? '')}.</p>` }) }).catch(e => console.error('usage alert failed', e.message))
 }
 /** Terms: 14 days read-only after a failed payment, then the Desk stops; a closed Desk's snapshot goes after 90 days. */
 async function sweep() {
@@ -261,7 +272,7 @@ const server = createServer(async (req, res) => {
       let o = Object.values(orders).find(x => x.slug === slug)
       if (!o && staticTok && tok.length === staticTok.length && timingSafeEqual(Buffer.from(tok), Buffer.from(staticTok))) { o = orders[`static_${slug}`] ??= { id: `static_${slug}`, slug, host: `${slug}.${new URL(PUBLIC).hostname}`, status: 'ready', static: true, created: new Date().toISOString() } }
       if (!o || !(o.boxToken ? tok.length === o.boxToken.length && timingSafeEqual(Buffer.from(tok), Buffer.from(o.boxToken)) : o.static)) return json(res, 401, { error: 'no' })
-      o.lastHeartbeat = new Date().toISOString(); const beat = JSON.parse((await body(req)).toString() || '{}'); o.heartbeat = { ready: beat.ready, harness: beat.harness, google: beat.google?.accounts?.length ?? 0, push: beat.push?.devices ?? 0 }; if (beat.usage) o.usage = { monthTokens: beat.usage.monthTokens, totalTokens: beat.usage.totalTokens, sessions: beat.usage.sessions, turns: beat.usage.turns }; save(); return json(res, 200, { ok: true })
+      o.lastHeartbeat = new Date().toISOString(); const beat = JSON.parse((await body(req)).toString() || '{}'); o.heartbeat = { ready: beat.ready, harness: beat.harness, google: beat.google?.accounts?.length ?? 0, push: beat.push?.devices ?? 0 }; if (beat.usage) o.usage = { monthTokens: beat.usage.monthTokens, totalTokens: beat.usage.totalTokens, sessions: beat.usage.sessions, turns: beat.usage.turns }; usageWatch(o); save(); return json(res, 200, { ok: true })
     }
     // The Desk's Billing link: a fresh Stripe customer-portal session for this box's owner.
     const pm = u.pathname.match(/^\/api\/boxes\/([a-z0-9-]+)\/portal$/)
@@ -308,6 +319,6 @@ const server = createServer(async (req, res) => {
     }
     if (u.pathname === '/api/health') return json(res, 200, { ok: true, stripe: Boolean(STRIPE), provisioning: Boolean(process.env.DIGITALOCEAN_TOKEN), dns: Boolean(process.env.CLOUDFLARE_API_TOKEN), orders: Object.keys(orders).length })
     res.writeHead(404); res.end('not found')
-  } catch (e) { console.error(e); json(res, 500, { error: e.message }) }
+  } catch (e) { console.error(e); if (res.headersSent) return res.end(); json(res, 500, { error: e.message }) }
 })
 server.listen(PORT, '127.0.0.1', () => console.log(`deskapi on 127.0.0.1:${PORT} → ${PUBLIC}`))

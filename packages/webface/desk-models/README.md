@@ -23,3 +23,11 @@ in a profile's `dsh.profile.bundles`, and store the key with the Models page or
   job needs more.
 - The `sovereign` route needs `SOVEREIGN_GATEWAY_KEY` and reachability to the
   gateway; it is declared for every Desk and only fails when selected.
+
+## Model Experience
+
+None, as the bundle only declares provider routes and a default model; request rendering belongs to the provider plugins; nothing here reaches a model request.
+
+#### KV Cache effect
+
+None; this package neither assembles nor sends a provider request.

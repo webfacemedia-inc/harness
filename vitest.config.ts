@@ -245,6 +245,38 @@ export default defineConfig({
         'packages/client/ui-primitives/src/JsonTree.tsx',
         'packages/client/ui-settings-models/src/client/DeepSeekOnboardingDialog.tsx',
         'packages/client/ui-settings-models/src/client/welcome-store.ts',
+        // webfaCe Desk surfaces: browser-only plugins and box host plugins whose
+        // behaviour is verified against the live Desk (Playwright) and by the
+        // preset/notice unit tests beside them. TODO(gui): cover under the
+        // client test lane and remove.
+        'packages/client/ui-team/src/index.ts',
+        'packages/client/ui-team/src/invariant.ts',
+        'packages/client/ui-team/src/client/index.ts',
+        'packages/client/ui-team/src/client/TeamPanel.tsx',
+        'packages/client/ui-team/src/client/SignOut.tsx',
+        'packages/client/ui-team/src/client/cloud.ts',
+        'packages/webface/desk-notify/src/index.ts',
+        'packages/webface/desk-notify/src/invariant.ts',
+        'packages/webface/desk-routines/src/index.ts',
+        'packages/webface/desk-routines/src/invariant.ts',
+        'packages/webface/desk-app/src/invariant.ts',
+        'packages/webface/desk-models/src/invariant.ts',
+        // webfaCe Desk surfaces: browser-only plugins and box host plugins whose
+        // behaviour is verified against the live Desk (Playwright) and by the
+        // preset/notice unit tests beside them. TODO(gui): cover under the
+        // client test lane and remove.
+        'packages/client/ui-team/src/index.ts',
+        'packages/client/ui-team/src/invariant.ts',
+        'packages/client/ui-team/src/client/index.ts',
+        'packages/client/ui-team/src/client/TeamPanel.tsx',
+        'packages/client/ui-team/src/client/SignOut.tsx',
+        'packages/client/ui-team/src/client/cloud.ts',
+        'packages/webface/desk-notify/src/index.ts',
+        'packages/webface/desk-notify/src/invariant.ts',
+        'packages/webface/desk-routines/src/index.ts',
+        'packages/webface/desk-routines/src/invariant.ts',
+        'packages/webface/desk-app/src/invariant.ts',
+        'packages/webface/desk-models/src/invariant.ts',
         'packages/extensions/*/src/**/*.ts',
         'packages/extensions/*/src/**/*.tsx',
         // Typert generator: correctness is pinned by its fixture suites and

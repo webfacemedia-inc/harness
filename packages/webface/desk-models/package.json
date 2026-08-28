@@ -16,12 +16,17 @@
       "types": "./lib/types/index.d.ts",
       "default": "./lib/index.js"
     },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
     "./cordis.patch.yml": "./cordis.patch.yml",
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
+    "lib/invariant.js",
     "cordis.patch.yml",
     "lib/types/**/*.d.ts"
   ],
@@ -39,6 +44,12 @@
   "devDependencies": {
     "@deepseek-ai/cordis-plugin-include": "workspace:^",
     "js-yaml": "^4.1.0",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "@deepseek-ai/dsh-invariants": "workspace:^",
+    "@deepseek-ai/cordis": "workspace:^"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-invariants": "workspace:^",
+    "@deepseek-ai/cordis": "workspace:^"
   }
 }

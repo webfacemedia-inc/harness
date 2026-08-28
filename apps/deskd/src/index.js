@@ -233,6 +233,10 @@ const server = createServer(async (req, res) => {
       const b = JSON.parse(await readBody(req) || '{}'); if (!b.subscription?.endpoint) { res.writeHead(400); return res.end('subscription?') }
       return json(res, 200, { devices: push.subscribe(b.subscription, b.label) })
     }
+    if (u.pathname === '/deskd/push/unsubscribe' && req.method === 'POST') {
+      if (!verifySession(cookieOf(req))) { res.writeHead(401); return res.end() }
+      const b = JSON.parse((await readBody(req)) || '{}'); if (b.endpoint) push.unsubscribe(String(b.endpoint)); return json(res, 200, { devices: push.count() })
+    }
     if (u.pathname === '/deskd/push/test' && req.method === 'POST') {
       if (!verifySession(cookieOf(req))) { res.writeHead(401); return res.end() }
       return json(res, 200, await push.send(HOST, { kind: 'test', sessionId: '', title: 'Desk notifications are on', body: 'You will hear from Desk when it needs you.' }))

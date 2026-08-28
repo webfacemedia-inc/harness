@@ -232,6 +232,9 @@ Requires=desk-xvfb.service
 User=desk
 Environment=DISPLAY=:1
 Environment=HOME=$D
+MemoryMax=1500M
+MemoryHigh=1200M
+OOMPolicy=continue
 ExecStart=/usr/bin/google-chrome --no-first-run --no-default-browser-check --disable-dev-shm-usage --remote-debugging-port=9222 --user-data-dir=$D/browser --window-size=1440,900 --window-position=0,0 --start-maximized --password-store=basic about:blank
 Restart=always
 RestartSec=3
@@ -240,6 +243,7 @@ WantedBy=multi-user.target
 UNIT
 cat > /etc/systemd/system/desk-harness.service <<UNIT
 [Unit]
+StartLimitIntervalSec=0
 Description=webfaCe Desk (harness)
 After=network-online.target desk-xvfb.service
 Wants=network-online.target
@@ -250,11 +254,14 @@ EnvironmentFile=$D/desk.env
 ExecStart=/usr/bin/node --import tsx/esm apps/cli/src/bin.ts --profile desk --host 127.0.0.1 --port 3080 --trusted-host $DESK_HOST
 Restart=always
 RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
 [Install]
 WantedBy=multi-user.target
 UNIT
 cat > /etc/systemd/system/deskd.service <<UNIT
 [Unit]
+StartLimitIntervalSec=0
 Description=webfaCe Desk box agent (deskd)
 After=network-online.target
 [Service]
@@ -264,9 +271,16 @@ EnvironmentFile=$D/desk.env
 ExecStart=/usr/bin/node src/index.js
 Restart=always
 RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
 [Install]
 WantedBy=multi-user.target
 UNIT
+
+echo "==> logs: bounded journal, rotated bootstrap log, kernel updates applied at night"
+mkdir -p /etc/systemd/journald.conf.d; printf "[Journal]\nSystemMaxUse=300M\nMaxRetentionSec=30day\n" > /etc/systemd/journald.conf.d/desk.conf; systemctl restart systemd-journald
+printf "/var/log/desk-bootstrap.log {\n  weekly\n  rotate 4\n  compress\n  missingok\n  notifempty\n}\n" > /etc/logrotate.d/desk
+printf 'Unattended-Upgrade::Automatic-Reboot "true";\nUnattended-Upgrade::Automatic-Reboot-Time "04:30";\n' > /etc/apt/apt.conf.d/52desk-reboot
 
 echo "==> owner account"
 sudo -u desk -H env DESK_AUTH_FILE=$D/auth.json node $D/harness/apps/deskd/src/cli.js set "${DESK_OWNER_USER:-owner}" "${DESK_OWNER_EMAIL:-}" "$DESK_OWNER_PASSWORD" >/dev/null

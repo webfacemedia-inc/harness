@@ -12,6 +12,12 @@ interface DeskStatus { billing?: { state?: string; portalUrl?: string }; push?: 
 const urlBase64ToKey = (b64: string): ArrayBuffer => { const pad = '='.repeat((4 - b64.length % 4) % 4); const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/')); const out = new ArrayBuffer(raw.length); const view = new Uint8Array(out); for (let i = 0; i < raw.length; i++) view[i] = raw.charCodeAt(i); return out }
 
 /** Ask for permission (needs a tap), subscribe this device, tell deskd. */
+async function disableNotifications(): Promise<string> {
+  const reg = await navigator.serviceWorker.getRegistration('/sw.js')
+  const sub = await reg?.pushManager.getSubscription()
+  if (sub) { await fetch('/deskd/push/unsubscribe', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ endpoint: sub.endpoint }) }); await sub.unsubscribe() }
+  return 'Notifications are off on this device.'
+}
 async function enableNotifications(): Promise<string> {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return 'This browser cannot receive notifications. On iPhone, add Desk to the Home Screen first (Share → Add to Home Screen), then open it from there.'
   const perm = await Notification.requestPermission(); if (perm !== 'granted') return 'Notifications were not allowed.'
@@ -50,6 +56,7 @@ export function CloudLinks({ wide }: { wide: boolean }) {
   return (
     <div className={clsx(css.stack, !wide && css.railStack)}>
       {billing?.state === 'past_due' ? <a className={css.warn} href={billing.portalUrl || 'mailto:tommy@webfacemedia.com'} target="_blank" rel="noreferrer">{wide ? <span>Payment failed — update your card. Desk is in Guided mode until then.</span> : <span>!</span>}</a> : null}
+      {pushOn ? <button type="button" className={css.link} title="Stop notifications on this device" aria-label="Turn off notifications" onClick={() => { disableNotifications().then((m) => { setNotif(m); setPushOn(false) }).catch((cause: unknown) => { setNotif(cause instanceof Error ? cause.message : String(cause)) }) }}>{BELL}{wide ? <span>Notifications on · turn off</span> : null}</button> : null}
       {!pushOn ? <button type="button" className={css.link} title="Get a notification when Desk needs you" aria-label="Turn on notifications" onClick={() => { enableNotifications().then((m) => { setNotif(m); if (m.startsWith('On')) setPushOn(true) }).catch((cause: unknown) => { setNotif(cause instanceof Error ? cause.message : String(cause)) }) }}>{BELL}{wide ? <span>Turn on notifications</span> : null}</button> : null}
       {notif && wide ? <span className={css.note}>{notif}</span> : null}
       <a className={css.link} href="/profile" title="Business" aria-label="Business">{BIZ}{wide ? <span>Business</span> : null}</a>

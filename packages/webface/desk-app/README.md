@@ -23,3 +23,11 @@ this bundle.
 - `@webface/*` packages are not in the dsh installation's dependency closure,
   so a profile must symlink them under `$DSH_HOME/profiles/node_modules/@webface/`
   until the Desk installer owns that step.
+
+## Model Experience
+
+None, as the bundle is a cordis patch composing other plugins; each composed plugin owns its own model-visible behaviour; nothing here reaches a model request.
+
+#### KV Cache effect
+
+None; this package neither assembles nor sends a provider request.

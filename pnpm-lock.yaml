@@ -8244,9 +8244,15 @@ importers:
         specifier: workspace:^
         version: link:../desk-routines
     devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
       '@deepseek-ai/cordis-plugin-include':
         specifier: workspace:^
         version: link:../../../vendor/include
+      '@deepseek-ai/dsh-invariants':
+        specifier: workspace:^
+        version: link:../../runtime-diagnostics/invariants
       js-yaml:
         specifier: ^4.1.0
         version: 4.2.0
@@ -8266,9 +8272,15 @@ importers:
         specifier: workspace:^
         version: link:../../session/session-telemetry-otel
     devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
       '@deepseek-ai/cordis-plugin-include':
         specifier: workspace:^
         version: link:../../../vendor/include
+      '@deepseek-ai/dsh-invariants':
+        specifier: workspace:^
+        version: link:../../runtime-diagnostics/invariants
       js-yaml:
         specifier: ^4.1.0
         version: 4.2.0
@@ -8285,6 +8297,9 @@ importers:
       '@deepseek-ai/cordis':
         specifier: workspace:^
         version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-invariants':
+        specifier: workspace:^
+        version: link:../../runtime-diagnostics/invariants
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../core/session
@@ -8298,6 +8313,9 @@ importers:
       '@deepseek-ai/cordis':
         specifier: workspace:^
         version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-invariants':
+        specifier: workspace:^
+        version: link:../../runtime-diagnostics/invariants
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../core/session

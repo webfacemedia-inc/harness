@@ -144,6 +144,14 @@ server.registerTool('calendar_update', {
   try { const body = {}; if (start) body.start = { dateTime: start }; if (end) body.end = { dateTime: end }; if (summary) body.summary = summary; if (location) body.location = location; const r = await calFor(account).events.patch({ calendarId, eventId, sendUpdates: 'all', requestBody: body }); return text({ id: r.data.id, link: r.data.htmlLink }) } catch (e) { return fail(e) }
 })
 
+server.registerTool('calendar_delete', {
+  description: 'Cancel (delete) an event. Consequential: requires confirm:true after the user approved it; attendees are notified.',
+  inputSchema: { eventId: z.string(), calendarId: z.string().default('primary'), confirm: z.boolean().default(false), account: acct },
+}, async ({ eventId, calendarId, confirm, account }) => {
+  if (!confirm) return fail(new Error('Refused: cancelling an event needs confirm:true after the user approved it.'))
+  try { await calFor(account).events.delete({ calendarId, eventId, sendUpdates: 'all' }); return text({ deleted: eventId }) } catch (e) { return fail(e) }
+})
+
 server.registerTool('drive_search', {
   description: 'Search Drive by name/content (Drive query syntax or plain words). Read-only.',
   inputSchema: { query: z.string(), max: z.number().int().min(1).max(50).default(20), account: acct },

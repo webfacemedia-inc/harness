@@ -17,7 +17,7 @@ export interface Config {
   /** deskd notify endpoint. */
   url: string
   /** Minimum ms between notices for the same session and kind. */
-  cooldownMs?: number
+  cooldownMs: number
 }
 export const Config: z<Config> = z.object({
   url: z.string().default('http://127.0.0.1:8090/deskd/notify'),
@@ -27,20 +27,23 @@ export const Config: z<Config> = z.object({
 interface Notice { kind: 'approval' | 'question' | 'handover'; sessionId: string; title: string; body: string }
 
 /** Classify an event into a notice, or undefined when the owner is not needed. */
+// Payload fields are model/tool data: only strings are used as text; anything else is not a notice body.
+const str = (v: unknown): string => (typeof v === 'string' ? v : '')
 export function noticeFor(session: Session, event: SessionEvent): Notice | undefined {
-  const type = String(event.type)
+  // Events from other plugins (approval, ask-user) are not in this package's view of the map; compare as plain strings.
+  const type: string = event.type
   const payload = (event as { data?: Record<string, unknown> }).data ?? {}
-  const sessionId = String((session as { id?: unknown }).id ?? '')
+  const sessionId = str((session as { id?: unknown }).id)
   if (type === 'approval/asked') {
-    const tool = String(payload.toolName ?? 'an action')
-    return { kind: 'approval', sessionId, title: 'Desk needs your approval', body: `${tool}${payload.reason ? ` — ${String(payload.reason)}` : ''}` }
+    const tool = str(payload.toolName) || 'an action'
+    return { kind: 'approval', sessionId, title: 'Desk needs your approval', body: `${tool}${str(payload.reason) ? ` — ${str(payload.reason)}` : ''}` }
   }
   if (/question|ask-user|ask_user/.test(type) && !/answer|resolved|decided/.test(type)) {
-    const q = String(payload.question ?? payload.prompt ?? payload.text ?? '')
+    const q = str(payload.question) || str(payload.prompt) || str(payload.text)
     return { kind: 'question', sessionId, title: 'Desk has a question for you', body: q.slice(0, 140) }
   }
   if (type === 'assistant/message' || type === 'message/assistant' || /assistant.*(message|text)/.test(type)) {
-    const text = String(payload.text ?? payload.content ?? '')
+    const text = str(payload.text) || str(payload.content)
     if (/I need you for a moment/i.test(text)) return { kind: 'handover', sessionId, title: 'Desk needs you at the browser', body: text.slice(0, 140) }
   }
   return undefined
@@ -48,14 +51,19 @@ export function noticeFor(session: Session, event: SessionEvent): Notice | undef
 
 export function apply(ctx: Context, config: Config): void {
   const last = new Map<string, number>()
+  // Bounded: drop the oldest cooldown marks so the map cannot grow for the life of the box.
+  const mark = (key: string, at: number): void => {
+    last.delete(key); last.set(key, at)
+    if (last.size > 500) { const oldest = last.keys().next().value; if (oldest !== undefined) last.delete(oldest) }
+  }
   ctx.on('session/event', (session: Session, event: SessionEvent) => {
     const notice = noticeFor(session, event)
     if (notice === undefined) return
     const key = `${notice.sessionId}:${notice.kind}`
     const now = Date.now()
-    if (now - (last.get(key) ?? 0) < (config.cooldownMs ?? 20_000)) return
-    last.set(key, now)
+    if (now - (last.get(key) ?? 0) < config.cooldownMs) return
+    mark(key, now)
     void fetch(config.url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(notice), signal: AbortSignal.timeout(5000) })
-      .catch((error: unknown) => { ctx.logger?.warn?.(`desk-notify: ${error instanceof Error ? error.message : String(error)}`) })
+      .catch((error: unknown) => { ctx.logger.warn(`desk-notify: ${error instanceof Error ? error.message : String(error)}`) })
   })
 }

@@ -17,9 +17,9 @@ const b64url = (b) => b.toString('base64').replace(/\+/g, '-').replace(/\//g, '_
 let meta
 async function metadata() {
   if (meta) return meta
-  const pr = await (await fetch(`${RESOURCE}/.well-known/oauth-protected-resource`)).json()
+  const pr = await (await fetch(`${RESOURCE}/.well-known/oauth-protected-resource`, { signal: AbortSignal.timeout(15000) })).json()
   const as = pr.authorization_servers[0]
-  meta = await (await fetch(`${as}/.well-known/oauth-authorization-server`)).json()
+  meta = await (await fetch(`${as}/.well-known/oauth-authorization-server`, { signal: AbortSignal.timeout(15000) })).json()
   return meta
 }
 async function client(host) {
@@ -60,24 +60,32 @@ async function identity(access) {
   const text = await r.text()
   if (!r.ok) { let j; try { j = JSON.parse(text) } catch { j = {} } return { error: j.error ?? `HTTP ${r.status}`, detail: j.detail ?? '' } }
   let email
-  try { const u = await (await fetch('https://clerk.webfacemedia.com/oauth/userinfo', { headers: { authorization: `Bearer ${access}` } })).json(); email = u.email } catch {}
+  try { const u = await (await fetch('https://clerk.webfacemedia.com/oauth/userinfo', { headers: { authorization: `Bearer ${access}` }, signal: AbortSignal.timeout(15000) })).json(); email = u.email } catch {}
   // Which client? list_clients returns the one tenant this token is scoped to.
   let client
   try {
     const lc = await fetch(MCP_URL, { method: 'POST', headers: { authorization: `Bearer ${access}`, 'content-type': 'application/json', accept: 'application/json, text/event-stream' }, body: JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'list_clients', arguments: {} } }) })
-    const body = (await lc.text()).split('\n').filter(l => l.startsWith('{')).map(l => JSON.parse(l)).pop()
+    const body = (await lc.text()).split('\n').map(l => l.replace(/^data:\s*/, '')).filter(l => l.startsWith('{')).map(l => { try { return JSON.parse(l) } catch { return undefined } }).filter(Boolean).pop()
     const txt = body?.result?.content?.map(c => c.text).join('') ?? ''
     client = JSON.parse(txt).clients?.map(c => c.slug).join(', ')
   } catch {}
   return { email, client }
 }
 
+let refreshing = null
 async function accessToken(host) {
   const s = read(); if (!s.tokens) return null
   if (Date.now() < s.tokens.expiresAt - 60_000) return s.tokens.access
   if (!s.tokens.refresh) return s.tokens.access
+  // One refresh at a time: with rotating refresh tokens a second concurrent refresh would kill the connection.
+  refreshing ??= refresh(host).finally(() => { refreshing = null })
+  return refreshing
+}
+async function refresh(host) {
+  const s = read(); if (!s.tokens?.refresh) return s.tokens?.access ?? null
+  if (Date.now() < s.tokens.expiresAt - 60_000) return s.tokens.access
   const m = await metadata(); const c = await client(host)
-  const r = await fetch(m.token_endpoint, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: s.tokens.refresh, client_id: c.client_id, resource: RESOURCE }) })
+  const r = await fetch(m.token_endpoint, { method: 'POST', signal: AbortSignal.timeout(15000), headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: s.tokens.refresh, client_id: c.client_id, resource: RESOURCE }) })
   const t = await r.json(); if (!r.ok || !t.access_token) { console.error('webface refresh failed', t.error ?? r.status); return s.tokens.access }
   s.tokens = { access: t.access_token, refresh: t.refresh_token ?? s.tokens.refresh, expiresAt: Date.now() + (t.expires_in ?? 3600) * 1000 }; write(s)
   return s.tokens.access
