@@ -60,6 +60,10 @@ const safeNext = n => (typeof n === 'string' && n.startsWith('/') && !n.startsWi
 const RELAY = !SIGNIN && process.env.DESK_API_URL && process.env.DESK_BOX_TOKEN ? process.env.DESK_API_URL.replace(/\/api\/?$/, '') : ''
 const GOOGLE_SIGNIN = Boolean(SIGNIN || RELAY)
 const started = Date.now()
+// A timed-out upstream (platform API, WordPress probe, harness) must never take
+// the box agent down with it: log and keep serving.
+process.on('unhandledRejection', e => console.error('unhandled rejection:', e instanceof Error ? e.message : e))
+process.on('uncaughtException', e => console.error('uncaught exception:', e instanceof Error ? e.stack ?? e.message : e))
 
 const json = (res, code, obj) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify(obj)) }
 const page = (title, body) => layout({ title, business: businessName(), body: `<h1>${title}</h1>${body}` })
