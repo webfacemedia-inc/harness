@@ -41,7 +41,7 @@ export function apply(ctx: ClientContext): void {
   // Business page.
   ctx.effect(() => {
     const style = document.createElement('style')
-    style.textContent = '[data-context-role="injection"]{display:none}[data-stats-line]{display:none}'
+    style.textContent = '[data-context-role="injection"]{display:none!important}[data-stats-line]{display:none!important}'
     document.head.append(style)
     return () => { style.remove() }
   }, 'ui-team: hide harness chrome')
