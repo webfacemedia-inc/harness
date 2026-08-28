@@ -126,6 +126,11 @@ const server = createServer(async (req, res) => {
       if (!user) { res.writeHead(403, { 'content-type': 'text/html; charset=utf-8' }); return res.end(loginPage({ business: businessName(), google: true, error: `${email ?? 'That account'} is not an owner of this Desk.` })) }
       res.writeHead(302, { location: safeNext(u.searchParams.get('state')), 'set-cookie': cookieHeader(issueSession(user)) }); return res.end()
     }
+    if (u.pathname === '/browser') {
+      if (!verifySession(cookieOf(req))) { res.writeHead(302, { location: '/login?next=/browser' }); return res.end() }
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' })
+      return res.end(layout({ title: 'Browser', business: businessName(), head: '<style>main{max-width:none;padding:0;height:calc(100dvh - 53px)}iframe{display:block;width:100%;height:100%;border:0;background:#111}.bar{display:flex;gap:10px;align-items:center;padding:8px 14px;font-size:13px;color:var(--mute);background:var(--card);border-bottom:1px solid var(--line)}</style>', body: `<div class="bar">This is Desk's browser. Watch it work, or click inside to take the mouse — sign in to sites here and Desk keeps the session.</div><iframe src="/vnc/vnc.html?autoconnect=1&resize=scale&show_dot=1" allow="clipboard-read; clipboard-write" title="Desk browser"></iframe>` }))
+    }
     if (u.pathname === '/profile') {
       if (!verifySession(cookieOf(req))) { res.writeHead(302, { location: `/login?next=/profile` }); return res.end() }
       if (await profile.handle(req, res, u, { business: businessName(), readBody }) !== false) return

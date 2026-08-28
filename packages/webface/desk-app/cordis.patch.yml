@@ -65,7 +65,9 @@
         serverName: browser
         transport: stdio
         command: npx
-        args: !!js '["--yes", "@playwright/mcp@0.0.79", "--browser", "chrome", "--user-data-dir", process.env.DESK_BROWSER_HOME ?? `${process.env.HOME}/.config/webface-desk/browser`, "--output-dir", `${process.env.DSH_HOME ?? process.env.HOME + "/.desk"}/browser-output`]'
+        # DESK_BROWSER_CDP (cloud box): attach to the always-on Chrome the owner
+        # can watch/take over; otherwise launch a local Chrome with its own profile.
+        args: !!js 'process.env.DESK_BROWSER_CDP ? ["--yes", "@playwright/mcp@0.0.79", "--cdp-endpoint", process.env.DESK_BROWSER_CDP, "--output-dir", `${process.env.DSH_HOME ?? process.env.HOME + "/.desk"}/browser-output`] : ["--yes", "@playwright/mcp@0.0.79", "--browser", "chrome", "--user-data-dir", process.env.DESK_BROWSER_HOME ?? `${process.env.HOME}/.config/webface-desk/browser`, "--output-dir", `${process.env.DSH_HOME ?? process.env.HOME + "/.desk"}/browser-output`]'
         env:
           PATH: !!js process.env.PATH
         toolCallTimeoutMs: 90000

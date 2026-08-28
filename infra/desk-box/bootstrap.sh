@@ -117,6 +117,7 @@ DESK_HARNESS_DIR=$D/harness
 DESK_GOOGLE_HOME=$D/google
 GOOGLE_MCP_HOME=$D/google
 DESK_BROWSER_HOME=$D/browser
+DESK_BROWSER_CDP=http://127.0.0.1:9222
 DESK_HOST=$DESK_HOST
 DESK_SLUG=$DESK_SLUG
 DESK_API_URL=${DESK_API_URL:-}
@@ -191,6 +192,21 @@ Restart=always
 [Install]
 WantedBy=multi-user.target
 UNIT
+cat > /etc/systemd/system/desk-chrome.service <<UNIT
+[Unit]
+Description=Desk browser (Chrome on :1, shared by the owner and Desk)
+After=desk-xvfb.service
+Requires=desk-xvfb.service
+[Service]
+User=desk
+Environment=DISPLAY=:1
+Environment=HOME=$D
+ExecStart=/usr/bin/google-chrome --no-first-run --no-default-browser-check --disable-dev-shm-usage --remote-debugging-port=9222 --user-data-dir=$D/browser --window-size=1440,900 --window-position=0,0 --start-maximized --password-store=basic about:blank
+Restart=always
+RestartSec=3
+[Install]
+WantedBy=multi-user.target
+UNIT
 cat > /etc/systemd/system/desk-harness.service <<UNIT
 [Unit]
 Description=webfaCe Desk (harness)
@@ -232,7 +248,7 @@ cat > /etc/systemd/system/caddy.service.d/desk.conf <<UNIT
 Environment=DESK_HOST=$DESK_HOST
 UNIT
 systemctl daemon-reload
-systemctl enable --now desk-xvfb desk-vnc desk-novnc desk-harness deskd
+systemctl enable --now desk-xvfb desk-vnc desk-novnc desk-chrome desk-harness deskd
 systemctl restart caddy
 unset DESK_OWNER_PASSWORD OPENROUTER_API_KEY
 for i in $(seq 1 60); do curl -fsS -o /dev/null http://127.0.0.1:3080/ && break; sleep 2; done
