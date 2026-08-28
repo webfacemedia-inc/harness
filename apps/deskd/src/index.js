@@ -19,6 +19,7 @@ import * as routines from './routines.js'
 import * as wf from './webface-oauth.js'
 import { layout } from './ui.js'
 import * as push from './push.js'
+import { usage } from './usage.js'
 import { execFile } from 'node:child_process'
 import { findUser, checkPassword, issueSession, verifySession, cookieHeader, cookieOf, loginPage } from './auth.js'
 
@@ -70,6 +71,7 @@ function status() {
     billing: readBilling(),
     harness: harnessUp,
     push: { devices: push.count() },
+    usage: usage(process.env.DESK_TZ ?? 'America/Toronto'),
   }
 }
 

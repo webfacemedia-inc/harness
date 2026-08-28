@@ -14,7 +14,7 @@ function page(orders, msg, err) {
   const rows = Object.values(orders).sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? '')).map(o => `<tr>
 <td><strong>${esc(o.business)}</strong><br><small>${esc(o.email)} · ${esc(o.plan)}${o.webfaceClient ? ' · webface: ' + esc(o.webfaceClient) : ''}</small></td>
 <td>${o.host ? `<a href="https://${esc(o.host)}/" target="_blank" rel="noopener">${esc(o.host)}</a>` : esc(o.slug)}<br><small>${o.ip ?? ''} ${o.dropletId ? '· #' + o.dropletId : ''}</small></td>
-<td><span class="pill ${o.status === 'ready' ? '' : 'off'}">${esc(o.status)}</span>${o.billing && o.billing !== 'ok' ? `<br><span class="pill warn">${esc(o.billing)}</span>` : ''}<br><small>beat ${when(o.lastHeartbeat)}</small><br><small>snap ${when(o.lastSnapshot)}</small></td>
+<td><span class="pill ${o.status === 'ready' ? '' : 'off'}">${esc(o.status)}</span>${o.usage ? `<br><small>${Math.round((o.usage.monthTokens ?? 0) / 1000)}k tokens this month · ${o.usage.sessions ?? 0} sessions</small>` : ''}${o.billing && o.billing !== 'ok' ? `<br><span class="pill warn">${esc(o.billing)}</span>` : ''}<br><small>beat ${when(o.lastHeartbeat)}</small><br><small>snap ${when(o.lastSnapshot)}</small></td>
 <td class="a"><form method="post" action="/ops/action" style="display:inline"><input type="hidden" name="id" value="${esc(o.id)}"><input type="hidden" name="op" value="resend"><button class="ghost">Resend welcome</button></form>
 <form method="post" action="/ops/action" style="display:inline"><input type="hidden" name="id" value="${esc(o.id)}"><input type="hidden" name="op" value="${o.billing === 'past_due' || o.billing === 'cancelled' ? 'resume' : 'pause'}"><button class="ghost">${o.billing === 'past_due' || o.billing === 'cancelled' ? 'Resume' : 'Pause'}</button></form>
 <form method="post" action="/ops/action" style="display:inline" onsubmit="return confirm('Destroy ${esc(o.slug)}? The droplet and DNS are deleted.')"><input type="hidden" name="id" value="${esc(o.id)}"><input type="hidden" name="op" value="destroy"><button class="quiet">Destroy</button></form></td></tr>`).join('')
@@ -56,7 +56,7 @@ export async function handle(req, res, u, ctx) {
     }
   } else return false
   if (u.pathname === '/ops' && req.method === 'GET') return html(res, 200, page(orders, u.searchParams.get('msg'), u.searchParams.get('err')))
-  if (u.pathname === '/api/ops/boxes' && req.method === 'GET') return json(res, 200, Object.values(orders).map(o => ({ id: o.id, slug: o.slug, business: o.business, email: o.email, plan: o.plan, status: o.status, host: o.host, billing: o.billing ?? 'ok', lastHeartbeat: o.lastHeartbeat, lastSnapshot: o.lastSnapshot, webfaceClient: o.webfaceClient })))
+  if (u.pathname === '/api/ops/boxes' && req.method === 'GET') return json(res, 200, Object.values(orders).map(o => ({ id: o.id, slug: o.slug, business: o.business, email: o.email, plan: o.plan, status: o.status, host: o.host, billing: o.billing ?? 'ok', lastHeartbeat: o.lastHeartbeat, lastSnapshot: o.lastSnapshot, webfaceClient: o.webfaceClient, usage: o.usage, heartbeat: o.heartbeat })))
   if ((u.pathname === '/ops/create' || u.pathname === '/api/ops/boxes') && req.method === 'POST') {
     const raw = (await body(req)).toString(); const f = req.headers['content-type']?.includes('json') ? new Map(Object.entries(JSON.parse(raw || '{}'))) : new URLSearchParams(raw)
     const get = k => (f.get(k) ?? '').toString().trim()

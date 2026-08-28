@@ -218,7 +218,7 @@ const server = createServer(async (req, res) => {
     if (hb && req.method === 'POST') {
       const o = Object.values(orders).find(x => x.slug === hb[1]); const tok = (req.headers.authorization ?? '').replace(/^Bearer /, '')
       if (!o || !o.boxToken || tok !== o.boxToken) return json(res, 401, { error: 'no' })
-      o.lastHeartbeat = new Date().toISOString(); o.heartbeat = JSON.parse((await body(req)).toString() || '{}'); save(); return json(res, 200, { ok: true })
+      o.lastHeartbeat = new Date().toISOString(); const hb = JSON.parse((await body(req)).toString() || '{}'); o.heartbeat = { ready: hb.ready, harness: hb.harness, google: hb.google?.accounts?.length ?? 0, push: hb.push?.devices ?? 0 }; if (hb.usage) o.usage = { monthTokens: hb.usage.monthTokens, totalTokens: hb.usage.totalTokens, sessions: hb.usage.sessions, turns: hb.usage.turns }; save(); return json(res, 200, { ok: true })
     }
     if (u.pathname === '/api/ops/snapshot' && req.method === 'POST') {
       const k = (req.headers.authorization ?? '').replace(/^Bearer /, ''); if (!process.env.DESKAPI_OPS_KEY || k !== process.env.DESKAPI_OPS_KEY) return json(res, 401, { error: 'no' })

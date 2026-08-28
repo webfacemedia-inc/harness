@@ -67,7 +67,7 @@ export function saveProfile(p) {
 
 const field = (id, label, value, { type = 'text', ph = '', rows = 0, hint = '' } = {}) => `<label for="${id}">${label}${hint ? ` <small>${hint}</small>` : ''}</label>${rows ? `<textarea id="${id}" name="${id}" rows="${rows}" placeholder="${esc(ph)}">${esc(value)}</textarea>` : `<input id="${id}" name="${id}" type="${type}" value="${esc(value)}" placeholder="${esc(ph)}">`}`
 
-export function page({ business, p, first = false, msg = '' }) {
+export function page({ business, p, first = false, msg = '', usage = null }) {
   p = p ?? {}
   const body = `<h1>${first ? 'Tell Desk about your business' : 'Business'}</h1>
 <p class="sub">${first ? 'Five minutes, once. Everything Desk says and does starts from this page — you can change it any time.' : 'What Desk knows about you and how it behaves. Saved instantly; every conversation uses the latest version.'}</p>
@@ -99,6 +99,7 @@ ${field('notes', 'Anything else Desk should know', p.notes, { rows: 3, hint: '(o
 </section>
 <button type="submit">${first ? 'Save and start' : 'Save'}</button>
 </form>
+${!first && usage ? `<section><h2>${ICONS.clock}Usage</h2><p class="h">What Desk has used on your model account. Tokens are the unit your model provider bills in.</p><div class="row"><span>Today</span><strong>${Math.round((usage.todayTokens ?? 0) / 1000)}k tokens</strong></div><div class="row"><span>This month</span><strong>${Math.round((usage.monthTokens ?? 0) / 1000)}k tokens · ${usage.sessions ?? 0} sessions</strong></div></section>` : ''}
 ${!first && isComplete(p) ? `<div class="next"><a class="btn ghost" href="/connections">${ICONS.plug} Connections</a><a class="btn ghost" href="/files">${ICONS.files} Files (price list)</a></div>` : ''}
 `
   return layout({ title: 'Business', business, body })
@@ -108,7 +109,8 @@ export async function handle(req, res, u, { business, readBody }) {
   if (u.pathname === '/profile' && req.method === 'GET') {
     const p = readProfile()
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' })
-    return res.end(page({ business: p?.business ?? business, p, first: !isComplete(p), msg: u.searchParams.get('msg') ?? '' }))
+    const { usage } = await import('./usage.js')
+    return res.end(page({ business: p?.business ?? business, p, first: !isComplete(p), msg: u.searchParams.get('msg') ?? '', usage: usage(process.env.DESK_TZ ?? 'America/Toronto') }))
   }
   if (u.pathname === '/profile' && req.method === 'POST') {
     const f = new URLSearchParams(await readBody(req))
