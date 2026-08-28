@@ -1,22 +1,67 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Download webfaCe Desk</title><meta name="description" content="webfaCe Desk for Mac, Windows and Linux — a window onto your Desk. Your phone uses the web app.">
-<link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
-<style>:root{--blue:#3499cc;--deep:#1f6f99;--ink:#152029;--mute:#5a6a78;--line:#dfe6ec;--tint:#eef6fb}*{box-sizing:border-box}body{margin:0;background:#fff;color:var(--ink);font:17px/1.55 "Inter Tight",-apple-system,system-ui,sans-serif}
-.wrap{max-width:760px;margin:0 auto;padding:56px 24px 80px}a{color:var(--deep)}h1{font-family:Fraunces,serif;font-weight:600;font-size:40px;margin:0 0 8px;letter-spacing:-.01em}p.sub{color:var(--mute);font-size:19px;margin:0 0 28px}
-.dl{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}.card{border:1px solid var(--line);border-radius:14px;padding:20px}.card h2{font-family:Fraunces,serif;font-weight:600;font-size:22px;margin:0 0 6px}.card p{color:var(--mute);font-size:15px;margin:0 0 12px}
-.btn{display:inline-block;padding:12px 18px;border-radius:10px;background:var(--blue);color:#fff;text-decoration:none;font-weight:600}.btn:hover{background:var(--deep)}
-.note{margin-top:28px;border:1px solid var(--line);border-radius:14px;padding:20px;background:var(--tint)}.note h3{margin:0 0 6px;font-size:16px}.note p{margin:0 0 8px;font-size:15px}code{background:#fff;border:1px solid var(--line);padding:3px 7px;border-radius:6px;font-size:14px;overflow-wrap:anywhere}
-.brand{display:flex;align-items:center;gap:10px;font-weight:600;margin-bottom:28px}.brand a{color:inherit;text-decoration:none}</style></head>
-<body><div class="wrap"><div class="brand"><a href="/">← webfaCe Desk</a></div>
-<h1>Download webfaCe Desk</h1>
-<p class="sub">A window onto your Desk for your computer. Sign in with your Desk address once; it remembers. On your phone, open your Desk address in Safari or Chrome and add it to the Home Screen — that's the phone app.</p>
-<div class="dl">
-<div class="card"><h2>macOS</h2><p>Apple silicon and Intel.</p><a class="btn" href="https://github.com/webfacemedia-inc/harness/releases/latest/download/webfaCe-Desk-macOS.zip">Download for Mac</a></div>
-<div class="card"><h2>Windows</h2><p>Windows 10 and 11, 64-bit.</p><a class="btn" href="https://github.com/webfacemedia-inc/harness/releases/latest/download/webfaCe-Desk-Windows.zip">Download for Windows</a></div>
-<div class="card"><h2>Linux</h2><p>Ubuntu 22.04 and newer, x86-64.</p><a class="btn" href="https://github.com/webfacemedia-inc/harness/releases/latest/download/webfaCe-Desk-Linux.zip">Download for Linux</a></div>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Download webfaCe Desk</title>
+<meta name="description" content="webfaCe Desk for Mac, Windows and Linux — a window onto your Desk. On your phone, add your Desk to the Home Screen.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="canonical" href="https://webfacedesk.app/download">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--blue:#3499cc;--blue-deep:#1f6f99;--ink:#152029;--mute:#5a6a78;--line:#dfe6ec;--bg:#ffffff;--tint:#eef6fb;--ok:#1f8a5b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.55 "Inter Tight",-apple-system,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--blue-deep)}h1,h2,h3{font-family:Fraunces,Georgia,serif;font-weight:600;letter-spacing:-.01em;text-wrap:balance;margin:0}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+header{position:sticky;top:0;background:rgba(255,255,255,.92);backdrop-filter:saturate(1.4) blur(8px);border-bottom:1px solid var(--line);z-index:5}
+header .wrap{display:flex;align-items:center;justify-content:space-between;height:64px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:600;text-decoration:none;color:var(--ink);font-size:19px}.brand svg{width:30px;height:31px;color:var(--blue)}.brand b{font-weight:600}.brand span{font-weight:400}
+nav a{margin-left:22px;text-decoration:none;color:var(--mute);font-weight:500}nav a.cta{color:#fff;background:var(--blue);padding:9px 16px;border-radius:8px}nav a.cta:hover{background:var(--blue-deep)}
+.hero{padding:72px 0 40px}.eyebrow{display:inline-block;font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--blue-deep);background:var(--tint);padding:6px 10px;border-radius:999px;margin-bottom:18px}
+h1{font-size:clamp(36px,4.6vw,52px);line-height:1.06}.lead{font-size:19px;color:var(--mute);margin:18px 0 0;max-width:38em}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;padding:24px 0 8px}
+.card{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:16px;padding:26px;background:#fff}
+.card .os{width:44px;height:44px;border-radius:12px;background:var(--tint);color:var(--blue-deep);display:grid;place-items:center;margin-bottom:16px}.card .os svg{width:24px;height:24px}
+.card h2{font-size:22px;margin-bottom:6px}.card p{margin:0 0 22px;color:var(--mute);font-size:15px;flex:1}
+.btn{display:flex;justify-content:center;align-items:center;gap:8px;width:100%;padding:13px 16px;border-radius:10px;background:var(--blue);color:#fff;text-decoration:none;font-weight:600;font-size:16px}.btn:hover{background:var(--blue-deep)}.btn svg{width:18px;height:18px}
+.meta{margin-top:10px;font-size:13px;color:var(--mute);text-align:center}
+section{padding:56px 0;border-top:1px solid var(--line);margin-top:48px}section h2{font-size:clamp(26px,3vw,32px);margin-bottom:8px}section .sub{color:var(--mute);font-size:17px;max-width:40em;margin:0 0 26px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}.step{border:1px solid var(--line);border-radius:14px;padding:20px;background:var(--tint)}.step h3{font-size:18px;font-family:"Inter Tight",sans-serif;font-weight:600;display:flex;align-items:center;gap:10px}.step h3 svg{width:20px;height:20px;color:var(--blue-deep)}.step p{margin:8px 0 0;color:var(--mute);font-size:15px}
+code{background:#fff;border:1px solid var(--line);padding:2px 6px;border-radius:6px;font-size:13.5px}
+.phone{display:grid;grid-template-columns:1.1fr .9fr;gap:36px;align-items:center}.phone ol{margin:0;padding-left:20px;color:var(--mute)}.phone li{margin:6px 0}
+footer{padding:40px 0;border-top:1px solid var(--line);color:var(--mute);font-size:14px}footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+@media(max-width:860px){.grid,.steps,.phone{grid-template-columns:1fr}nav a:not(.cta){display:none}.hero{padding:48px 0 24px}}
+</style>
+</head>
+<body>
+<header><div class="wrap"><a class="brand" href="/"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 171.28 177.92">    <path fill="currentColor" d="M170.38,128.74l.45-.99.36-.72v-.77l.09-.52-.2-.97-.29-.81-.49-.77-.45-.67-46.66-64.72-.23-.36,37.44-22.82.95-2.83-.29-.45-.14-.22v-.14l-.65-.77-.58-.83-.68-.74-.45-.52-.32-.38-.81-.9-.31-.29-.14-.16h0l-.43-.43-.99-.9-2.31-2.56-2.31-2.23-2.54-2.16-2.54-2.11-.9-.67-.9-.45-.9-.29h-1.78l-.92.22-.9.38-.74.67-52.22,33.35-1.33-.38,19.02-40.59-.4-2.7-1.53-1.04-1.66-.81-1.93-.83-2-.67-2.32-.68-2.38-.52-2.61-.52-2.76-.38-1.71-.07-.74.23-.67.36-.67.38-.52.67-.45.88-.38.97-.14.45-34.02,80.01-.38.31-.36.43-.52.31-.67.43-36.48-18.08-2.9.38-.43.68-.27.88-.76,1.94-.88,2.32-.79,2.79-.95,3.6-.83,3.37-.65,3.06-.4,2.92-.14,1.01v.95l.22.9.4.9.43.68.76.61.79.61.97.5.16.09.67.36,1.04.52,1.57.83,1.8.97,2.45,1.26,2.76,1.42,3.26,1.8,1.8.83,1.8.97,1.93.95,2.16,1.13,4.47,2.32,4.99,2.61,5.28,2.77,2.83,1.4,3.06,1.58,6.18,3.21,6.77,3.6.14,1.49-44.26,3.71-2.11,1.8-.13,1.64v1.8l.23,2.03.36,2.16.54,2.16.74,2.47.83,2.54,1.1,2.77.31.74.52.67.5.54.77.36.67.23.88.16h2.09l78.41-10.5,2.81,1.49.74,33.19.97.97.99,1.35.58-.09h.81l.9-.16,1.12-.14,1.12-.31,1.33-.31,1.42-.36,1.57-.31,3.6-1.04,1.8-.45,1.62-.45,1.51-.52,1.4-.43,2.67-.9.97-.61.38-.29.43-.22.31-.38.38-.31.29-.36.31-.31.14-.45v-.22h0l.14-.16v-.45l.14-.38v-1.93l-2.72-62.11,1.19-.97,25.34,36.63,2.59,1.13,1.26-.85,1.51-.95,1.46-1.28,1.66-1.35,1.64-1.64,1.8-1.8,1.8-2.09,2.02-2.18.14-.22.11.02Z"/></svg><b>webfaCe</b>&nbsp;<span>Desk</span></a><nav><a href="/#how">How it works</a><a href="/#connections">Connections</a><a href="/#pricing">Pricing</a><a class="cta" href="/checkout?plan=business">Get your Desk</a></nav></div></header>
+
+<section class="hero" style="border:0;margin:0"><div class="wrap">
+<span class="eyebrow">Desktop app · free with every Desk</span>
+<h1>webfaCe Desk on your computer</h1>
+<p class="lead">A window onto your Desk. Enter your Desk address once and it remembers you. Nothing runs on your computer — your Desk stays in Toronto; this is just the front door.</p>
+</div></section>
+
+<div class="wrap"><div class="grid">
+<div class="card"><div class="os"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.4 12.6c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9s-1.8-.8-3-.8C6.9 7.4 5.4 8.3 4.6 9.7c-1.7 3-.4 7.4 1.2 9.8.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.2-.8s1.9.8 3.2.8c1.3 0 2.1-1.2 2.9-2.4.9-1.4 1.3-2.7 1.3-2.8 0 0-2.6-1-2.6-4.1zM14.1 5.3c.6-.8 1.1-1.9.9-3-.9 0-2 .6-2.7 1.4-.6.7-1.1 1.8-1 2.9 1 .1 2.1-.5 2.8-1.3z"/></svg></div><h2>macOS</h2><p>Apple silicon and Intel, macOS 12 or newer. One universal app.</p><a class="btn" href="https://github.com/webfacemedia-inc/harness/releases/latest/download/webfaCe-Desk-macOS.zip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M6 9l6 6 6-6M4 21h16"/></svg>Download for Mac</a><div class="meta">Zip · about 7 MB</div></div>
+<div class="card"><div class="os"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 11 4.4v7.1H3V5.5zm9 -1.3L21 3v8.5h-9V4.2zM3 12.5h8v7.1L3 18.5v-6zm9 0h9V21l-9-1.3v-7.2z"/></svg></div><h2>Windows</h2><p>Windows 10 and 11, 64-bit. Uses the WebView already in Windows.</p><a class="btn" href="https://github.com/webfacemedia-inc/harness/releases/latest/download/webfaCe-Desk-Windows.zip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M6 9l6 6 6-6M4 21h16"/></svg>Download for Windows</a><div class="meta">Zip · about 4 MB</div></div>
+<div class="card"><div class="os"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div><h2>Linux</h2><p>Ubuntu 22.04 and newer, x86-64. Needs WebKitGTK (already on Ubuntu desktop).</p><a class="btn" href="https://github.com/webfacemedia-inc/harness/releases/latest/download/webfaCe-Desk-Linux.zip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M6 9l6 6 6-6M4 21h16"/></svg>Download for Linux</a><div class="meta">Zip · about 4 MB</div></div>
+</div></div>
+
+<section><div class="wrap">
+<h2>First open</h2>
+<p class="sub">These early builds aren't yet notarised with Apple or Microsoft, so the first launch takes one extra click. After that they open like any other app.</p>
+<div class="steps">
+<div class="step"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>Mac</h3><p>Unzip, move <strong>webfaCe Desk</strong> to Applications, then <strong>right-click → Open → Open</strong> once. The app clears the warning itself on that first run.</p></div>
+<div class="step"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>Windows</h3><p>Unzip and run. If SmartScreen appears, choose <strong>More info → Run anyway</strong>.</p></div>
+<div class="step"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>Linux</h3><p>Unzip and run the <code>webfaCe Desk</code> file. If it won't start, install <code>libwebkit2gtk-4.0</code>.</p></div>
 </div>
-<div class="note"><h3>Opening it on a Mac (for now)</h3><p>This early build is not yet notarised with Apple. Unzip it, move <strong>webfaCe Desk</strong> to Applications, then <strong>right-click it → Open → Open</strong> once. From then on it opens normally — the app clears the warning itself on that first run.</p><p style="margin-top:10px">Windows: if SmartScreen appears, choose <em>More info → Run anyway</em>. Linux: unzip and run the <code>webfaCe Desk</code> file (needs WebKitGTK, present on Ubuntu desktop).</p></div>
-<p style="margin-top:24px;color:var(--mute);font-size:14px">All releases and checksums: <a href="https://github.com/webfacemedia-inc/harness/releases">github.com/webfacemedia-inc/harness/releases</a></p>
-</div></body></html>
+</div></section>
+
+<section><div class="wrap phone">
+<div><h2>On your phone</h2><p class="sub">There's nothing to download. Your Desk is a web app that installs from the browser and gets notifications.</p><ol><li>Open your Desk address (like <code>yourname.webfacedesk.app</code>) in Safari or Chrome.</li><li>Share → <strong>Add to Home Screen</strong>.</li><li>Open it from the Home Screen and tap <strong>Turn on notifications</strong> in the sidebar.</li></ol></div>
+<div class="step"><h3>Why a web app on the phone?</h3><p>It's the same Desk, kept in sync with your computer, with the browser view and approvals built in — and it updates itself without an app store.</p></div>
+</div></section>
+
+<footer><div class="wrap"><span>© 2026 webfaCeMEdia Inc · Toronto</span><span><a href="https://github.com/webfacemedia-inc/harness/releases">All releases</a> · <a href="mailto:tommy@webfacemedia.com">tommy@webfacemedia.com</a></span></div></footer>
+</body></html>
