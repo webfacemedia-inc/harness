@@ -49,16 +49,17 @@ const LOGO = '<svg width="30" height="31" viewBox="0 0 171.28 177.92" aria-hidde
 export function loginPage({ business, error = '', google = false, next = '/' }) {
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in · webfaCe Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{color-scheme:light dark;--bg:#f5f7fa;--card:#fff;--ink:#16212b;--mute:#5b6b7a;--line:#dde4ea;--blue:#3499cc;--blue-ink:#22729c;--err:#b42318}
 @media(prefers-color-scheme:dark){:root{--bg:#0f151b;--card:#161e26;--ink:#eef3f7;--mute:#9db0c0;--line:#25313c}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,"Segoe UI",Inter,system-ui,sans-serif;min-height:100vh;display:grid;place-items:center;padding:24px}
 .card{width:100%;max-width:400px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:32px}
-.brand{display:flex;align-items:center;gap:10px;margin-bottom:6px;font-weight:700;font-size:20px}.brand span{font-weight:400}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:6px;font-weight:600;font-size:20px}h2{font-family:Fraunces,Georgia,serif;font-weight:600}.brand span{font-weight:400}
 p.sub{margin:0 0 22px;color:var(--mute)}label{display:block;font-size:13px;font-weight:600;margin:14px 0 6px}
 input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:transparent;color:inherit;font:inherit}
 input:focus{outline:2px solid var(--blue);outline-offset:1px;border-color:var(--blue)}
-button{width:100%;margin-top:20px;padding:12px;border:0;border-radius:8px;background:var(--blue);color:#fff;font:inherit;font-weight:600;cursor:pointer}button:hover{background:var(--blue-ink)}
+button{width:100%;margin-top:20px;padding:12px;border:0;border-radius:10px;background:var(--blue);color:#fff;font:inherit;font-weight:600;cursor:pointer}button:hover{background:var(--blue-ink);color:#fff}
 .err{background:rgba(180,35,24,.08);color:var(--err);border-radius:8px;padding:10px 12px;font-size:14px;margin-bottom:6px}
 .or{display:flex;align-items:center;gap:12px;color:var(--mute);font-size:13px;margin:20px 0 0}.or:before,.or:after{content:"";flex:1;height:1px;background:var(--line)}
 a.g{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:14px;padding:11px;border:1px solid var(--line);border-radius:8px;color:inherit;text-decoration:none;font-weight:600}a.g:hover{border-color:var(--blue)}

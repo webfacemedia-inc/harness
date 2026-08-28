@@ -16,6 +16,7 @@ import * as files from './files.js'
 import * as connections from './connections.js'
 import * as profile from './profile.js'
 import * as wf from './webface-oauth.js'
+import { layout } from './ui.js'
 import { execFile } from 'node:child_process'
 import { findUser, checkPassword, issueSession, verifySession, cookieHeader, cookieOf, loginPage } from './auth.js'
 
@@ -50,7 +51,7 @@ const safeNext = n => (typeof n === 'string' && n.startsWith('/') && !n.startsWi
 const started = Date.now()
 
 const json = (res, code, obj) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify(obj)) }
-const page = (title, body) => `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>webfaCe Desk</title><body style="font-family:-apple-system,Segoe UI,sans-serif;padding:48px;max-width:560px;margin:auto;color:#1b2430"><h2 style="margin:0 0 12px">${title}</h2>${body}</body>`
+const page = (title, body) => layout({ title, business: businessName(), body: `<h1>${title}</h1>${body}` })
 
 let harnessUp = false
 async function probeHarness() { try { const r = await fetch('http://127.0.0.1:3080/', { signal: AbortSignal.timeout(2000) }); harnessUp = r.ok } catch { harnessUp = false } }

@@ -3,6 +3,7 @@
 // (read by the model every turn) — nothing else writes that file.
 import { existsSync, readFileSync, writeFileSync, copyFileSync, mkdirSync } from 'node:fs'
 import { join, dirname } from 'node:path'
+import { layout, ICONS } from './ui.js'
 
 export const WORK = process.env.DESK_WORK_DIR ?? '/srv/desk/work'
 export const PROFILE = process.env.DESK_PROFILE_FILE ?? join(dirname(WORK), 'profile.json')
@@ -68,28 +69,11 @@ const field = (id, label, value, { type = 'text', ph = '', rows = 0, hint = '' }
 
 export function page({ business, p, first = false, msg = '' }) {
   p = p ?? {}
-  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Business · webfaCe Desk</title>
-<style>
-:root{color-scheme:light dark;--bg:#f5f7fa;--card:#fff;--ink:#16212b;--mute:#5b6b7a;--line:#dde4ea;--blue:#3499cc;--blue-ink:#22729c;--ok:#1f8a5b}
-@media(prefers-color-scheme:dark){:root{--bg:#0f151b;--card:#161e26;--ink:#eef3f7;--mute:#9db0c0;--line:#25313c}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,"Segoe UI",Inter,system-ui,sans-serif}
-.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line);background:var(--card)}.top a{color:var(--blue-ink);text-decoration:none;font-weight:600}
-main{max-width:720px;margin:0 auto;padding:22px 20px 60px}h1{font-size:24px;margin:0 0 4px}p.sub{color:var(--mute);margin:0 0 20px}
-section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:18px}section h2{font-size:17px;margin:0 0 4px}section p.h{color:var(--mute);font-size:14px;margin:0 0 6px}
-label{display:block;font-weight:600;font-size:13px;margin:14px 0 6px}label small{font-weight:400;color:var(--mute)}
-input,textarea,select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:transparent;color:inherit;font:inherit}textarea{resize:vertical}
-.tones{display:grid;gap:8px;margin-top:6px}.tones label{display:flex;gap:10px;align-items:flex-start;font-weight:500;margin:0;padding:10px 12px;border:1px solid var(--line);border-radius:8px;cursor:pointer}.tones input{width:auto;margin-top:3px}.tones small{display:block;font-weight:400;color:var(--mute)}
-.checks label{display:flex;gap:10px;align-items:center;font-weight:500;margin:8px 0}.checks input{width:auto}
-button{margin-top:18px;padding:12px 18px;border:0;border-radius:8px;background:var(--blue);color:#fff;font:inherit;font-weight:600;cursor:pointer}button:hover{background:var(--blue-ink)}
-.msg{padding:10px 12px;border-radius:8px;margin-bottom:12px;font-size:14px;background:rgba(31,138,91,.1);color:var(--ok)}
-.next{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.next a{color:var(--blue-ink);font-weight:600;text-decoration:none;border:1px solid var(--line);padding:8px 12px;border-radius:8px}
-</style><body>
-<div class="top"><a href="/">← Back to Desk</a><span style="color:var(--mute);font-size:13px">${esc(business)}</span></div><main>
-<h1>${first ? 'Tell Desk about your business' : 'Business'}</h1>
+  const body = `<h1>${first ? 'Tell Desk about your business' : 'Business'}</h1>
 <p class="sub">${first ? 'Five minutes, once. Everything Desk says and does starts from this page — you can change it any time.' : 'What Desk knows about you and how it behaves. Saved instantly; every conversation uses the latest version.'}</p>
 ${msg ? `<div class="msg">${esc(msg)}</div>` : ''}
 <form method="post" action="/profile">
-<section><h2>The business</h2>
+<section><h2>${ICONS.business}The business</h2>
 ${field('business', 'Business name', p.business, { ph: 'Maple & Main Home Services' })}
 ${field('owner', 'Your name', p.owner, { ph: 'Dana Okafor', hint: '(who Desk works for)' })}
 ${field('does', 'What you do', p.does, { rows: 3, ph: 'Family-run plumbing and HVAC company: emergency plumbing, drain cleaning, water heaters, furnace and A/C service, maintenance plans for homes and small commercial buildings.' })}
@@ -102,21 +86,22 @@ ${field('website', 'Website', p.website, { type: 'url', ph: 'https://' })}
 ${field('phone', 'Business phone', p.phone, { type: 'tel' })}
 ${field('email', 'Business email', p.email, { type: 'email' })}
 </section>
-<section><h2>How Desk speaks</h2><p class="h">Every reply, quote and confirmation uses this voice.</p>
+<section><h2>${ICONS.voice}How Desk speaks</h2><p class="h">Every reply, quote and confirmation uses this voice.</p>
 <div class="tones">${Object.entries(TONES).map(([k, d]) => `<label><input type="radio" name="tone" value="${k}" ${(p.tone ?? 'friendly') === k ? 'checked' : ''}><span>${k[0].toUpperCase() + k.slice(1)}<small>${d}</small></span></label>`).join('')}</div>
 ${field('toneNotes', 'Anything else about the voice', p.toneNotes, { rows: 2, ph: 'e.g. Always sign off as "The Maple & Main team". Never use exclamation marks.', hint: '(optional)' })}
 </section>
-<section><h2>Always ask you first before</h2><p class="h">Desk stops and waits for your approval on these. Untick only what you are happy for it to do on its own.</p>
+<section><h2>${ICONS.shield}Always ask you first before</h2><p class="h">Desk stops and waits for your approval on these. Untick only what you are happy for it to do on its own.</p>
 <div class="checks">${APPROVALS.map(([k, label]) => `<label><input type="checkbox" name="approvals" value="${k}" ${(p.approvals ?? APPROVALS.map(a => a[0])).includes(k) ? 'checked' : ''}>${label}</label>`).join('')}</div>
 </section>
-<section><h2>House rules</h2><p class="h">Things Desk must never say or promise, and anything it should always do. One per line.</p>
+<section><h2>${ICONS.rules}House rules</h2><p class="h">Things Desk must never say or promise, and anything it should always do. One per line.</p>
 ${field('rules', 'Rules', p.rules, { rows: 5, ph: 'Never promise same-day service.\nAlways offer the maintenance plan after a repair.\nQuotes are valid for 30 days.' })}
 ${field('notes', 'Anything else Desk should know', p.notes, { rows: 3, hint: '(optional)' })}
 </section>
 <button type="submit">${first ? 'Save and start' : 'Save'}</button>
 </form>
-${!first && isComplete(p) ? `<div class="next"><a href="/connections">Connections →</a><a href="/files">Files (price list) →</a></div>` : ''}
-</main></body></html>`
+${!first && isComplete(p) ? `<div class="next"><a class="btn ghost" href="/connections">${ICONS.plug} Connections</a><a class="btn ghost" href="/files">${ICONS.files} Files (price list)</a></div>` : ''}
+`
+  return layout({ title: 'Business', business, body })
 }
 
 export async function handle(req, res, u, { business, readBody }) {
