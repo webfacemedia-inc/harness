@@ -98,7 +98,7 @@ cat > $D/work/AGENTS.md <<MD
 # ${DESK_BUSINESS} — how this Desk works
 
 ## The business
-(The owner fills this in on day one — Desk's first-day skill asks for it: what you do, where, hours, how you take payment.)
+(Not set yet. The owner fills this in from Desk → Business; until then, ask the owner to do that before answering anything about services, prices or hours.)
 
 ## House rules
 - Nothing goes to a customer without the owner's approval. Draft, show, wait.
@@ -123,6 +123,7 @@ DESK_BOX_TOKEN=${DESK_BOX_TOKEN:-}
 DESK_BUSINESS=$DESK_BUSINESS
 DESK_AUTH_FILE=$D/auth.json
 DESK_WORK_DIR=$D/work
+DESK_PROFILE_FILE=$D/profile.json
 DESK_PROFILE_PATCH=$D/home/profiles/desk/cordis.patch.yml
 DESK_SIGNIN_CLIENT_ID=${DESK_SIGNIN_CLIENT_ID:-}
 DESK_SIGNIN_CLIENT_SECRET=${DESK_SIGNIN_CLIENT_SECRET:-}

@@ -14,6 +14,7 @@ import { OAuth2Client } from 'google-auth-library'
 import { google } from 'googleapis'
 import * as files from './files.js'
 import * as connections from './connections.js'
+import * as profile from './profile.js'
 import { findUser, checkPassword, issueSession, verifySession, cookieHeader, cookieOf, loginPage } from './auth.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -25,7 +26,8 @@ const SLUG = process.env.DESK_SLUG ?? 'desk'
 const API = process.env.DESK_API_URL
 const READY = process.env.DESK_READY_FILE ?? '/srv/desk/READY'
 const REDIRECT = `https://${HOST}/oauth/google/callback`
-const BUSINESS = process.env.DESK_BUSINESS ?? 'Your business'
+const BUSINESS_ENV = process.env.DESK_BUSINESS ?? 'Your business'
+const businessName = () => profile.readProfile()?.business || BUSINESS_ENV
 const SIGNIN = process.env.DESK_SIGNIN_CLIENT_ID && process.env.DESK_SIGNIN_CLIENT_SECRET
   ? new OAuth2Client(process.env.DESK_SIGNIN_CLIENT_ID, process.env.DESK_SIGNIN_CLIENT_SECRET, `https://${HOST}/auth/google/callback`) : null
 const safeNext = n => (typeof n === 'string' && n.startsWith('/') && !n.startsWith('//')) ? n : '/'
@@ -64,7 +66,7 @@ const server = createServer(async (req, res) => {
     if (u.pathname === '/login' && req.method === 'GET') {
       if (verifySession(cookieOf(req))) { res.writeHead(302, { location: safeNext(u.searchParams.get('next')) }); return res.end() }
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' })
-      return res.end(loginPage({ business: BUSINESS, google: Boolean(SIGNIN), next: safeNext(u.searchParams.get('next')) }))
+      return res.end(loginPage({ business: businessName(), google: Boolean(SIGNIN), next: safeNext(u.searchParams.get('next')) }))
     }
     if (u.pathname === '/login' && req.method === 'POST') {
       const f = new URLSearchParams(await readBody(req))
@@ -72,9 +74,10 @@ const server = createServer(async (req, res) => {
       await new Promise(r => setTimeout(r, 300))
       if (!user || !checkPassword(f.get('password') ?? '', user.scrypt)) {
         res.writeHead(401, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' })
-        return res.end(loginPage({ business: BUSINESS, google: Boolean(SIGNIN), next: safeNext(f.get('next')), error: 'That username or password is not right.' }))
+        return res.end(loginPage({ business: businessName(), google: Boolean(SIGNIN), next: safeNext(f.get('next')), error: 'That username or password is not right.' }))
       }
-      res.writeHead(302, { location: safeNext(f.get('next')), 'set-cookie': cookieHeader(issueSession(user)) }); return res.end()
+      const landing = profile.isComplete(profile.readProfile()) ? safeNext(f.get('next')) : '/profile'
+      res.writeHead(302, { location: landing, 'set-cookie': cookieHeader(issueSession(user)) }); return res.end()
     }
     if (u.pathname === '/logout') { res.writeHead(302, { location: '/login', 'set-cookie': cookieHeader('', true) }); return res.end() }
     if (u.pathname === '/auth/google') {
@@ -85,22 +88,26 @@ const server = createServer(async (req, res) => {
     if (u.pathname === '/auth/google/callback') {
       if (!SIGNIN) { res.writeHead(404); return res.end() }
       const code = u.searchParams.get('code')
-      if (!code) { res.writeHead(401, { 'content-type': 'text/html; charset=utf-8' }); return res.end(loginPage({ business: BUSINESS, google: true, error: 'Google did not sign you in.' })) }
+      if (!code) { res.writeHead(401, { 'content-type': 'text/html; charset=utf-8' }); return res.end(loginPage({ business: businessName(), google: true, error: 'Google did not sign you in.' })) }
       const { tokens } = await SIGNIN.getToken(code)
       const ticket = await SIGNIN.verifyIdToken({ idToken: tokens.id_token, audience: process.env.DESK_SIGNIN_CLIENT_ID })
       const email = ticket.getPayload()?.email
       const user = email && findUser({ email })
-      if (!user) { res.writeHead(403, { 'content-type': 'text/html; charset=utf-8' }); return res.end(loginPage({ business: BUSINESS, google: true, error: `${email ?? 'That account'} is not an owner of this Desk.` })) }
+      if (!user) { res.writeHead(403, { 'content-type': 'text/html; charset=utf-8' }); return res.end(loginPage({ business: businessName(), google: true, error: `${email ?? 'That account'} is not an owner of this Desk.` })) }
       res.writeHead(302, { location: safeNext(u.searchParams.get('state')), 'set-cookie': cookieHeader(issueSession(user)) }); return res.end()
+    }
+    if (u.pathname === '/profile') {
+      if (!verifySession(cookieOf(req))) { res.writeHead(302, { location: `/login?next=/profile` }); return res.end() }
+      if (await profile.handle(req, res, u, { business: businessName(), readBody }) !== false) return
     }
     if (u.pathname === '/connections' || u.pathname.startsWith('/connections/')) {
       if (!verifySession(cookieOf(req))) { res.writeHead(302, { location: `/login?next=${encodeURIComponent(u.pathname)}` }); return res.end() }
       const saveClient = raw => { mkdirSync(dirname(cfg.CLIENT_SECRET), { recursive: true, mode: 0o700 }); writeFileSync(cfg.CLIENT_SECRET, JSON.stringify(raw, null, 2), { mode: 0o600 }); chmodSync(cfg.CLIENT_SECRET, 0o600) }
-      if (await connections.handle(req, res, u, { business: BUSINESS, host: HOST, cfg: { ...cfg, saveClient }, readBody, status }) !== false) return
+      if (await connections.handle(req, res, u, { business: businessName(), host: HOST, cfg: { ...cfg, saveClient }, readBody, status }) !== false) return
     }
     if (u.pathname === '/files' || u.pathname.startsWith('/files/')) {
       if (!verifySession(cookieOf(req))) { res.writeHead(302, { location: `/login?next=${encodeURIComponent(u.pathname)}` }); return res.end() }
-      if (await files.handle(req, res, u, { business: BUSINESS }) !== false) return
+      if (await files.handle(req, res, u, { business: businessName() }) !== false) return
     }
     if (u.pathname === '/healthz') { res.writeHead(200, { 'content-type': 'text/plain' }); return res.end('ok') }
     if (u.pathname === '/deskd/status') { res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify(status())) }
