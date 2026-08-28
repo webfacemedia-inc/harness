@@ -15,6 +15,7 @@ import { google } from 'googleapis'
 import * as files from './files.js'
 import * as connections from './connections.js'
 import * as profile from './profile.js'
+import * as wf from './webface-oauth.js'
 import { execFile } from 'node:child_process'
 import { findUser, checkPassword, issueSession, verifySession, cookieHeader, cookieOf, loginPage } from './auth.js'
 
@@ -60,6 +61,7 @@ function status() {
   return {
     slug: SLUG, host: HOST, ready: existsSync(READY), uptimeSec: Math.round((Date.now() - started) / 1000),
     google: { clientConfigured: existsSync(cfg.CLIENT_SECRET), redirectUri: REDIRECT, accounts },
+    webface: wf.status(),
     billing: readBilling(),
     harness: harnessUp,
   }
@@ -153,6 +155,27 @@ const server = createServer(async (req, res) => {
       mkdirSync(dirname(cfg.CLIENT_SECRET), { recursive: true, mode: 0o700 })
       writeFileSync(cfg.CLIENT_SECRET, JSON.stringify(raw, null, 2), { mode: 0o600 }); chmodSync(cfg.CLIENT_SECRET, 0o600)
       res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify({ ok: true, redirectUri: REDIRECT }))
+    }
+    if (u.pathname === '/oauth/webface/start') {
+      if (!verifySession(cookieOf(req))) { res.writeHead(302, { location: '/login?next=/connections' }); return res.end() }
+      res.writeHead(302, { location: await wf.startUrl(HOST) }); return res.end()
+    }
+    if (u.pathname === '/oauth/webface/callback') {
+      const code = u.searchParams.get('code'), state = u.searchParams.get('state') ?? '', err = u.searchParams.get('error')
+      if (!code) { res.writeHead(302, { location: `/connections?err=${encodeURIComponent(`webfaCeMEdia sign-in did not complete (${err ?? 'no code'}).`)}` }); return res.end() }
+      try {
+        const who = await wf.finish(HOST, code, state)
+        if (who.error) { wf.disconnect(); res.writeHead(302, { location: `/connections?err=${encodeURIComponent(`Signed in, but webfaCeMEdia could not match your account to a client (${who.error}${who.detail ? ': ' + who.detail : ''}). Ask webfaCeMEdia to link your account.`)}` }); return res.end() }
+        const list = connections.readServers().filter(x => x.name !== 'webface')
+        list.push({ name: 'webface', transport: 'streamable-http', url: `http://127.0.0.1:${PORT}/mcp/webface`, headers: {} })
+        connections.writeServers(list); connections.restartHarness()
+        res.writeHead(302, { location: `/connections?msg=${encodeURIComponent(`webfaCeMEdia connected as ${who.email ?? 'you'}${who.client ? ` (${who.client})` : ''}. Desk is restarting — give it half a minute.`)}` }); return res.end()
+      } catch (e) { res.writeHead(302, { location: `/connections?err=${encodeURIComponent(e.message)}` }); return res.end() }
+    }
+    if (u.pathname === '/mcp/webface') {
+      // Loopback only: the harness calls deskd directly; Caddy never routes this path.
+      if (req.socket.remoteAddress !== '127.0.0.1' && req.socket.remoteAddress !== '::ffff:127.0.0.1' && req.socket.remoteAddress !== '::1') { res.writeHead(403); return res.end() }
+      return wf.proxy(req, res, HOST, req.method === 'GET' ? undefined : await readBody(req))
     }
     if (u.pathname === '/oauth/google/start') {
       const url = oauthClient().generateAuthUrl({ access_type: 'offline', prompt: 'consent', scope: cfg.SCOPES })

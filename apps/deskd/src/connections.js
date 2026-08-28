@@ -11,6 +11,7 @@ const MARK_END = '# --- end connections ---'
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
 const yq = s => JSON.stringify(String(s))
 
+export { writeServers, restartHarness }
 export function readServers() {
   if (!existsSync(PATCH)) return []
   const s = readFileSync(PATCH, 'utf8'); const a = s.indexOf(MARK_BEGIN), b = s.indexOf(MARK_END)
@@ -74,7 +75,7 @@ details{margin-top:10px}summary{cursor:pointer;color:var(--blue-ink);font-weight
 </script></body></html>`
 }
 
-export function page({ business, host, google, servers, msg, err }) {
+export function page({ business, host, google, webface, servers, msg, err }) {
   const gc = google.clientConfigured, accounts = google.accounts
   const inner = `<h1>Connections</h1><p class="sub">Your team uses these on your behalf. Every account here is yours — nothing is shared with anyone else.</p>
 ${msg ? `<div class="msg ok">${esc(msg)}</div>` : ''}${err ? `<div class="msg err">${esc(err)}</div>` : ''}
@@ -94,11 +95,10 @@ ${accounts.length ? accounts.map(a => `<div class="row"><span>${esc(a)}<small>Gm
 ${gc ? `<a class="btn" href="/oauth/google/start">Connect a Google account →</a>` : ''}
 </section>
 
-${(() => { const w = servers.find(x => x.name === 'webface'); return `<section><h2>webfaCeMEdia — your website, campaigns, contacts and analytics ${w ? '<span class="pill">connected</span>' : '<span class="pill off">not connected</span>'}</h2>
-<p style="color:var(--mute);margin:0 0 8px">If webfaCeMEdia built or runs your website, connect it and Desk can update pages, draft campaigns, look up contacts and read your analytics — with your approval on anything that goes live.</p>
-${w ? `<div class="row"><span><strong>Connected</strong><small>mcp.webfacemedia.com · token ${esc((w.headers?.Authorization ?? '').replace(/^Bearer /, '').slice(0, 12))}…</small></span><form method="post" action="/connections/mcp/remove" style="margin:0"><input type="hidden" name="name" value="webface"><button class="quiet" type="submit">Disconnect</button></form></div>`
-: `<form method="post" action="/connections/webface/connect" style="margin:0"><button type="submit">Connect webfaCeMEdia</button></form>
-<details><summary style="font-size:13px">Have a connection key instead?</summary><form method="post" action="/connections/webface"><label for="wt">Connection key</label><input id="wt" name="token" pattern="wfs_[a-f0-9]{48}" placeholder="wfs_…" required title="Starts with wfs_"><button type="submit">Connect with key</button></form></details>`}
+${(() => { const wfs = webface ?? { connected: false }; return `<section><h2>webfaCeMEdia — your website, campaigns, contacts and analytics ${wfs.connected ? '<span class="pill">connected</span>' : '<span class="pill off">not connected</span>'}</h2>
+<p style="color:var(--mute);margin:0 0 8px">If webfaCeMEdia built or runs your website, sign in with your webfaCeMEdia account and Desk can update pages, draft campaigns, look up contacts and read your analytics — with your approval on anything that goes live.</p>
+${wfs.connected ? `<div class="row"><span><strong>${esc(wfs.email ?? 'Signed in')}</strong><small>${wfs.client ? 'client: ' + esc(wfs.client) + ' · ' : ''}connected ${esc((wfs.connectedAt ?? '').slice(0, 10))}</small></span><form method="post" action="/connections/mcp/remove" style="margin:0"><input type="hidden" name="name" value="webface"><button class="quiet" type="submit">Disconnect</button></form></div>`
+: `<a class="btn" href="/oauth/webface/start">Sign in with webfaCeMEdia →</a>`}
 </section>` })()}
 ${(() => { const w = servers.find(x => x.name === 'wordpress'); return `<section><h2>WordPress ${w ? '<span class="pill">connected</span>' : '<span class="pill off">not connected</span>'}</h2>
 <p style="color:var(--mute);margin:0 0 8px">If your website runs on WordPress, connect it with an Application Password and Desk can read pages and posts, draft new ones, update content and upload images — publishing and edits to live pages always wait for your approval.</p>
@@ -128,7 +128,7 @@ export async function handle(req, res, u, ctx) {
   const p = u.pathname
   if (p === '/connections' && req.method === 'GET') {
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' })
-    return res.end(page({ business, host, google: status().google, servers: readServers(), msg: u.searchParams.get('msg'), err: u.searchParams.get('err') }))
+    return res.end(page({ business, host, google: status().google, webface: status().webface, servers: readServers(), msg: u.searchParams.get('msg'), err: u.searchParams.get('err') }))
   }
   if (p === '/connections/google/client' && req.method === 'POST') {
     const f = new URLSearchParams(await readBody(req)); let raw
@@ -188,11 +188,8 @@ export async function handle(req, res, u, ctx) {
   if (p === '/connections/mcp/remove' && req.method === 'POST') {
     const f = new URLSearchParams(await readBody(req)); const name = f.get('name') ?? ''
     if (name === 'webface') {
-      // Disconnect = revoke the key on the platform too, so it cannot be reused.
-      const w = readServers().find(x => x.name === 'webface'); const prefix = (w?.headers?.Authorization ?? '').replace(/^Bearer /, '').slice(0, 12)
-      const api = process.env.DESK_API_URL, slug = process.env.DESK_SLUG, boxTok = process.env.DESK_BOX_TOKEN
-      if (api && boxTok && prefix.startsWith('wfs_')) await fetch(`${api}/boxes/${slug}/webface-token/revoke`, { method: 'POST', headers: { authorization: `Bearer ${boxTok}`, 'content-type': 'application/json' }, body: JSON.stringify({ prefix }), signal: AbortSignal.timeout(15000) }).catch(() => {})
-      writeServers(readServers().filter(x => x.name !== 'webface')); restartHarness(); return redirect({ msg: 'webfaCeMEdia disconnected and its key revoked. Desk is restarting.' })
+      const { disconnect } = await import('./webface-oauth.js'); disconnect()
+      writeServers(readServers().filter(x => x.name !== 'webface')); restartHarness(); return redirect({ msg: 'webfaCeMEdia disconnected — your sign-in was removed from this Desk. Desk is restarting.' })
     }
     writeServers(readServers().filter(s => s.name !== name)); restartHarness(); return redirect({ msg: `${name} removed. Your team is restarting.` })
   }
