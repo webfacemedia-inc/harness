@@ -288,3 +288,11 @@
   flex: 0 0 auto;
   min-height: 0;
 }
+
+/* Phones: let the sidebar grow to its content and scroll as a whole (the
+   drawer column is the scroll container); the browser region no longer owns
+   a tiny scroll box between the modes strip and the foot links. */
+@media (max-width: 768px) {
+  .root { height: auto; min-height: 100%; }
+  .regionArea { flex: none; overflow: visible; }
+}

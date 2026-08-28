@@ -504,3 +504,9 @@
     transition: none;
   }
 }
+
+/* Phones: no inner scroll box — the whole drawer scrolls. */
+@media (max-width: 768px) {
+  .root, .listArea, .treeBody { flex: none; }
+  .list { overflow: visible; max-height: none; }
+}

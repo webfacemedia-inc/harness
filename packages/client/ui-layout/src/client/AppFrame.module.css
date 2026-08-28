@@ -136,3 +136,8 @@
   .detailsCol { grid-column: 3; }
   .detailsCol, .handle { display: none; }
 }
+
+/* Phones: the drawer scrolls as one page; nested regions stop clipping. */
+@media (max-width: 768px) {
+  .frame:not([data-sidebar-collapsed]) .sidebarCol { overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+}
