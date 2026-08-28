@@ -39,7 +39,7 @@ export class WelcomeNoticeStore {
    */
   constructor(
     private readonly api: Pick<IApiClient, 'settings'>,
-    private readonly persistence: 'host' | 'memory' = 'host',
+    private persistence: 'host' | 'memory' = 'host',
   ) {}
 
   /** Load the acknowledgement from Host settings or initialize process-local state. */
@@ -65,8 +65,11 @@ export class WelcomeNoticeStore {
       })
     } catch (error) {
       if (generation !== this.generation) return
+      // The Host settings plane is loopback-only; a remote browser that
+      // cannot reach it keeps a process-local acknowledgement instead.
+      this.persistence = 'memory'
       this.store.update((state) => {
-        state.status = 'error'
+        state.status = 'ready'
         state.acknowledged = false
         state.error = messageOf(error)
       })
@@ -103,14 +106,15 @@ export class WelcomeNoticeStore {
       }
       return true
     } catch (error) {
+      this.persistence = 'memory'
       if (generation === this.generation) {
         this.store.update((state) => {
-          state.status = 'error'
-          state.acknowledged = false
+          state.status = 'ready'
+          state.acknowledged = true
           state.error = messageOf(error)
         })
       }
-      return false
+      return true
     }
   }
 }

@@ -87,7 +87,10 @@ export function apply(ctx: ClientContext): void {
   })
   const welcomeController = new WelcomeNoticeStore(
     connection.api,
-    connection.isLoopback ? 'host' : 'memory',
+    // Always try durable Host settings: a fronted Desk (Caddy presents as
+    // loopback) is remote to the browser yet persists fine; the store falls
+    // back to process memory on its own when the Host refuses.
+    'host',
   )
   const welcomeInjected = (): WelcomeNoticeInjected => ({
     controller: welcomeController,
