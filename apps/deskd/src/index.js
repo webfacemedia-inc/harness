@@ -7,8 +7,7 @@
 //   POST /deskd/google/client          save the owner's pasted OAuth client JSON
 // Heartbeats to DESK_API_URL every 60s when set. Loopback only; Caddy fronts it.
 import { createServer } from 'node:http'
-import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync, unlinkSync } from 'node:fs'
-import { randomBytes } from 'node:crypto'
+import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { OAuth2Client } from 'google-auth-library'
@@ -45,9 +44,6 @@ async function applyBilling(b) {
 const REDIRECT = `https://${HOST}/oauth/google/callback`
 const BUSINESS_ENV = process.env.DESK_BUSINESS ?? 'Your business'
 const businessName = () => profile.readProfile()?.business || BUSINESS_ENV
-const CENTRAL = process.env.DESK_GOOGLE_CLIENT_ID && process.env.DESK_GOOGLE_CLIENT_SECRET
-  ? { id: process.env.DESK_GOOGLE_CLIENT_ID, secret: process.env.DESK_GOOGLE_CLIENT_SECRET, redirect: `${process.env.DESK_PUBLIC_URL ?? 'https://webfacedesk.app'}/oauth/google/callback` } : null
-const PENDING = process.env.DESK_GOOGLE_PENDING ?? '/srv/desk/google-pending.json'
 const SIGNIN = process.env.DESK_SIGNIN_CLIENT_ID && process.env.DESK_SIGNIN_CLIENT_SECRET
   ? new OAuth2Client(process.env.DESK_SIGNIN_CLIENT_ID, process.env.DESK_SIGNIN_CLIENT_SECRET, `https://${HOST}/auth/google/callback`) : null
 const safeNext = n => (typeof n === 'string' && n.startsWith('/') && !n.startsWith('//')) ? n : '/'
@@ -64,7 +60,7 @@ function status() {
   try { accounts = cfg.listAccounts() } catch {}
   return {
     slug: SLUG, host: HOST, ready: existsSync(READY), uptimeSec: Math.round((Date.now() - started) / 1000),
-    google: { clientConfigured: existsSync(cfg.CLIENT_SECRET), central: Boolean(CENTRAL), redirectUri: REDIRECT, accounts },
+    google: { clientConfigured: existsSync(cfg.CLIENT_SECRET), redirectUri: REDIRECT, accounts },
     webface: wf.status(),
     billing: readBilling(),
     harness: harnessUp,
@@ -182,27 +178,8 @@ const server = createServer(async (req, res) => {
       return wf.proxy(req, res, HOST, req.method === 'GET' ? undefined : await readBody(req))
     }
     if (u.pathname === '/oauth/google/start') {
-      if (CENTRAL) {
-        if (!verifySession(cookieOf(req))) { res.writeHead(302, { location: '/login?next=/connections' }); return res.end() }
-        const nonce = randomBytes(16).toString('base64url'); writeFileSync(PENDING, JSON.stringify({ nonce, at: Date.now() }), { mode: 0o600 })
-        const c = new OAuth2Client(CENTRAL.id, CENTRAL.secret, CENTRAL.redirect)
-        res.writeHead(302, { location: c.generateAuthUrl({ access_type: 'offline', prompt: 'consent', scope: cfg.SCOPES, state: `${HOST}.${nonce}`, include_granted_scopes: true }) }); return res.end()
-      }
       const url = oauthClient().generateAuthUrl({ access_type: 'offline', prompt: 'consent', scope: cfg.SCOPES })
       res.writeHead(302, { location: url }); return res.end()
-    }
-    if (u.pathname === '/oauth/google/finish') {
-      // Relayed here by webfacedesk.app's central callback (state = host.nonce).
-      const code = u.searchParams.get('code'), state = u.searchParams.get('state') ?? '', err = u.searchParams.get('error')
-      let pending = null; try { pending = JSON.parse(readFileSync(PENDING, 'utf8')) } catch {}
-      if (!CENTRAL || !code || !pending || state !== `${HOST}.${pending.nonce}` || Date.now() - pending.at > 15 * 60_000) { res.writeHead(302, { location: `/connections?err=${encodeURIComponent(`Google sign-in did not complete (${err ?? 'stale link'}). Start again from Connections.`)}` }); return res.end() }
-      try {
-        const c = new OAuth2Client(CENTRAL.id, CENTRAL.secret, CENTRAL.redirect)
-        const { tokens } = await c.getToken(code); c.setCredentials(tokens)
-        const me = await google.oauth2({ version: 'v2', auth: c }).userinfo.get(); const email = me.data.email; if (!email) throw new Error('Google returned no email address')
-        cfg.writeToken(email, tokens); try { unlinkSync(PENDING) } catch {}
-        res.writeHead(302, { location: `/connections?msg=${encodeURIComponent(`${email} connected.`)}` }); return res.end()
-      } catch (e) { res.writeHead(302, { location: `/connections?err=${encodeURIComponent(`Google sign-in failed: ${e.message}`)}` }); return res.end() }
     }
     if (u.pathname === '/oauth/google/callback') {
       const code = u.searchParams.get('code'); const err = u.searchParams.get('error')

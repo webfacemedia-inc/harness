@@ -108,13 +108,6 @@ cat > $D/work/AGENTS.md <<MD
 MD
 fi
 chown -R desk:desk $D/home $D/work
-if [[ -n "${DESK_GOOGLE_CLIENT_ID:-}" ]]; then
-  # webfaCe's own Google app: the connector refreshes tokens with this client; consent goes through the central callback.
-  cat > $D/google/client_secret.json <<JSON
-{ "web": { "client_id": "$DESK_GOOGLE_CLIENT_ID", "client_secret": "$DESK_GOOGLE_CLIENT_SECRET", "redirect_uris": ["${DESK_PUBLIC_URL:-https://webfacedesk.app}/oauth/google/callback"], "auth_uri": "https://accounts.google.com/o/oauth2/auth", "token_uri": "https://oauth2.googleapis.com/token" } }
-JSON
-  chmod 600 $D/google/client_secret.json; chown desk:desk $D/google/client_secret.json
-fi
 
 echo "==> profile module farm (dsh builds it on first run) + @webface links"
 cat > $D/desk.env <<ENV
@@ -135,9 +128,6 @@ DESK_BILLING_FILE=$D/billing.json
 DESK_PROFILE_PATCH=$D/home/profiles/desk/cordis.patch.yml
 DESK_SIGNIN_CLIENT_ID=${DESK_SIGNIN_CLIENT_ID:-}
 DESK_SIGNIN_CLIENT_SECRET=${DESK_SIGNIN_CLIENT_SECRET:-}
-DESK_GOOGLE_CLIENT_ID=${DESK_GOOGLE_CLIENT_ID:-}
-DESK_GOOGLE_CLIENT_SECRET=${DESK_GOOGLE_CLIENT_SECRET:-}
-DESK_PUBLIC_URL=${DESK_PUBLIC_URL:-https://webfacedesk.app}
 DISPLAY=:1
 HOME=$D
 PATH=/usr/local/bin:/usr/bin:/bin
