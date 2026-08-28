@@ -474,3 +474,13 @@
   text-decoration: line-through;
   opacity: 0.7;
 }
+
+/* Phones: the control row wraps — mode chips stay left, the model picker and
+   Send move to their own line rather than overlapping the chips. */
+@media (max-width: 768px) {
+  .row { flex-wrap: wrap; gap: 8px 12px; }
+  .tools { flex: 1 1 auto; gap: 10px; }
+  .modes { gap: 8px; }
+  .trailing { flex: 1 1 100%; justify-content: flex-end; gap: 8px; }
+  .trailing > * { min-width: 0; }
+}
