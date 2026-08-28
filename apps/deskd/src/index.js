@@ -6,6 +6,7 @@
 //   GET  /oauth/google/callback        store the token on this box, never centrally
 //   POST /deskd/google/client          save the owner's pasted OAuth client JSON
 // Heartbeats to DESK_API_URL every 60s when set. Loopback only; Caddy fronts it.
+import { createHmac, timingSafeEqual } from 'node:crypto'
 import { createServer } from 'node:http'
 import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync } from 'node:fs'
 import { join, dirname } from 'node:path'
@@ -53,6 +54,11 @@ const businessName = () => profile.readProfile()?.business || BUSINESS_ENV
 const SIGNIN = process.env.DESK_SIGNIN_CLIENT_ID && process.env.DESK_SIGNIN_CLIENT_SECRET
   ? new OAuth2Client(process.env.DESK_SIGNIN_CLIENT_ID, process.env.DESK_SIGNIN_CLIENT_SECRET, `https://${HOST}/auth/google/callback`) : null
 const safeNext = n => (typeof n === 'string' && n.startsWith('/') && !n.startsWith('//')) ? n : '/'
+// Without a local client, Google sign-in goes through the store's relay
+// (one Google client for every Desk): /auth/google → <store>/auth/google/start
+// → Google → <store>/auth/google/callback → signed ticket → /auth/google/finish.
+const RELAY = !SIGNIN && process.env.DESK_API_URL && process.env.DESK_BOX_TOKEN ? process.env.DESK_API_URL.replace(/\/api\/?$/, '') : ''
+const GOOGLE_SIGNIN = Boolean(SIGNIN || RELAY)
 const started = Date.now()
 
 const json = (res, code, obj) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify(obj)) }
@@ -101,7 +107,7 @@ const server = createServer(async (req, res) => {
     if (u.pathname === '/login' && req.method === 'GET') {
       if (verifySession(cookieOf(req))) { res.writeHead(302, { location: safeNext(u.searchParams.get('next')) }); return res.end() }
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' })
-      return res.end(loginPage({ business: businessName(), google: Boolean(SIGNIN), next: safeNext(u.searchParams.get('next')) }))
+      return res.end(loginPage({ business: businessName(), google: GOOGLE_SIGNIN, next: safeNext(u.searchParams.get('next')), error: u.searchParams.get('gerr') ?? '' }))
     }
     if (u.pathname === '/login' && req.method === 'POST') {
       const f = new URLSearchParams(await readBody(req))
@@ -110,16 +116,26 @@ const server = createServer(async (req, res) => {
       if (!user || !checkPassword(f.get('password') ?? '', user.scrypt)) {
         console.log(`login failed from ${req.headers['x-forwarded-for']?.split(',')[0]?.trim() ?? req.socket.remoteAddress} user=${JSON.stringify((f.get('username') ?? '').slice(0, 40))}`)
         res.writeHead(401, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' })
-        return res.end(loginPage({ business: businessName(), google: Boolean(SIGNIN), next: safeNext(f.get('next')), error: 'That username or password is not right.' }))
+        return res.end(loginPage({ business: businessName(), google: GOOGLE_SIGNIN, next: safeNext(f.get('next')), error: 'That username or password is not right.' }))
       }
       const landing = profile.isComplete(profile.readProfile()) ? safeNext(f.get('next')) : '/profile'
       res.writeHead(302, { location: landing, 'set-cookie': cookieHeader(issueSession(user, f.get('phone') ? 'phone' : 'owner')) }); return res.end()
     }
     if (u.pathname === '/logout') { res.writeHead(302, { location: '/login', 'set-cookie': cookieHeader('', true) }); return res.end() }
     if (u.pathname === '/auth/google') {
+      if (RELAY) { res.writeHead(302, { location: `${RELAY}/auth/google/start?box=${encodeURIComponent(HOST)}&next=${encodeURIComponent(safeNext(u.searchParams.get('next')))}` }); return res.end() }
       if (!SIGNIN) { res.writeHead(404); return res.end('Google sign-in is not set up on this Desk.') }
       const url = SIGNIN.generateAuthUrl({ scope: ['openid', 'email'], state: safeNext(u.searchParams.get('next')), prompt: 'select_account' })
       res.writeHead(302, { location: url }); return res.end()
+    }
+    if (u.pathname === '/auth/google/finish') {
+      const [body, sig] = (u.searchParams.get('ticket') ?? '').split('.')
+      const want = createHmac('sha256', process.env.DESK_BOX_TOKEN ?? '').update(body ?? '').digest('hex')
+      let t = null
+      if (RELAY && sig && sig.length === want.length && timingSafeEqual(Buffer.from(sig), Buffer.from(want))) { try { t = JSON.parse(Buffer.from(body, 'base64url').toString()) } catch { t = null } }
+      const user = t && t.exp > Date.now() && t.email && findUser({ email: t.email })
+      if (!user) { res.writeHead(403, { 'content-type': 'text/html; charset=utf-8' }); return res.end(loginPage({ business: businessName(), google: true, error: `${t?.email ?? 'That account'} is not an owner of this Desk.` })) }
+      res.writeHead(302, { location: safeNext(u.searchParams.get('next')), 'set-cookie': cookieHeader(issueSession(user)) }); return res.end()
     }
     if (u.pathname === '/auth/google/callback') {
       if (!SIGNIN) { res.writeHead(404); return res.end() }

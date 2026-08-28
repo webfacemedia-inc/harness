@@ -6,6 +6,7 @@
 //   GET  /api/orders/:id                        status JSON (polled by /welcome)
 //   GET  /welcome?order=:id                     "your Desk is being built" → credentials once ready
 //   POST /api/boxes/:slug/heartbeat             deskd heartbeats (bearer = box token)
+//   GET  /auth/google/{start,callback}          Google sign-in relay for every Desk (DESK_SIGNIN_CLIENT_ID/SECRET)
 // State: DESKAPI_DATA/orders.json (0600). Keys: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET,
 // STRIPE_PRICE_* (see PLANS), DIGITALOCEAN_TOKEN, OPENROUTER_API_KEY, optional CLOUDFLARE_API_TOKEN, BREVO_API_KEY.
 import { createServer } from 'node:http'
@@ -223,6 +224,35 @@ const server = createServer(async (req, res) => {
     if (u.pathname === '/api/ops/snapshot' && req.method === 'POST') {
       const k = (req.headers.authorization ?? '').replace(/^Bearer /, ''); if (!process.env.DESKAPI_OPS_KEY || k !== process.env.DESKAPI_OPS_KEY) return json(res, 401, { error: 'no' })
       await snapshots(); return json(res, 200, { ok: true })
+    }
+    // Google sign-in relay: ONE Google client (DESK_SIGNIN_CLIENT_ID/SECRET, scopes
+    // openid+email only — no mail or files) signs owners into every Desk. The box sends
+    // the owner here; Google returns here; we hand the box a ticket signed with that
+    // box's own token, which only it can verify. Nothing about the sign-in is stored.
+    const boxTokenFor = slug => Object.values(orders).find(x => x.slug === slug)?.boxToken || (process.env.DESKAPI_STATIC_BOX_TOKENS ?? '').split(',').map(x => x.split(':')).find(([s]) => s === slug)?.[1]
+    const boxHostOk = box => { const slug = box.split('.')[0]; return /^[a-z0-9-]+$/.test(slug) && box === `${slug}.${new URL(PUBLIC).hostname}` && boxTokenFor(slug) }
+    if (u.pathname === '/auth/google/start') {
+      if (!process.env.DESK_SIGNIN_CLIENT_ID) return html(res, 404, 'Google sign-in is not set up yet.')
+      const box = u.searchParams.get('box') ?? ''; if (!boxHostOk(box)) return html(res, 400, 'Unknown Desk.')
+      const state = Buffer.from(JSON.stringify({ box, next: u.searchParams.get('next') ?? '/', n: randomBytes(8).toString('hex') })).toString('base64url')
+      const sig = createHmac('sha256', boxTokenFor(box.split('.')[0])).update(state).digest('hex')
+      const q = new URLSearchParams({ client_id: process.env.DESK_SIGNIN_CLIENT_ID, redirect_uri: `${PUBLIC}/auth/google/callback`, response_type: 'code', scope: 'openid email', prompt: 'select_account', state: `${state}.${sig}` })
+      res.writeHead(302, { location: `https://accounts.google.com/o/oauth2/v2/auth?${q}` }); return res.end()
+    }
+    if (u.pathname === '/auth/google/callback') {
+      const [state, sig] = (u.searchParams.get('state') ?? '').split('.')
+      let st = null; try { st = JSON.parse(Buffer.from(state ?? '', 'base64url').toString()) } catch { st = null }
+      if (!st || !boxHostOk(String(st.box ?? ''))) return html(res, 400, 'Unknown Desk.')
+      const tok = boxTokenFor(st.box.split('.')[0]); const want = createHmac('sha256', tok).update(state).digest('hex')
+      if (!sig || sig.length !== want.length || !timingSafeEqual(Buffer.from(sig), Buffer.from(want))) return html(res, 400, 'Bad sign-in state.')
+      const fail = m => { res.writeHead(302, { location: `https://${st.box}/login?gerr=${encodeURIComponent(m)}` }); res.end() }
+      const code = u.searchParams.get('code'); if (!code) return fail('Google did not sign you in.')
+      const tr = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ code, client_id: process.env.DESK_SIGNIN_CLIENT_ID, client_secret: process.env.DESK_SIGNIN_CLIENT_SECRET ?? '', redirect_uri: `${PUBLIC}/auth/google/callback`, grant_type: 'authorization_code' }) })
+      const tj = await tr.json().catch(() => ({})); if (!tj.id_token) return fail('Google did not sign you in.')
+      const info = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(tj.id_token)}`).then(r => r.json()).catch(() => ({}))
+      if (info.aud !== process.env.DESK_SIGNIN_CLIENT_ID || info.email_verified !== 'true' || !info.email) return fail('Google did not sign you in.')
+      const body = Buffer.from(JSON.stringify({ email: info.email, exp: Date.now() + 120000, n: st.n })).toString('base64url')
+      res.writeHead(302, { location: `https://${st.box}/auth/google/finish?ticket=${body}.${createHmac('sha256', tok).update(body).digest('hex')}&next=${encodeURIComponent(String(st.next ?? '/'))}` }); return res.end()
     }
     if (u.pathname === '/api/health') return json(res, 200, { ok: true, stripe: Boolean(STRIPE), provisioning: Boolean(process.env.DIGITALOCEAN_TOKEN), dns: Boolean(process.env.CLOUDFLARE_API_TOKEN), orders: Object.keys(orders).length })
     res.writeHead(404); res.end('not found')
