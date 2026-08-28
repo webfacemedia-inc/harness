@@ -121,6 +121,11 @@
             maxTokens: 32768
             input: [ text, image ]
 
+# DeepSeek's own API route is not offered on Desk (no key on a box; every
+# model goes through the customer's OpenRouter key or the private gateway).
+- id: llm-deepseek
+  disabled: true
+
 - id: agent-default-model
   config:
     provider: openrouter
