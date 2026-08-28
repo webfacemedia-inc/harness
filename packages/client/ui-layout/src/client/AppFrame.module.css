@@ -117,3 +117,18 @@
 .overlayLayer > * {
   pointer-events: auto;
 }
+
+/* Phones: the sidebar is a drawer over the conversation, never a column beside
+   it. Collapsed keeps the 56px rail (its Open button); open slides a drawer in
+   and the centre column keeps the full width. !important beats the inline
+   grid-template-columns the drag/collapse logic writes. */
+@media (max-width: 768px) {
+  .frame[data-sidebar-collapsed] { grid-template-columns: 56px minmax(0, 1fr) 0 !important; }
+  .frame:not([data-sidebar-collapsed]) { grid-template-columns: 0 minmax(0, 1fr) 0 !important; }
+  .frame:not([data-sidebar-collapsed]) .sidebarCol {
+    position: absolute; top: 0; bottom: 0; left: 0; z-index: 20;
+    width: min(86vw, 320px);
+    box-shadow: 0 0 48px rgba(0, 0, 0, 0.28);
+  }
+  .detailsCol, .handle { display: none; }
+}
