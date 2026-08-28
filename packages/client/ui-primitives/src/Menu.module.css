@@ -241,18 +241,11 @@
   width: 10px;
 }
 
-/* Phones: every menu scrolls inside the viewport — there is no room for a
- * side card, and an unclipped list runs off the bottom of the screen. */
-@media (max-width: 768px) {
-  .list { max-height: calc(100dvh - 24px); }
-  .viewport { overflow-y: auto; -webkit-overflow-scrolling: touch; }
-}
-
 /* Phones: a portal (fixed) menu is pinned inside the viewport regardless of
  * where its anchor sits — an anchor low on the screen used to push the menu's
  * top above the screen edge. Inline top/left from the placement pass are
  * overridden on purpose. */
-@media (max-width: 768px) {
+@media (max-width: 1023.98px) {
   .list {
     position: fixed !important;
     top: 12px !important; left: 12px !important; right: 12px !important; bottom: auto !important;
@@ -260,15 +253,18 @@
     max-height: calc(100dvh - 24px) !important;
     display: flex; flex-direction: column;
   }
-  .viewport {
+  /* A list carrying a submenu card keeps its overflow visible: the card is
+     positioned outside the list box and a scroll clip would crop it. */
+  .list:not(:has(.submenu)) .viewport {
     overflow-y: auto !important; -webkit-overflow-scrolling: touch;
     max-height: calc(100dvh - 24px);
     touch-action: pan-y; overscroll-behavior: contain;
   }
+  .list:has(.submenu) { max-height: none !important; }
   .list { touch-action: pan-y; overscroll-behavior: contain; }
 }
 /* While a menu is open on a phone the page behind must not scroll or bounce,
  * or the finger moves the page instead of the list. */
-@media (max-width: 768px) {
+@media (max-width: 1023.98px) {
   html:has(.list), html:has(.list) body { overflow: hidden !important; overscroll-behavior: none; touch-action: none; }
 }

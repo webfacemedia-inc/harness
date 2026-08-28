@@ -33,7 +33,7 @@ export function page({ business, rel }) {
     return `<tr><td class="n">${e.dir ? `📁 <a href="/files?dir=${encodeURIComponent(path)}">${esc(e.name)}</a>` : `<a href="/files/dl/${encodeURIComponent(path)}">${esc(e.name)}</a>`}</td><td class="s">${e.dir ? '' : fmtSize(e.size)}</td><td class="d">${e.mtime.toISOString().slice(0, 16).replace('T', ' ')}</td><td class="a">${e.dir || lock ? '' : `<button class="quiet" data-del="${esc(path)}">Delete</button>`}</td></tr>`
   }).join('')
   const crumbHtml = ['<a href="/files">Desk</a>', ...crumbs.map((c, i) => `<a href="/files?dir=${encodeURIComponent(crumbs.slice(0, i + 1).join('/'))}">${esc(c)}</a>`)].join(' / ')
-  const body = `<h1>${ICONS.files} Files</h1><p class="sub">${crumbHtml}</p>
+  const body = `<h1>${ICONS.files} Files</h1><p class="sub"><a href="/files/export">Download everything (files and conversations)</a> · ${crumbHtml}</p>
 <div class="drop" id="drop">Drop files here, or <label>choose files<input id="pick" type="file" multiple></label>. They land in this folder and Desk can use them right away.</div>
 <div id="status"></div>
 ${rows ? `<table><thead><tr><th>Name</th><th>Size</th><th>Changed</th><th></th></tr></thead><tbody>${rows}</tbody></table>` : '<div class="empty">Nothing here yet.</div>'}
@@ -60,6 +60,11 @@ export async function handle(req, res, u, { business }) {
     return pipeline(createReadStream(f), res)
   }
   if (p.startsWith('/files/up/') && req.method === 'PUT') {
+    // 10 GB per Desk (the plan's file allowance): refuse an upload that would cross it.
+    const LIMIT = 10 * 1024 ** 3; const incoming = Number(req.headers['content-length'] ?? 0)
+    const used = (() => { const walk = d => readdirSync(d, { withFileTypes: true }).reduce((n, e) => n + (e.isDirectory() ? walk(join(d, e.name)) : statSync(join(d, e.name)).size), 0); try { return walk(WORK) } catch { return 0 } })()
+    if (used + incoming > LIMIT) { res.writeHead(413, { 'content-type': 'text/plain' }); return res.end(`This Desk holds ${(used / 1024 ** 3).toFixed(1)} GB of files; the plan includes 10 GB. Delete something first.`) }
+
     const f = safe(p.slice('/files/up/'.length)); const name = basename(f)
     if (PROTECTED.has(name) || name.startsWith('.')) { res.writeHead(403); return res.end('That file is managed by Desk') }
     mkdirSync(resolve(f, '..'), { recursive: true })

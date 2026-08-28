@@ -19,6 +19,7 @@ import * as profile from './profile.js'
 import * as routines from './routines.js'
 import * as wf from './webface-oauth.js'
 import { layout, esc } from './ui.js'
+import { WORK } from './profile.js'
 import * as push from './push.js'
 import { usage } from './usage.js'
 import { execFile } from 'node:child_process'
@@ -166,8 +167,27 @@ const server = createServer(async (req, res) => {
         || u.pathname === '/connections' || u.pathname.startsWith('/connections/')
         || ((u.pathname === '/files' || u.pathname.startsWith('/files/')) && req.method !== 'GET')
         || (u.pathname.startsWith('/routines/') && req.method !== 'GET')
-        || u.pathname === '/deskd/google/client' || u.pathname.startsWith('/oauth/')
+        || u.pathname === '/deskd/google/client' || u.pathname.startsWith('/oauth/') || u.pathname === '/billing' || u.pathname === '/files/export'
       if (ownerOnly && sess?.r === 'phone') { res.writeHead(403, { 'content-type': 'text/html; charset=utf-8' }); return res.end(page('Owner only', `<p>Settings are changed from an owner sign-in, not a phone session. <a href="/logout">Sign out</a> and sign in again without ticking "phone".</p>`)) }
+    }
+    if (u.pathname === '/billing') {
+      // Owner-only (the phone fence above covers /billing via the ownerOnly list below); opens the store's customer portal.
+      const sess = verifySession(cookieOf(req)); if (!sess || sess.r === 'phone') { res.writeHead(302, { location: '/login?next=/billing' }); return res.end() }
+      if (!API || !process.env.DESK_BOX_TOKEN) return res.end(page('Billing', '<p>This Desk is not billed through the store. Write to <a href="mailto:tommy@webfacemedia.com">tommy@webfacemedia.com</a>.</p>'))
+      try {
+        const r = await fetch(`${API}/boxes/${SLUG}/portal`, { method: 'POST', headers: { authorization: `Bearer ${process.env.DESK_BOX_TOKEN}` }, signal: AbortSignal.timeout(15000) })
+        const j = await r.json()
+        if (!r.ok || !j.url) { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); return res.end(page('Billing', `<p>${esc(j.message ?? 'Billing is not available right now.')}</p>`)) }
+        res.writeHead(302, { location: j.url }); return res.end()
+      } catch (e) { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); return res.end(page('Billing', `<p>Could not reach the store: ${esc(e.message)}</p>`)) }
+    }
+    if (u.pathname === '/files/export') {
+      // Everything on this Desk as one archive: the Desk folder and every conversation.
+      const sess = verifySession(cookieOf(req)); if (!sess || sess.r === 'phone') { res.writeHead(302, { location: '/login?next=/files/export' }); return res.end() }
+      const { spawn } = await import('node:child_process'); const home = process.env.DSH_HOME ?? '/srv/desk/home'
+      res.writeHead(200, { 'content-type': 'application/gzip', 'content-disposition': `attachment; filename="desk-export-${new Date().toISOString().slice(0, 10)}.tar.gz"` })
+      const tar = spawn('tar', ['-czf', '-', '-C', '/', WORK.replace(/^\//, ''), `${home.replace(/^\//, '')}/sessions`, `${home.replace(/^\//, '')}/storages`], { stdio: ['ignore', 'pipe', 'ignore'] })
+      tar.stdout.pipe(res); tar.on('error', () => res.end()); return
     }
     if (u.pathname === '/browser') {
       if (!verifySession(cookieOf(req))) { res.writeHead(302, { location: '/login?next=/browser' }); return res.end() }

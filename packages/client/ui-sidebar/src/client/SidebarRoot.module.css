@@ -292,23 +292,25 @@
 /* Phones: let the sidebar grow to its content and scroll as a whole (the
    drawer column is the scroll container); the browser region no longer owns
    a tiny scroll box between the modes strip and the foot links. */
-@media (max-width: 768px) {
+@media (max-width: 1023.98px) {
   .root { height: auto; min-height: 100%; }
   .regionArea { flex: none; overflow: visible; }
 }
 
 /* Phones, collapsed: only the mark (opens the drawer) and New session remain. */
-@media (max-width: 768px) {
+@media (max-width: 1023.98px) {
   .collapsed .footArea, .collapsed .regionArea { display: none; }
 }
 
 /* Phones, collapsed: the expand toggle reads as a menu button — three bars,
    not the brand mark (the mark did not read as "open" on a phone). */
-@media (max-width: 768px) {
+@media (max-width: 1023.98px) {
   .collapsed .railFish { display: none; }
-  .collapsed .toggle { position: relative; width: 40px; height: 40px; border-radius: 10px; }
+  .collapsed .toggle { position: relative; width: 36px; height: 36px; border-radius: 10px; }
+  /* iOS keeps :hover after a tap; the panel glyph must not paint over the bars. */
+  .collapsed .toggle:hover .panelIcon, .collapsed .toggle .panelIcon { display: none; }
   .collapsed .toggle::before {
-    content: ""; position: absolute; left: 10px; right: 10px; top: 13px; height: 2px; border-radius: 2px;
+    content: ""; position: absolute; left: 9px; right: 9px; top: 11px; height: 2px; border-radius: 2px;
     background: currentColor; box-shadow: 0 6px 0 currentColor, 0 12px 0 currentColor;
   }
 }

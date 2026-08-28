@@ -508,7 +508,7 @@
 /* Phones: the session tree keeps its own scroll box (it renders rows against
    its height), but a generous one — roughly half the screen — inside a drawer
    that itself scrolls. */
-@media (max-width: 768px) {
+@media (max-width: 1023.98px) {
   .root, .listArea, .treeBody { flex: none; }
-  .list { height: 55dvh; min-height: 260px; max-height: none; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; overscroll-behavior: contain; }
+  .list { height: auto; min-height: 0; max-height: 55dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; overscroll-behavior: contain; }
 }

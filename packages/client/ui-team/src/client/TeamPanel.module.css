@@ -18,7 +18,7 @@
 .list { max-height: 46vh; overflow-y: auto; overscroll-behavior: contain; }
 
 /* Phones: modes become a horizontal strip of chips so the sessions list keeps its room. */
-@media (max-width: 768px) {
+@media (max-width: 1023.98px) {
   .list { flex-direction: row; max-height: none; overflow-x: auto; overflow-y: hidden; gap: 6px; padding: 2px 0 6px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
   .list::-webkit-scrollbar { display: none; }
   .bot { flex: 0 0 auto; width: auto; padding: 6px 10px 6px 6px; border: 1px solid var(--dsw-alias-border-default, rgba(127, 127, 127, 0.28)); border-radius: 999px; }
@@ -29,6 +29,6 @@
 }
 
 /* Phones, collapsed rail: the modes live in the drawer — the rail shows nothing for them. */
-@media (max-width: 768px) {
+@media (max-width: 1023.98px) {
   .rail { display: none; }
 }

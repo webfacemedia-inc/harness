@@ -477,7 +477,7 @@
 
 /* Phones: the control row wraps — mode chips stay left, the model picker and
    Send move to their own line rather than overlapping the chips. */
-@media (max-width: 768px) {
+@media (max-width: 1023.98px) {
   .row { flex-wrap: wrap; gap: 8px 12px; }
   .tools { flex: 1 1 auto; gap: 10px; }
   .modes { gap: 8px; }

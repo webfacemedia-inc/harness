@@ -190,6 +190,7 @@ export function AppFrame({
         <CenterColumn>{renderSlot('conversation', {})}</CenterColumn>
         <DetailsColumn>{renderSlot('details', {})}</DetailsColumn>
       </>
+      {narrow && !sidebarCollapsed && <button type="button" className={css.scrim} aria-label="Close menu" onClick={() => { actions.toggleSidebar() }} />}
       <div className={css.overlayLayer} data-shell-overlay>
         {renderSlot('shell.overlay', {})}
       </div>

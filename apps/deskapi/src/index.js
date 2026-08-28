@@ -105,9 +105,18 @@ async function tellBox(o, state) {
   if (!r.ok) throw new Error(`box said ${r.status}`)
   console.log('box', o.slug, 'billing →', state)
 }
-/** Delete a Desk's droplet and DNS record; the order stays as a record. */
+/** Delete a Desk's droplet and DNS record after a final snapshot; the order stays as a record. */
 async function destroyBox(o) {
   const tok = process.env.DIGITALOCEAN_TOKEN
+  if (o.dropletId && tok) {
+    // Farewell snapshot: kept 30 days for a come-back or an export (terms), deleted by the 90-day sweep.
+    try {
+      const h = { authorization: `Bearer ${tok}`, 'content-type': 'application/json' }
+      const a = await (await fetch(`https://api.digitalocean.com/v2/droplets/${o.dropletId}/actions`, { method: 'POST', headers: h, body: JSON.stringify({ type: 'snapshot', name: `desk-${o.slug}-final-${new Date().toISOString().slice(0, 10)}` }) })).json()
+      for (let i = 0; i < 120 && a.action?.status === 'in-progress'; i++) { await new Promise(r => setTimeout(r, 10000)); const st = await (await fetch(`https://api.digitalocean.com/v2/actions/${a.action.id}`, { headers: h })).json(); a.action = st.action }
+      o.finalSnapshot = a.action?.status === 'completed' ? a.action.resource_id : undefined
+    } catch (e) { console.error('final snapshot failed', o.slug, e.message) }
+  }
   if (o.dropletId && tok) await fetch(`https://api.digitalocean.com/v2/droplets/${o.dropletId}`, { method: 'DELETE', headers: { authorization: `Bearer ${tok}` } }).catch(e => console.error('droplet delete failed', e.message))
   const cf = process.env.CLOUDFLARE_API_TOKEN; const zone = process.env.CLOUDFLARE_ZONE_ID ?? 'd3fc4cb5dfad60b2064472906607a170'
   if (cf && o.host?.endsWith('.webfacedesk.app')) {
@@ -117,8 +126,23 @@ async function destroyBox(o) {
   }
   o.status = 'destroyed'; o.destroyedAt = new Date().toISOString(); save()
 }
-/** Nightly DigitalOcean snapshot per live box, keeping the newest three. */
+/** Terms: 14 days read-only after a failed payment, then the Desk stops; a closed Desk's snapshot goes after 90 days. */
+async function sweep() {
+  const now = Date.now()
+  for (const o of Object.values(orders)) {
+    if (o.billing === 'past_due' && o.pastDueSince && now - Date.parse(o.pastDueSince) > 14 * 86400000 && o.status === 'ready') {
+      o.billing = 'cancelled'; o.billingAt = new Date().toISOString(); save()
+      await tellBox(o, 'cancelled').catch(e => console.error('stop after 14 days failed', o.slug, e.message))
+    }
+    if (o.status === 'destroyed' && o.finalSnapshot && o.destroyedAt && now - Date.parse(o.destroyedAt) > 90 * 86400000 && process.env.DIGITALOCEAN_TOKEN) {
+      await fetch(`https://api.digitalocean.com/v2/snapshots/${o.finalSnapshot}`, { method: 'DELETE', headers: { authorization: `Bearer ${process.env.DIGITALOCEAN_TOKEN}` } }).catch(() => {})
+      delete o.finalSnapshot; save()
+    }
+  }
+}
+/** Nightly DigitalOcean snapshot per live box, kept 30 days. */
 async function snapshots() {
+  await sweep().catch(e => console.error('sweep failed', e.message))
   const tok = process.env.DIGITALOCEAN_TOKEN; if (!tok) return
   const h = { authorization: `Bearer ${tok}`, 'content-type': 'application/json' }
   // Static boxes (the demo/apex box itself) join the nightly snapshot loop: DESKAPI_STATIC_BOXES=slug:dropletId,…
@@ -128,7 +152,9 @@ async function snapshots() {
       const a = await fetch(`https://api.digitalocean.com/v2/droplets/${o.dropletId}/actions`, { method: 'POST', headers: h, body: JSON.stringify({ type: 'snapshot', name: `desk-${o.slug}-${new Date().toISOString().slice(0, 10)}` }) })
       if (!a.ok) throw new Error(`snapshot action ${a.status}`)
       const snaps = (await (await fetch(`https://api.digitalocean.com/v2/droplets/${o.dropletId}/snapshots?per_page=50`, { headers: h })).json()).snapshots ?? []
-      for (const s of snaps.sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(3)) await fetch(`https://api.digitalocean.com/v2/snapshots/${s.id}`, { method: 'DELETE', headers: h })
+      // Retention is by age (30 days), and a final snapshot from a closed Desk is never in this list.
+      const cutoff = Date.now() - 30 * 86400000
+      for (const s of snaps.filter(x => !x.name.includes('-final-') && Date.parse(x.created_at) < cutoff)) await fetch(`https://api.digitalocean.com/v2/snapshots/${s.id}`, { method: 'DELETE', headers: h })
       o.lastSnapshot = new Date().toISOString(); if (!o.static) save(); console.log('snapshot ok', o.slug, snaps.length)
     } catch (e) { console.error('snapshot failed', o.slug, e.message) }
   }
@@ -140,7 +166,7 @@ async function email(o) {
   if (!process.env.BREVO_API_KEY) return
   const r = await fetch('https://api.brevo.com/v3/smtp/email', { method: 'POST', headers: { 'api-key': process.env.BREVO_API_KEY, 'content-type': 'application/json' }, body: JSON.stringify({
     sender: { name: 'webfaCe Desk', email: process.env.DESK_FROM_EMAIL ?? 'desk@webfacemedia.com' }, to: [{ email: o.email }], subject: `${o.business}: your Desk is ready`,
-    htmlContent: `<p>Your Desk is ready.</p><p><a href="https://${o.host}/">Open your Desk</a> — username <b>owner</b> (or this email address), password <b>${o.password}</b>. You can also use <b>Sign in with Google</b> if your Google address is ${o.email}.</p><p>Sign in — Desk opens the Business page and asks about the business. On your computer you can also <a href="${process.env.DESK_PUBLIC_URL ?? 'https://webfacedesk.app'}/download">download the desktop app</a>. Reply to this email if anything is unclear.</p><p>— webfaCeMEdia, Toronto</p>`,
+    htmlContent: `<p>Your Desk is ready.</p><p><a href="https://${o.host}/">Open your Desk</a> — username <b>owner</b> (or this email address), password <b>${o.password}</b>. You can also use <b>Sign in with Google</b> if your Google address is ${o.email}.</p><p>Your subscription, invoices and card are under <b>Billing</b> in the Desk sidebar; you can cancel there at any time.</p><p>Sign in — Desk opens the Business page and asks about the business. On your computer you can also <a href="${process.env.DESK_PUBLIC_URL ?? 'https://webfacedesk.app'}/download">download the desktop app</a>. Reply to this email if anything is unclear.</p><p>— webfaCeMEdia, Toronto</p>`,
   }) })
   if (!r.ok) throw new Error(`brevo ${r.status}: ${await r.text()}`)
   console.log('welcome email sent to', o.email, 'for', o.slug)
@@ -184,6 +210,8 @@ const server = createServer(async (req, res) => {
         const o = Object.values(orders).find(x => x.stripeSubscription === (obj.subscription ?? obj.id))
         if (o) {
           const state = ev.type === 'invoice.paid' ? 'ok' : ev.type === 'invoice.payment_failed' ? 'past_due' : 'cancelled'
+          if (state === 'past_due' && o.billing !== 'past_due') o.pastDueSince = new Date().toISOString()
+          if (state !== 'past_due') delete o.pastDueSince
           if (!(state === 'ok' && (o.billing ?? 'ok') === 'ok')) { o.billing = state; o.billingAt = new Date().toISOString(); save(); tellBox(o, state).catch(e => console.error('box billing notify failed', o.slug, e.message)) }
         }
       }
@@ -234,6 +262,14 @@ const server = createServer(async (req, res) => {
       if (!o && staticTok && tok.length === staticTok.length && timingSafeEqual(Buffer.from(tok), Buffer.from(staticTok))) { o = orders[`static_${slug}`] ??= { id: `static_${slug}`, slug, host: `${slug}.${new URL(PUBLIC).hostname}`, status: 'ready', static: true, created: new Date().toISOString() } }
       if (!o || !(o.boxToken ? tok.length === o.boxToken.length && timingSafeEqual(Buffer.from(tok), Buffer.from(o.boxToken)) : o.static)) return json(res, 401, { error: 'no' })
       o.lastHeartbeat = new Date().toISOString(); const beat = JSON.parse((await body(req)).toString() || '{}'); o.heartbeat = { ready: beat.ready, harness: beat.harness, google: beat.google?.accounts?.length ?? 0, push: beat.push?.devices ?? 0 }; if (beat.usage) o.usage = { monthTokens: beat.usage.monthTokens, totalTokens: beat.usage.totalTokens, sessions: beat.usage.sessions, turns: beat.usage.turns }; save(); return json(res, 200, { ok: true })
+    }
+    // The Desk's Billing link: a fresh Stripe customer-portal session for this box's owner.
+    const pm = u.pathname.match(/^\/api\/boxes\/([a-z0-9-]+)\/portal$/)
+    if (pm && req.method === 'POST') {
+      const o = Object.values(orders).find(x => x.slug === pm[1]); const tok = (req.headers.authorization ?? '').replace(/^Bearer /, '')
+      if (!o?.boxToken || tok.length !== o.boxToken.length || !timingSafeEqual(Buffer.from(tok), Buffer.from(o.boxToken))) return json(res, 401, { error: 'no' })
+      if (!o.stripeCustomer || !STRIPE) return json(res, 404, { error: 'no_billing', message: 'This Desk is not billed through the store.' })
+      try { const p = await stripe('billing_portal/sessions', { customer: o.stripeCustomer, return_url: `https://${o.host}/` }); return json(res, 200, { url: p.url }) } catch (e) { return json(res, 502, { error: 'stripe', message: e.message }) }
     }
     if (u.pathname === '/api/ops/snapshot' && req.method === 'POST') {
       const k = (req.headers.authorization ?? '').replace(/^Bearer /, ''); if (!process.env.DESKAPI_OPS_KEY || k !== process.env.DESKAPI_OPS_KEY) return json(res, 401, { error: 'no' })

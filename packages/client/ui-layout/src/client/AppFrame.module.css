@@ -122,7 +122,7 @@
    it. Collapsed keeps the 56px rail (its Open button); open slides a drawer in
    and the centre column keeps the full width. !important beats the inline
    grid-template-columns the drag/collapse logic writes. */
-@media (max-width: 768px) {
+@media (max-width: 1023.98px) {
   .frame[data-sidebar-collapsed] { grid-template-columns: 56px minmax(0, 1fr) 0 !important; }
   .frame:not([data-sidebar-collapsed]) { grid-template-columns: 0 minmax(0, 1fr) 0 !important; }
   .frame:not([data-sidebar-collapsed]) .sidebarCol {
@@ -135,9 +135,13 @@
   .centerCol { grid-column: 2; }
   .detailsCol { grid-column: 3; }
   .detailsCol, .handle { display: none; }
+  /* A tap on the conversation closes the drawer; the scrim also dims it. */
+  .scrim { position: absolute; inset: 0; z-index: 19; background: rgba(21, 32, 41, 0.28); border: 0; padding: 0; cursor: pointer; }
 }
+.scrim { display: none; }
+@media (max-width: 1023.98px) { .frame:not([data-sidebar-collapsed]) .scrim { display: block; } }
 
 /* Phones: the drawer scrolls as one page; nested regions stop clipping. */
-@media (max-width: 768px) {
+@media (max-width: 1023.98px) {
   .frame:not([data-sidebar-collapsed]) .sidebarCol { overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
 }
