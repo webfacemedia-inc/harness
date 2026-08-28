@@ -33,6 +33,16 @@ export function apply(ctx: ClientContext): void {
     en: { 'title': 'Modes', 'active': 'default', 'message': 'Switch to {name}' },
   }), 'ui-team: dictionaries')
 
+  // Desk hides harness plumbing a business owner never needs: the per-turn
+  // context-injection rows (AGENTS.md, system prompt, skill catalog) and the
+  // token/TTFT stats line. Both stay in the session log and the Trajectory tab.
+  ctx.effect(() => {
+    const style = document.createElement('style')
+    style.textContent = '[data-open]:has([data-context-source]){display:none}[data-stats-line]{display:none}'
+    document.head.append(style)
+    return () => { style.remove() }
+  }, 'ui-team: hide harness chrome')
+
   const { api } = ctx.get('connection') as ConnectionHandle
   const readers = new Set<() => void>()
   ctx.effect(() => {

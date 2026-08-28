@@ -184,7 +184,7 @@ export const en = {
   'hint.goal': 'describe the objective for a long-running task',
   'hint.goal.active': 'goal active — edit / pause / resume / clear',
   'placeholder.plan': PLAN_NEXT_ACTION_EN,
-  'placeholder.default': 'Message the agent',
+  'placeholder.default': 'Ask Desk anything',
   'placeholder.unavailable': 'Session unavailable',
   'placeholder.parentOffline': 'Parent session offline; sending is unavailable but you can still stop the run',
   'placeholder.hero': 'Describe what you want to build',
