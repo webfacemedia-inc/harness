@@ -109,12 +109,14 @@ async function destroyBox(o) {
 async function snapshots() {
   const tok = process.env.DIGITALOCEAN_TOKEN; if (!tok) return
   const h = { authorization: `Bearer ${tok}`, 'content-type': 'application/json' }
-  for (const o of Object.values(orders).filter(x => x.status === 'ready' && x.dropletId && x.billing !== 'cancelled')) {
+  // Static boxes (the demo/apex box itself) join the nightly snapshot loop: DESKAPI_STATIC_BOXES=slug:dropletId,…
+  const statics = (process.env.DESKAPI_STATIC_BOXES ?? '').split(',').filter(Boolean).map(x => { const [slug, dropletId] = x.split(':'); return { slug, dropletId: Number(dropletId), status: 'ready', static: true } })
+  for (const o of [...Object.values(orders).filter(x => x.status === 'ready' && x.dropletId && x.billing !== 'cancelled'), ...statics]) {
     try {
       await fetch(`https://api.digitalocean.com/v2/droplets/${o.dropletId}/actions`, { method: 'POST', headers: h, body: JSON.stringify({ type: 'snapshot', name: `desk-${o.slug}-${new Date().toISOString().slice(0, 10)}` }) })
       const snaps = (await (await fetch(`https://api.digitalocean.com/v2/droplets/${o.dropletId}/snapshots?per_page=50`, { headers: h })).json()).snapshots ?? []
       for (const s of snaps.sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(3)) await fetch(`https://api.digitalocean.com/v2/snapshots/${s.id}`, { method: 'DELETE', headers: h })
-      o.lastSnapshot = new Date().toISOString(); save()
+      o.lastSnapshot = new Date().toISOString(); if (!o.static) save(); console.log('snapshot ok', o.slug, snaps.length)
     } catch (e) { console.error('snapshot failed', o.slug, e.message) }
   }
 }
@@ -216,6 +218,10 @@ const server = createServer(async (req, res) => {
       const o = Object.values(orders).find(x => x.slug === hb[1]); const tok = (req.headers.authorization ?? '').replace(/^Bearer /, '')
       if (!o || !o.boxToken || tok !== o.boxToken) return json(res, 401, { error: 'no' })
       o.lastHeartbeat = new Date().toISOString(); o.heartbeat = JSON.parse((await body(req)).toString() || '{}'); save(); return json(res, 200, { ok: true })
+    }
+    if (u.pathname === '/api/ops/snapshot' && req.method === 'POST') {
+      const k = (req.headers.authorization ?? '').replace(/^Bearer /, ''); if (!process.env.DESKAPI_OPS_KEY || k !== process.env.DESKAPI_OPS_KEY) return json(res, 401, { error: 'no' })
+      await snapshots(); return json(res, 200, { ok: true })
     }
     if (u.pathname === '/api/health') return json(res, 200, { ok: true, stripe: Boolean(STRIPE), provisioning: Boolean(process.env.DIGITALOCEAN_TOKEN), dns: Boolean(process.env.CLOUDFLARE_API_TOKEN), orders: Object.keys(orders).length })
     res.writeHead(404); res.end('not found')
