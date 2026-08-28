@@ -2,27 +2,33 @@ package main
 
 import (
 	"context"
-	"fmt"
+
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-// App struct
+// App is the Wails-bound application: a window onto a Desk.
 type App struct {
 	ctx context.Context
 }
 
-// NewApp creates a new App application struct
+// NewApp creates the application struct.
 func NewApp() *App {
 	return &App{}
 }
 
-// startup is called when the app starts. The context is saved
-// so we can call the runtime methods
+// startup keeps the context for runtime calls and clears the macOS quarantine
+// flag; when the app runs from a translocated copy (opened from Downloads) the
+// frontend is told so it can ask the user to move it to Applications.
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
-	go clearQuarantine()
+	go func() {
+		if translocated := clearQuarantine(); translocated {
+			runtime.EventsEmit(ctx, "desk:translocated")
+		}
+	}()
 }
 
-// Greet returns a greeting for the given name
-func (a *App) Greet(name string) string {
-	return fmt.Sprintf("Hello %s, It's show time!", name)
+// Version reports the build's release version ("dev" for local builds).
+func (a *App) Version() string {
+	return version
 }

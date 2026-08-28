@@ -5,6 +5,10 @@ webfacedesk.app, www.webfacedesk.app {
 	handle @api {
 		reverse_proxy 127.0.0.1:8095
 	}
+	# Download links never show the repository name.
+	redir /dl/mac https://github.com/webfacemedia-inc/harness/releases/latest/download/webfaCe-Desk-macOS.zip 302
+	redir /dl/windows https://github.com/webfacemedia-inc/harness/releases/latest/download/webfaCe-Desk-Windows.zip 302
+	redir /dl/linux https://github.com/webfacemedia-inc/harness/releases/latest/download/webfaCe-Desk-Linux.zip 302
 	root * /srv/desk/site
 	try_files {path} {path}.html
 	file_server

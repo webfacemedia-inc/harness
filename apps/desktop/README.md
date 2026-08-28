@@ -1,19 +1,12 @@
-# README
+# webfaCe Desk — desktop app
 
-## About
+A small Wails (Go + WebView) window onto a Desk. It asks for the Desk address once, probes `/healthz`
+on it, and then shows the Desk in a frame. Nothing runs locally; the Desk stays on its own server.
 
-This is the official Wails Vanilla template.
+- `main.go` — window, menu (Desk → Change Desk…, ⌘⇧D / Ctrl+Shift+D), build-time `version`.
+- `app.go` — bound methods (`Version`) and startup (quarantine clearing, translocation notice).
+- `quarantine_darwin.go` — clears `com.apple.quarantine` from the bundle after the first right-click → Open.
+- `frontend/` — the address screen and frame; `build.mjs` copies it to `frontend/dist`.
 
-You can configure the project by editing `wails.json`. More information about the project settings can be found
-here: https://wails.io/docs/reference/project-config
-
-## Live Development
-
-To run in live development mode, run `wails dev` in the project directory. This will run a Vite development
-server that will provide very fast hot reload of your frontend changes. If you want to develop in a browser
-and have access to your Go methods, there is also a dev server that runs on http://localhost:34115. Connect
-to this in your browser, and you can call your Go code from devtools.
-
-## Building
-
-To build a redistributable, production mode package, use `wails build`.
+Releases are built by `.github/workflows/desktop.yml` on a `desktop-v*` tag (macOS universal, Windows, Linux) and
+served from https://webfacedesk.app/download.

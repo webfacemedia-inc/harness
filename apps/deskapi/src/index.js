@@ -267,7 +267,9 @@ const server = createServer(async (req, res) => {
     const pm = u.pathname.match(/^\/api\/boxes\/([a-z0-9-]+)\/portal$/)
     if (pm && req.method === 'POST') {
       const o = Object.values(orders).find(x => x.slug === pm[1]); const tok = (req.headers.authorization ?? '').replace(/^Bearer /, '')
-      if (!o?.boxToken || tok.length !== o.boxToken.length || !timingSafeEqual(Buffer.from(tok), Buffer.from(o.boxToken))) return json(res, 401, { error: 'no' })
+      const staticTok = (process.env.DESKAPI_STATIC_BOX_TOKENS ?? '').split(',').map(x => x.split(':')).find(([s]) => s === pm[1])?.[1]
+      const okTok = (want) => Boolean(want) && tok.length === want.length && timingSafeEqual(Buffer.from(tok), Buffer.from(want))
+      if (!(okTok(o?.boxToken) || okTok(staticTok))) return json(res, 401, { error: 'no' })
       if (!o.stripeCustomer || !STRIPE) return json(res, 404, { error: 'no_billing', message: 'This Desk is not billed through the store.' })
       try { const p = await stripe('billing_portal/sessions', { customer: o.stripeCustomer, return_url: `https://${o.host}/` }); return json(res, 200, { url: p.url }) } catch (e) { return json(res, 502, { error: 'stripe', message: e.message }) }
     }

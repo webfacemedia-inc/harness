@@ -9,5 +9,12 @@
   "author": {
     "name": "webfaCeMEdia",
     "email": "tommy@webfacemedia.com"
+  },
+  "info": {
+    "companyName": "webfaCeMEdia",
+    "productName": "webfaCe Desk",
+    "productVersion": "0.1.4",
+    "copyright": "© 2026 webfaCeMEdia",
+    "comments": "A window onto your Desk."
   }
 }
