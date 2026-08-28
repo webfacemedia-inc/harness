@@ -143,7 +143,7 @@ describe('ui-settings-models apply', () => {
     expect(() => b.locale.register('settings.models', 'en', {})).not.toThrow()
   })
 
-  it('keeps remote-browser acknowledgement in process memory', async () => {
+  it('tries Host settings on a remote browser and keeps the notice pending when they are unreachable', async () => {
     const b = await bench(false)
     declare(b.slots)
     await b.ctx.plugin({ inject: [...inject], apply }).await()
@@ -154,9 +154,7 @@ describe('ui-settings-models apply', () => {
     )()
 
     await injected.controller.load()
-    expect(injected.controller.store.getSnapshot()).toEqual({
-      status: 'ready', acknowledged: false, error: null,
-    })
+    expect(injected.controller.store.getSnapshot()).toMatchObject({ status: 'ready', acknowledged: false })
   })
 })
 

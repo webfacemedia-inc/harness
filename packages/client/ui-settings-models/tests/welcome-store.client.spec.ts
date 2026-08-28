@@ -76,18 +76,20 @@ describe('WelcomeNoticeStore', () => {
     expect(controller.store.getSnapshot()).toMatchObject({ status: 'ready', acknowledged: true })
   })
 
-  it('keeps the notice pending when loading or persistence fails', async () => {
+  it('falls back to process memory when loading or persistence fails', async () => {
     const load = new WelcomeNoticeStore({
       settings: { describe: () => Promise.reject(new Error('offline')) },
     } as never)
     await load.load()
-    expect(load.store.getSnapshot()).toEqual({ status: 'error', acknowledged: false, error: 'offline' })
+    // Host refused: the notice still shows, but the store now keeps the answer in memory.
+    expect(load.store.getSnapshot()).toEqual({ status: 'ready', acknowledged: false, error: 'offline' })
 
     const save = new WelcomeNoticeStore({
       settings: { mutate: () => Promise.reject(new Error('disk full')) },
     } as never)
-    await expect(save.acknowledge()).resolves.toBe(false)
-    expect(save.store.getSnapshot()).toEqual({ status: 'error', acknowledged: false, error: 'disk full' })
+    // A refused write is accepted locally so a fronted Desk never re-shows the notice.
+    await expect(save.acknowledge()).resolves.toBe(true)
+    expect(save.store.getSnapshot()).toEqual({ status: 'ready', acknowledged: true, error: 'disk full' })
 
     const nonError = new WelcomeNoticeStore({
       // Durable/wire failures are unknown; exercise containment of a non-Error rejection.
@@ -107,7 +109,8 @@ describe('WelcomeNoticeStore', () => {
     ]) {
       const controller = new WelcomeNoticeStore({ settings: { describe } } as never)
       await controller.load()
-      expect(controller.store.getSnapshot().status).toBe('error')
+      expect(controller.store.getSnapshot()).toMatchObject({ status: 'ready', acknowledged: false })
+      expect(controller.store.getSnapshot().error).not.toBeNull()
     }
 
     for (const value of [null, 42, { [WELCOME_NOTICE_ACK_FIELD]: 42 }]) {
@@ -135,7 +138,7 @@ describe('WelcomeNoticeStore', () => {
         },
       }) },
     } as never)
-    await expect(save.acknowledge()).resolves.toBe(false)
+    await expect(save.acknowledge()).resolves.toBe(true)
     expect(save.store.getSnapshot().error).toBe('denied')
   })
 
@@ -193,7 +196,7 @@ describe('WelcomeNoticeStore', () => {
     const pending = staleFailure.acknowledge()
     await staleFailure.load()
     failedWrite.reject('late failure')
-    await expect(pending).resolves.toBe(false)
+    await expect(pending).resolves.toBe(true)
     expect(staleFailure.store.getSnapshot().status).toBe('ready')
   })
 })
