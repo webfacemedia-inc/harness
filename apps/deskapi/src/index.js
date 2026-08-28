@@ -84,6 +84,30 @@ async function fulfil(o) {
     await email(o).catch(e => console.error('email failed:', e.message))
   } catch (e) { console.error('provision failed for', o.id, e); o.status = 'failed'; o.detail = e.message; save() }
 }
+async function tellBox(o, state) {
+  if (!o.host || !o.boxToken) return
+  let portalUrl = ''
+  if (state === 'past_due' && o.stripeCustomer) { try { portalUrl = (await stripe('billing_portal/sessions', { customer: o.stripeCustomer, return_url: `https://${o.host}/` })).url } catch (e) { console.error('portal session failed', e.message) } }
+  const r = await fetch(`https://${o.host}/deskd/billing`, { method: 'POST', headers: { authorization: `Bearer ${o.boxToken}`, 'content-type': 'application/json' }, body: JSON.stringify({ state, portalUrl }), signal: AbortSignal.timeout(15000) })
+  if (!r.ok) throw new Error(`box said ${r.status}`)
+  console.log('box', o.slug, 'billing →', state)
+}
+/** Nightly DigitalOcean snapshot per live box, keeping the newest three. */
+async function snapshots() {
+  const tok = process.env.DIGITALOCEAN_TOKEN; if (!tok) return
+  const h = { authorization: `Bearer ${tok}`, 'content-type': 'application/json' }
+  for (const o of Object.values(orders).filter(x => x.status === 'ready' && x.dropletId && x.billing !== 'cancelled')) {
+    try {
+      await fetch(`https://api.digitalocean.com/v2/droplets/${o.dropletId}/actions`, { method: 'POST', headers: h, body: JSON.stringify({ type: 'snapshot', name: `desk-${o.slug}-${new Date().toISOString().slice(0, 10)}` }) })
+      const snaps = (await (await fetch(`https://api.digitalocean.com/v2/droplets/${o.dropletId}/snapshots?per_page=50`, { headers: h })).json()).snapshots ?? []
+      for (const s of snaps.sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(3)) await fetch(`https://api.digitalocean.com/v2/snapshots/${s.id}`, { method: 'DELETE', headers: h })
+      o.lastSnapshot = new Date().toISOString(); save()
+    } catch (e) { console.error('snapshot failed', o.slug, e.message) }
+  }
+}
+const msToNextSnapshot = () => { const d = new Date(); d.setUTCHours(7, 30, 0, 0); if (d <= new Date()) d.setUTCDate(d.getUTCDate() + 1); return d - new Date() }
+setTimeout(function tick() { snapshots().finally(() => setTimeout(tick, msToNextSnapshot())) }, msToNextSnapshot()).unref()
+
 async function email(o) {
   if (!process.env.BREVO_API_KEY) return
   const r = await fetch('https://api.brevo.com/v3/smtp/email', { method: 'POST', headers: { 'api-key': process.env.BREVO_API_KEY, 'content-type': 'application/json' }, body: JSON.stringify({
@@ -127,9 +151,12 @@ const server = createServer(async (req, res) => {
         if (o.status === 'created') { o.status = 'paid'; o.stripeCustomer = obj.customer; o.stripeSubscription = obj.subscription; o.paidAt = new Date().toISOString(); save(); fulfil(o) }
         return json(res, 200, { ok: true })
       }
-      if (ev.type === 'invoice.payment_failed' || ev.type === 'customer.subscription.deleted') {
+      if (ev.type === 'invoice.payment_failed' || ev.type === 'customer.subscription.deleted' || ev.type === 'invoice.paid') {
         const o = Object.values(orders).find(x => x.stripeSubscription === (obj.subscription ?? obj.id))
-        if (o) { o.billing = ev.type; o.billingAt = new Date().toISOString(); save() }  // box-side grace/stop lands with the next deskd release
+        if (o) {
+          const state = ev.type === 'invoice.paid' ? 'ok' : ev.type === 'invoice.payment_failed' ? 'past_due' : 'cancelled'
+          if (!(state === 'ok' && (o.billing ?? 'ok') === 'ok')) { o.billing = state; o.billingAt = new Date().toISOString(); save(); tellBox(o, state).catch(e => console.error('box billing notify failed', o.slug, e.message)) }
+        }
       }
       return json(res, 200, { ok: true })
     }

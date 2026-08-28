@@ -11,3 +11,4 @@
 }
 .link:hover { background: var(--dsw-bg-hover, rgba(127, 127, 127, 0.12)); color: inherit; }
 .stack { display: flex; flex-direction: column; width: 100%; }
+.warn { display: block; margin: 0 0 6px; padding: 8px 10px; border-radius: 8px; background: rgba(180, 35, 24, 0.12); color: #b42318; font-size: 12px; font-weight: 600; text-decoration: none; }

@@ -15,6 +15,7 @@ import { google } from 'googleapis'
 import * as files from './files.js'
 import * as connections from './connections.js'
 import * as profile from './profile.js'
+import { execFile } from 'node:child_process'
 import { findUser, checkPassword, issueSession, verifySession, cookieHeader, cookieOf, loginPage } from './auth.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -25,6 +26,20 @@ const HOST = process.env.DESK_HOST ?? 'localhost'
 const SLUG = process.env.DESK_SLUG ?? 'desk'
 const API = process.env.DESK_API_URL
 const READY = process.env.DESK_READY_FILE ?? '/srv/desk/READY'
+const BILLING = process.env.DESK_BILLING_FILE ?? '/srv/desk/billing.json'
+const PATCH = process.env.DESK_PROFILE_PATCH ?? '/srv/desk/home/profiles/desk/cordis.patch.yml'
+const readBilling = () => { try { return JSON.parse(readFileSync(BILLING, 'utf8')) } catch { return { state: 'ok' } } }
+const systemctl = (...a) => new Promise(r => execFile('sudo', ['-n', '/usr/bin/systemctl', ...a], () => r()))
+/** past_due → Guided (read-only) until paid; cancelled → harness stopped; ok → restore the owner's mode. */
+async function applyBilling(b) {
+  writeFileSync(BILLING, JSON.stringify({ ...b, at: new Date().toISOString() }, null, 2), { mode: 0o600 })
+  if (!existsSync(PATCH)) return
+  let y = readFileSync(PATCH, 'utf8')
+  const want = b.state === 'past_due' ? 'read-only' : (b.state === 'ok' ? (b.restoreMode ?? 'read-only') : null)
+  if (want) { const m = y.match(/(- id: sandbox-policy\n  config:\n    mode: )(\S+)/); if (m && m[2] !== want) { y = y.replace(m[0], m[1] + want); writeFileSync(PATCH, y) } }
+  if (b.state === 'cancelled') await systemctl('stop', 'desk-harness')
+  else await systemctl('restart', 'desk-harness')
+}
 const REDIRECT = `https://${HOST}/oauth/google/callback`
 const BUSINESS_ENV = process.env.DESK_BUSINESS ?? 'Your business'
 const businessName = () => profile.readProfile()?.business || BUSINESS_ENV
@@ -33,6 +48,7 @@ const SIGNIN = process.env.DESK_SIGNIN_CLIENT_ID && process.env.DESK_SIGNIN_CLIE
 const safeNext = n => (typeof n === 'string' && n.startsWith('/') && !n.startsWith('//')) ? n : '/'
 const started = Date.now()
 
+const json = (res, code, obj) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify(obj)) }
 const page = (title, body) => `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>webfaCe Desk</title><body style="font-family:-apple-system,Segoe UI,sans-serif;padding:48px;max-width:560px;margin:auto;color:#1b2430"><h2 style="margin:0 0 12px">${title}</h2>${body}</body>`
 
 function status() {
@@ -41,6 +57,7 @@ function status() {
   return {
     slug: SLUG, host: HOST, ready: existsSync(READY), uptimeSec: Math.round((Date.now() - started) / 1000),
     google: { clientConfigured: existsSync(cfg.CLIENT_SECRET), redirectUri: REDIRECT, accounts },
+    billing: readBilling(),
   }
 }
 
@@ -62,6 +79,10 @@ const server = createServer(async (req, res) => {
       const s = verifySession(cookieOf(req))
       if (s) { res.writeHead(200, { 'x-desk-user': s.u }); return res.end() }
       res.writeHead(401); return res.end()
+    }
+    if (u.pathname === '/login' && req.method === 'GET' && readBilling().state === 'cancelled') {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
+      return res.end(page('This Desk is paused', `<p>The subscription for <strong>${businessName()}</strong> has ended, so Desk is paused. Your files and conversations are kept for 30 days.</p><p>To pick up where you left off, write to <a href="mailto:tommy@webfacemedia.com">tommy@webfacemedia.com</a>.</p>`))
     }
     if (u.pathname === '/login' && req.method === 'GET') {
       if (verifySession(cookieOf(req))) { res.writeHead(302, { location: safeNext(u.searchParams.get('next')) }); return res.end() }
@@ -108,6 +129,16 @@ const server = createServer(async (req, res) => {
     if (u.pathname === '/files' || u.pathname.startsWith('/files/')) {
       if (!verifySession(cookieOf(req))) { res.writeHead(302, { location: `/login?next=${encodeURIComponent(u.pathname)}` }); return res.end() }
       if (await files.handle(req, res, u, { business: businessName() }) !== false) return
+    }
+    if (u.pathname === '/deskd/billing' && req.method === 'POST') {
+      const tok = (req.headers.authorization ?? '').replace(/^Bearer /, '')
+      if (!process.env.DESK_BOX_TOKEN || tok !== process.env.DESK_BOX_TOKEN) { res.writeHead(401); return res.end() }
+      const b = JSON.parse(await readBody(req) || '{}')
+      if (!['ok', 'past_due', 'cancelled'].includes(b.state)) { res.writeHead(400); return res.end('state?') }
+      const cur = readBilling()
+      const restoreMode = cur.state === 'ok' ? (readFileSync(PATCH, 'utf8').match(/mode: (\S+)/)?.[1] ?? 'read-only') : (cur.restoreMode ?? 'read-only')
+      await applyBilling({ state: b.state, portalUrl: b.portalUrl ?? cur.portalUrl ?? '', restoreMode })
+      return json(res, 200, { ok: true, state: b.state })
     }
     if (u.pathname === '/healthz') { res.writeHead(200, { 'content-type': 'text/plain' }); return res.end('ok') }
     if (u.pathname === '/deskd/status') { res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify(status())) }

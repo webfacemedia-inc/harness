@@ -124,6 +124,7 @@ DESK_BUSINESS=$DESK_BUSINESS
 DESK_AUTH_FILE=$D/auth.json
 DESK_WORK_DIR=$D/work
 DESK_PROFILE_FILE=$D/profile.json
+DESK_BILLING_FILE=$D/billing.json
 DESK_PROFILE_PATCH=$D/home/profiles/desk/cordis.patch.yml
 DESK_SIGNIN_CLIENT_ID=${DESK_SIGNIN_CLIENT_ID:-}
 DESK_SIGNIN_CLIENT_SECRET=${DESK_SIGNIN_CLIENT_SECRET:-}
@@ -152,7 +153,7 @@ fi
 chown -R desk:desk $D/home/storages
 
 echo "==> desk may restart its own harness (Connections page)"
-echo "desk ALL=(root) NOPASSWD: /usr/bin/systemctl restart desk-harness" > /etc/sudoers.d/desk; chmod 440 /etc/sudoers.d/desk
+echo "desk ALL=(root) NOPASSWD: /usr/bin/systemctl restart desk-harness, /usr/bin/systemctl stop desk-harness, /usr/bin/systemctl start desk-harness" > /etc/sudoers.d/desk; chmod 440 /etc/sudoers.d/desk
 
 echo "==> systemd"
 cat > /etc/systemd/system/desk-xvfb.service <<UNIT

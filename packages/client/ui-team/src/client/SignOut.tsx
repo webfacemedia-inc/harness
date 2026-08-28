@@ -6,6 +6,8 @@ import { useEffect, useState } from 'react'
 import css from './SignOut.module.css'
 import { isCloudDesk } from './cloud.ts'
 
+interface DeskStatus { billing?: { state?: string; portalUrl?: string } }
+
 const FILES = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
 const BIZ = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" /></svg>
 const PLUG = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 2v6M15 2v6M7 8h10l-1 6a4 4 0 0 1-8 0z" /><path d="M12 18v4" /></svg>
@@ -13,10 +15,20 @@ const OUT = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="
 
 export function CloudLinks({ wide }: { wide: boolean }) {
   const [shown, setShown] = useState(false)
-  useEffect(() => { let live = true; isCloudDesk().then((ok) => { if (live && ok) setShown(true) }); return () => { live = false } }, [])
+  const [billing, setBilling] = useState<DeskStatus['billing']>()
+  useEffect(() => {
+    let live = true
+    isCloudDesk().then(async (ok) => {
+      if (!live || !ok) return
+      setShown(true)
+      try { const st = await (await fetch('/deskd/status', { credentials: 'same-origin' })).json() as DeskStatus; if (live) setBilling(st.billing) } catch { /* status is best-effort; the links still render */ }
+    })
+    return () => { live = false }
+  }, [])
   if (!shown) return null
   return (
     <div className={css.stack}>
+      {billing?.state === 'past_due' ? <a className={css.warn} href={billing.portalUrl || 'mailto:tommy@webfacemedia.com'} target="_blank" rel="noreferrer">{wide ? <span>Payment failed — update your card. Desk is in Guided mode until then.</span> : <span>!</span>}</a> : null}
       <a className={css.link} href="/profile" title="Business" aria-label="Business">{BIZ}{wide ? <span>Business</span> : null}</a>
       <a className={css.link} href="/connections" title="Connections" aria-label="Connections">{PLUG}{wide ? <span>Connections</span> : null}</a>
       <a className={css.link} href="/files" title="Files" aria-label="Files">{FILES}{wide ? <span>Files</span> : null}</a>
