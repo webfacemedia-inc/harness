@@ -1,1 +1,7 @@
-{ "name": "webface-desk-desktop-frontend", "private": true, "scripts": { "build": "mkdir -p dist && cp index.html dist/index.html" } }
+{
+  "name": "webface-desk-desktop-frontend",
+  "private": true,
+  "scripts": {
+    "build": "node build.mjs"
+  }
+}
