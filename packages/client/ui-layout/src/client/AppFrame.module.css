@@ -130,5 +130,9 @@
     width: min(86vw, 320px);
     box-shadow: 0 0 48px rgba(0, 0, 0, 0.28);
   }
+  /* The drawer leaves grid flow, so pin the remaining columns to their tracks. */
+  .sidebarCol { grid-column: 1; }
+  .centerCol { grid-column: 2; }
+  .detailsCol { grid-column: 3; }
   .detailsCol, .handle { display: none; }
 }
