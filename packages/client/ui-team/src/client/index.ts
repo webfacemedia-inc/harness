@@ -38,7 +38,7 @@ export function apply(ctx: ClientContext): void {
   // token/TTFT stats line. Both stay in the session log and the Trajectory tab.
   ctx.effect(() => {
     const style = document.createElement('style')
-    style.textContent = '[data-open]:has([data-context-source]){display:none}[data-stats-line]{display:none}'
+    style.textContent = 'div:has(> [data-disclosure-row] [data-context-source]){display:none}[data-stats-line]{display:none}'
     document.head.append(style)
     return () => { style.remove() }
   }, 'ui-team: hide harness chrome')
