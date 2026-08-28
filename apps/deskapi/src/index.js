@@ -71,7 +71,7 @@ function welcomePage(o) {
   const inner = o.status === 'ready'
     ? `<h1>Your Desk is ready</h1><p class="sub">Save these — they are shown once here and sent to ${esc(o.email)}.</p>
 <div class="card"><p><strong>Address</strong><br><a href="https://${esc(o.host)}/">https://${esc(o.host)}/</a></p><p><strong>Username</strong> <code>owner</code></p><p><strong>Password</strong> <code>${esc(o.password)}</code></p></div>
-<p>Next:</p><ol class="steps"><li>Sign in and press <em>Get started</em>.</li><li>Tell your team about the business — it asks.</li><li>Connect Google from Connections when you're ready.</li></ol><a class="btn" href="https://${esc(o.host)}/">Open your Desk →</a>`
+<p>Next:</p><ol class="steps"><li>Sign in and press <em>Get started</em>.</li><li>Tell your team about the business — it asks.</li><li>Connect Google from Connections when you're ready.</li><li>On your computer, <a href="/download">download the desktop app</a>; on your phone, add your Desk address to the Home Screen.</li></ol><a class="btn" href="https://${esc(o.host)}/">Open your Desk →</a>`
     : `<h1>${esc(stages[o.status] ?? o.status)}</h1><p class="sub">${esc(o.business)} · this page updates itself.</p><div class="card"><p>${esc(o.detail ?? '')}</p></div><script>setTimeout(()=>location.reload(),15000)</script>`
   return shell('Your Desk', inner)
 }
@@ -128,7 +128,7 @@ async function email(o) {
   if (!process.env.BREVO_API_KEY) return
   const r = await fetch('https://api.brevo.com/v3/smtp/email', { method: 'POST', headers: { 'api-key': process.env.BREVO_API_KEY, 'content-type': 'application/json' }, body: JSON.stringify({
     sender: { name: 'webfaCe Desk', email: process.env.DESK_FROM_EMAIL ?? 'desk@webfacemedia.com' }, to: [{ email: o.email }], subject: `${o.business}: your Desk is ready`,
-    htmlContent: `<p>Your Desk is ready.</p><p><a href="https://${o.host}/">Open your Desk</a> — username <b>owner</b>, password <b>${o.password}</b>.</p><p>Sign in, press Get started, and tell your team about the business. Reply to this email if anything is unclear.</p><p>— webfaCeMEdia, Toronto</p>`,
+    htmlContent: `<p>Your Desk is ready.</p><p><a href="https://${o.host}/">Open your Desk</a> — username <b>owner</b>, password <b>${o.password}</b>.</p><p>Sign in, press Get started, and tell Desk about the business. On your computer you can also <a href="${process.env.DESK_PUBLIC_URL ?? 'https://webfacedesk.app'}/download">download the desktop app</a>. Reply to this email if anything is unclear.</p><p>— webfaCeMEdia, Toronto</p>`,
   }) })
   if (!r.ok) throw new Error(`brevo ${r.status}: ${await r.text()}`)
   console.log('welcome email sent to', o.email, 'for', o.slug)

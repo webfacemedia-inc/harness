@@ -56,6 +56,7 @@ export function CloudLinks({ wide }: { wide: boolean }) {
       <a className={css.link} href="/connections" title="Connections" aria-label="Connections">{PLUG}{wide ? <span>Connections</span> : null}</a>
       <a className={css.link} href="/browser" title="Browser — watch Desk or take the mouse" aria-label="Browser">{BROWSER}{wide ? <span>Browser</span> : null}</a>
       <a className={css.link} href="/files" title="Files" aria-label="Files">{FILES}{wide ? <span>Files</span> : null}</a>
+      <a className={css.link} href="https://webfacedesk.app/download" target="_blank" rel="noreferrer" title="Desktop app for Mac, Windows, Linux" aria-label="Download app">{BROWSER}{wide ? <span>Download app</span> : null}</a>
       <a className={css.link} href="/logout" title="Sign out" aria-label="Sign out">{OUT}{wide ? <span>Sign out</span> : null}</a>
     </div>
   )

@@ -301,3 +301,14 @@
 @media (max-width: 768px) {
   .collapsed .footArea, .collapsed .regionArea { display: none; }
 }
+
+/* Phones, collapsed: the expand toggle reads as a menu button — three bars,
+   not the brand mark (the mark did not read as "open" on a phone). */
+@media (max-width: 768px) {
+  .collapsed .railFish { display: none; }
+  .collapsed .toggle { position: relative; width: 40px; height: 40px; border-radius: 10px; }
+  .collapsed .toggle::before {
+    content: ""; position: absolute; left: 10px; right: 10px; top: 13px; height: 2px; border-radius: 2px;
+    background: currentColor; box-shadow: 0 6px 0 currentColor, 0 12px 0 currentColor;
+  }
+}

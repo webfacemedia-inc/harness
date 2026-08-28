@@ -6,5 +6,6 @@ webfacedesk.app, www.webfacedesk.app {
 		reverse_proxy 127.0.0.1:8095
 	}
 	root * /srv/desk/site
+	try_files {path} {path}.html
 	file_server
 }
