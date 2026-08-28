@@ -1,6 +1,7 @@
 // Connections: the owner connects Google (their OWN Google app — Google will
 // not allow a shared one for Gmail scopes) and adds any MCP server. MCP rows
 // are written into the Desk profile patch and the harness is restarted.
+import { writeAtomic } from './fsx.js'
 import { existsSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs'
 import { execFile } from 'node:child_process'
 import { layout, ICONS } from './ui.js'
@@ -35,7 +36,7 @@ function writeServers(list) {
   // would be read as a patch to an existing row and silently ignored.
   const block = rows ? `- insert:\n${rows}` : ''
   s = s.trimEnd() + `\n\n${MARK_BEGIN}\n${block}${MARK_END}\n`
-  writeFileSync(PATCH, s)
+  writeAtomic(PATCH, s)  // holds MCP headers / app passwords: private + atomic
 }
 function restartHarness() {
   return new Promise(r => execFile('sudo', ['-n', '/usr/bin/systemctl', 'restart', 'desk-harness'], () => r()))

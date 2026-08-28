@@ -1,9 +1,9 @@
-# webfaCe Desk — the team roster. `scripts/gen-desk-presets.mjs` turns this into
-# one agent preset per modes (from dsh's `standard` composition) and gives
-# EVERY Desk preset one delegation tool per modes (`ask_<id>`), so a session
-# run by any modes can hand work to the others. Handoffs show in the thread.
+# webfaCe Desk — the modes. `scripts/gen-desk-presets.mjs` turns this into one
+# agent preset per mode (from dsh's `standard` composition) and gives every
+# preset one delegation tool per other mode (`ask_<id>`), so a session in any
+# mode can hand work to the others. Handoffs show in the thread.
 #
-# shell: false → the modes never gets bash/pwsh/str_replace_editor/write,
+# shell: false → the mode has no bash/pwsh, its ask_* delegations deny every shell and file-write tool,
 # and its delegated children are filtered the same way.
 
 teammates:

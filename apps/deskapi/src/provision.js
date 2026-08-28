@@ -61,7 +61,7 @@ export async function provision(order, log = () => {}) {
   const dns = dnsAble ? await cfDns(order.slug, ip) : false
   const host = dns ? `${order.slug}.${DOMAIN}` : `${ip}.sslip.io`
   if (dnsAble && !dns) log('dns-failed', `DNS for ${order.slug}.${DOMAIN} could not be written; using ${host}`)
-  log('installing', 'installing your team (about ten minutes)')
+  log('installing', 'setting up your Desk')
   for (let i = 0; i < 180; i++) {
     await new Promise(r => setTimeout(r, 10000))
     try { const r = await fetch(`https://${host}/healthz`, { signal: AbortSignal.timeout(5000) }); if (r.ok) break } catch {}

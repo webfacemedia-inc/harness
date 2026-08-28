@@ -10,7 +10,7 @@
 // State: DESKAPI_DATA/orders.json (0600). Keys: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET,
 // STRIPE_PRICE_* (see PLANS), DIGITALOCEAN_TOKEN, OPENROUTER_API_KEY, optional CLOUDFLARE_API_TOKEN, BREVO_API_KEY.
 import { createServer } from 'node:http'
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, copyFileSync } from 'node:fs'
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 import { join } from 'node:path'
 import { provision } from './provision.js'
@@ -26,10 +26,19 @@ const PLANS = {
 }
 mkdirSync(DATA, { recursive: true, mode: 0o700 })
 const FILE = join(DATA, 'orders.json')
-const orders = existsSync(FILE) ? JSON.parse(readFileSync(FILE, 'utf8')) : {}
-const save = () => writeFileSync(FILE, JSON.stringify(orders, null, 2), { mode: 0o600 })
+const orders = (() => {
+  if (!existsSync(FILE)) return {}
+  try { return JSON.parse(readFileSync(FILE, 'utf8')) } catch (e) {
+    // A torn orders.json must not crash-loop the store; keep the evidence and start from the last good copy if any.
+    copyFileSync(FILE, FILE + '.corrupt'); console.error('orders.json unreadable, kept as orders.json.corrupt:', e.message)
+    try { return JSON.parse(readFileSync(FILE + '.bak', 'utf8')) } catch { return {} }
+  }
+})()
+setInterval(() => { try { copyFileSync(FILE, FILE + '.bak') } catch {} }, 3600000).unref()
+const save = () => { writeFileSync(FILE + '.tmp', JSON.stringify(orders, null, 2), { mode: 0o600 }); renameSync(FILE + '.tmp', FILE) }
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
 const slugify = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 24) || 'desk'
+const cleanName = v => String(v ?? '').replace(/[^\x20-\x7e]/g, '').trim().slice(0, 80)
 const json = (res, code, obj) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify(obj)) }
 const html = (res, code, body) => { res.writeHead(code, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' }); res.end(body) }
 async function body(req) { const c = []; for await (const x of req) c.push(x); return Buffer.concat(c) }
@@ -46,7 +55,7 @@ function verifyStripe(payload, header, secret) {
   return want.length === parts.v1.length && timingSafeEqual(Buffer.from(want), Buffer.from(parts.v1))
 }
 
-const shell = (title, inner) => `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)} · webfaCe Desk</title>
+const shell = (title, inner) => `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta name="color-scheme" content="light"><title>${esc(title)} · webfaCe Desk</title><script src="https://insights.webfacemedia.com/api/script.js" data-site="webfacedesk" defer></script>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
 <style>:root{--blue:#3499cc;--deep:#1f6f99;--ink:#152029;--mute:#5a6a78;--line:#dfe6ec;--tint:#eef6fb}*{box-sizing:border-box}body{margin:0;background:#fff;color:var(--ink);font:16px/1.55 "Inter Tight",-apple-system,system-ui,sans-serif}
 .wrap{max-width:560px;margin:0 auto;padding:56px 24px}h1{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:34px;margin:0 0 8px;letter-spacing:-.01em}p.sub{color:var(--mute);margin:0 0 28px}
@@ -68,12 +77,14 @@ ${error ? `<p class="err">${esc(error)}</p>` : ''}
 }
 function welcomePage(o) {
   if (!o) return shell('Order', '<h1>Order not found</h1><p class="sub">Check the link in your email, or write to tommy@webfacemedia.com.</p>')
-  const stages = { created: 'Waiting for payment…', paid: 'Paid. Creating your Desk computer in Toronto…', creating: 'Creating your Desk computer in Toronto…', installing: 'Installing your team (about ten minutes)…', ready: 'Your Desk is ready.', failed: 'Something went wrong — we are on it and will email you.' }
+  const stages = { created: 'Waiting for payment…', paid: 'Paid. Creating your Desk in Toronto…', creating: 'Creating your Desk in Toronto…', installing: 'Setting up your Desk…', ready: 'Your Desk is ready.', failed: 'Something went wrong — we are on it and will email you.', destroyed: 'This Desk has been closed.' }
+  const showPassword = o.status === 'ready' && !o.passwordShown
+  if (showPassword) { o.passwordShown = new Date().toISOString(); save() }
   const inner = o.status === 'ready'
-    ? `<h1>Your Desk is ready</h1><p class="sub">Save these — they are shown once here and sent to ${esc(o.email)}.</p>
-<div class="card"><p><strong>Address</strong><br><a href="https://${esc(o.host)}/">https://${esc(o.host)}/</a></p><p><strong>Username</strong> <code>owner</code></p><p><strong>Password</strong> <code>${esc(o.password)}</code></p></div>
-<p>Next:</p><ol class="steps"><li>Sign in and press <em>Get started</em>.</li><li>Tell your team about the business — it asks.</li><li>Connect Google from Connections when you're ready.</li><li>On your computer, <a href="/download">download the desktop app</a>; on your phone, add your Desk address to the Home Screen.</li></ol><a class="btn" href="https://${esc(o.host)}/">Open your Desk →</a>`
-    : `<h1>${esc(stages[o.status] ?? o.status)}</h1><p class="sub">${esc(o.business)} · this page updates itself.</p><div class="card"><p>${esc(o.detail ?? '')}</p></div><script>setTimeout(()=>location.reload(),15000)</script>`
+    ? `<h1>Your Desk is ready</h1><p class="sub">${showPassword ? `Save the password now — this page shows it once. It was also sent to ${esc(o.email)}.` : `Your sign-in details were sent to ${esc(o.email)}.`}</p>
+<div class="card"><p><strong>Address</strong><br><a href="https://${esc(o.host)}/">https://${esc(o.host)}/</a></p><p><strong>Username</strong> <code>owner</code> (or your email ${esc(o.email)})</p>${showPassword ? `<p><strong>Password</strong> <code>${esc(o.password)}</code></p>` : `<p><strong>Password</strong> in your email — <a href="mailto:tommy@webfacemedia.com?subject=Desk%20password">write to us</a> if it never arrived.</p>`}</div>
+<p>Next:</p><ol class="steps"><li>Sign in — Desk opens the Business page and asks about your business.</li><li>Connect Google from Connections when you're ready.</li><li>On your computer, <a href="/download">download the desktop app</a>; on your phone, open your Desk address and add it to the Home Screen.</li></ol><a class="btn" href="https://${esc(o.host)}/">Open your Desk</a>`
+    : `<h1>${esc(stages[o.status] ?? o.status)}</h1><p class="sub">${esc(o.business)} · ${o.status === 'failed' || o.status === 'destroyed' ? `<a href="mailto:tommy@webfacemedia.com?subject=Desk%20order%20${esc(o.id)}">tommy@webfacemedia.com</a>` : 'this page updates itself.'}</p><div class="card"><p>${esc(o.detail ?? '')}</p></div>${o.status === 'failed' || o.status === 'destroyed' ? '' : '<script>setTimeout(()=>location.reload(),15000)</script>'}`
   return shell('Your Desk', inner)
 }
 
@@ -129,7 +140,7 @@ async function email(o) {
   if (!process.env.BREVO_API_KEY) return
   const r = await fetch('https://api.brevo.com/v3/smtp/email', { method: 'POST', headers: { 'api-key': process.env.BREVO_API_KEY, 'content-type': 'application/json' }, body: JSON.stringify({
     sender: { name: 'webfaCe Desk', email: process.env.DESK_FROM_EMAIL ?? 'desk@webfacemedia.com' }, to: [{ email: o.email }], subject: `${o.business}: your Desk is ready`,
-    htmlContent: `<p>Your Desk is ready.</p><p><a href="https://${o.host}/">Open your Desk</a> — username <b>owner</b>, password <b>${o.password}</b>.</p><p>Sign in, press Get started, and tell Desk about the business. On your computer you can also <a href="${process.env.DESK_PUBLIC_URL ?? 'https://webfacedesk.app'}/download">download the desktop app</a>. Reply to this email if anything is unclear.</p><p>— webfaCeMEdia, Toronto</p>`,
+    htmlContent: `<p>Your Desk is ready.</p><p><a href="https://${o.host}/">Open your Desk</a> — username <b>owner</b> (or this email address), password <b>${o.password}</b>. You can also use <b>Sign in with Google</b> if your Google address is ${o.email}.</p><p>Sign in — Desk opens the Business page and asks about the business. On your computer you can also <a href="${process.env.DESK_PUBLIC_URL ?? 'https://webfacedesk.app'}/download">download the desktop app</a>. Reply to this email if anything is unclear.</p><p>— webfaCeMEdia, Toronto</p>`,
   }) })
   if (!r.ok) throw new Error(`brevo ${r.status}: ${await r.text()}`)
   console.log('welcome email sent to', o.email, 'for', o.slug)
@@ -145,7 +156,7 @@ const server = createServer(async (req, res) => {
       if (!STRIPE) return html(res, 503, checkoutPage('business', 'Checkout is not open yet — write to tommy@webfacemedia.com and we will set you up by hand.'))
       const f = new URLSearchParams((await body(req)).toString())
       const plan = PLANS[f.get('plan')] ? f.get('plan') : 'business'; const p = PLANS[plan]
-      const business = f.get('business')?.trim(); const emailAddr = f.get('email')?.trim()
+      const business = cleanName(f.get('business'))?.trim(); const emailAddr = f.get('email')?.trim()
       if (!business || !emailAddr) return html(res, 400, checkoutPage(plan, 'Business name and email are needed.'))
       let slug = slugify(f.get('slug') || business)
       if (Object.values(orders).some(o => o.slug === slug && o.status !== 'failed')) slug = `${slug}-${randomBytes(2).toString('hex')}`
@@ -217,9 +228,12 @@ const server = createServer(async (req, res) => {
     }
     const hb = u.pathname.match(/^\/api\/boxes\/([a-z0-9-]+)\/heartbeat$/)
     if (hb && req.method === 'POST') {
-      const o = Object.values(orders).find(x => x.slug === hb[1]); const tok = (req.headers.authorization ?? '').replace(/^Bearer /, '')
-      if (!o || !o.boxToken || tok !== o.boxToken) return json(res, 401, { error: 'no' })
-      o.lastHeartbeat = new Date().toISOString(); const hb = JSON.parse((await body(req)).toString() || '{}'); o.heartbeat = { ready: hb.ready, harness: hb.harness, google: hb.google?.accounts?.length ?? 0, push: hb.push?.devices ?? 0 }; if (hb.usage) o.usage = { monthTokens: hb.usage.monthTokens, totalTokens: hb.usage.totalTokens, sessions: hb.usage.sessions, turns: hb.usage.turns }; save(); return json(res, 200, { ok: true })
+      const slug = hb[1]; const tok = (req.headers.authorization ?? '').replace(/^Bearer /, '')
+      const staticTok = (process.env.DESKAPI_STATIC_BOX_TOKENS ?? '').split(',').map(x => x.split(':')).find(([s]) => s === slug)?.[1]
+      let o = Object.values(orders).find(x => x.slug === slug)
+      if (!o && staticTok && tok.length === staticTok.length && timingSafeEqual(Buffer.from(tok), Buffer.from(staticTok))) { o = orders[`static_${slug}`] ??= { id: `static_${slug}`, slug, host: `${slug}.${new URL(PUBLIC).hostname}`, status: 'ready', static: true, created: new Date().toISOString() } }
+      if (!o || !(o.boxToken ? tok.length === o.boxToken.length && timingSafeEqual(Buffer.from(tok), Buffer.from(o.boxToken)) : o.static)) return json(res, 401, { error: 'no' })
+      o.lastHeartbeat = new Date().toISOString(); const beat = JSON.parse((await body(req)).toString() || '{}'); o.heartbeat = { ready: beat.ready, harness: beat.harness, google: beat.google?.accounts?.length ?? 0, push: beat.push?.devices ?? 0 }; if (beat.usage) o.usage = { monthTokens: beat.usage.monthTokens, totalTokens: beat.usage.totalTokens, sessions: beat.usage.sessions, turns: beat.usage.turns }; save(); return json(res, 200, { ok: true })
     }
     if (u.pathname === '/api/ops/snapshot' && req.method === 'POST') {
       const k = (req.headers.authorization ?? '').replace(/^Bearer /, ''); if (!process.env.DESKAPI_OPS_KEY || k !== process.env.DESKAPI_OPS_KEY) return json(res, 401, { error: 'no' })

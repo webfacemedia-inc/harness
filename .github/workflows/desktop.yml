@@ -32,19 +32,31 @@ jobs:
         working-directory: apps/desktop
       - if: runner.os == 'macOS'
         run: codesign --force --deep --sign - "apps/desktop/build/bin/webfaCe Desk.app"
+      # Zip on the build runner: upload-artifact drops executable bits and
+      # symlinks, which leaves the macOS bundle "damaged" and the Linux binary
+      # non-executable. The release job only forwards the bytes.
+      - if: runner.os == 'macOS'
+        run: cd apps/desktop/build/bin && ditto -c -k --keepParent "webfaCe Desk.app" "${{ matrix.artifact }}.zip"
+      - if: runner.os == 'Linux'
+        run: cd apps/desktop/build/bin && chmod +x * && zip -r "${{ matrix.artifact }}.zip" . -x "*.zip"
+      - if: runner.os == 'Windows'
+        shell: pwsh
+        run: Compress-Archive -Path "apps/desktop/build/bin/*" -DestinationPath "apps/desktop/build/bin/${{ matrix.artifact }}.zip"
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: apps/desktop/build/bin/
+          path: apps/desktop/build/bin/${{ matrix.artifact }}.zip
+          if-no-files-found: error
   release:
     needs: build
     if: startsWith(github.ref, 'refs/tags/desktop-v')
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/download-artifact@v4
-        with: { path: dist }
-      - run: |
-          cd dist && for d in *; do (cd "$d" && zip -r "../$d.zip" .); done && ls -la
+        with: { path: dist, merge-multiple: true }
+      - run: ls -la dist
       - uses: softprops/action-gh-release@v2
         with:
           files: dist/*.zip

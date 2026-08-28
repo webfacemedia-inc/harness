@@ -2,12 +2,17 @@
 // operator needs (create a Desk for a client, pause/resume, resend welcome,
 // destroy). Gated by DESKAPI_OPS_KEY — Bearer for the API, a cookie for the
 // page. Provisioning reuses the same path a paid order takes.
-import { randomBytes, timingSafeEqual } from 'node:crypto'
+import { randomBytes, timingSafeEqual, createHmac } from 'node:crypto'
 import { provision } from './provision.js'
 
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
 const keyOk = (k) => { const K = process.env.DESKAPI_OPS_KEY ?? ''; return K.length > 0 && k.length === K.length && timingSafeEqual(Buffer.from(k), Buffer.from(K)) }
-const auth = (req) => { const m = (req.headers.cookie ?? '').match(/(?:^|;\s*)desk_ops=([^;]+)/); const bearer = (req.headers.authorization ?? '').replace(/^Bearer /, ''); return keyOk(bearer) || keyOk(m?.[1] ?? '') }
+// The console cookie is an HMAC session over the ops key (12 h), never the key itself.
+const KEY = () => process.env.DESKAPI_OPS_KEY ?? ''
+const mintSession = () => { const ts = String(Date.now()); return `${ts}.${createHmac('sha256', KEY()).update(ts).digest('hex')}` }
+const sessionOk = (c) => { const [ts, sig] = String(c).split('.'); if (!ts || !sig || !KEY() || Date.now() - Number(ts) > 43200000) return false; const want = createHmac('sha256', KEY()).update(ts).digest('hex'); return sig.length === want.length && timingSafeEqual(Buffer.from(sig), Buffer.from(want)) }
+const cleanName = v => String(v ?? '').replace(/[^\x20-\x7e]/g, '').trim().slice(0, 80)
+const auth = (req) => { const m = (req.headers.cookie ?? '').match(/(?:^|;\s*)desk_ops=([^;]+)/); const bearer = (req.headers.authorization ?? '').replace(/^Bearer /, ''); return keyOk(bearer) || sessionOk(m?.[1] ?? '') }
 const when = iso => iso ? new Date(iso).toLocaleString('en-CA', { timeZone: 'America/Toronto', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—'
 
 function page(orders, msg, err) {
@@ -47,7 +52,7 @@ export async function handle(req, res, u, ctx) {
   const { orders, save, json, html, body, slugify, fulfil, email, tellBox, destroyBox } = ctx
   if (u.pathname === '/ops/login' && req.method === 'POST') {
     const f = new URLSearchParams((await body(req)).toString()); if (!keyOk(f.get('key') ?? '')) { res.writeHead(401); return res.end('no') }
-    res.writeHead(303, { location: '/ops', 'set-cookie': `desk_ops=${f.get('key')}; Path=/ops; HttpOnly; Secure; SameSite=Strict; Max-Age=43200` }); return res.end()
+    res.writeHead(303, { location: '/ops', 'set-cookie': `desk_ops=${mintSession()}; Path=/ops; HttpOnly; Secure; SameSite=Strict; Max-Age=43200` }); return res.end()
   }
   if (u.pathname === '/ops/logout') { res.writeHead(303, { location: '/ops', 'set-cookie': 'desk_ops=; Path=/ops; HttpOnly; Secure; SameSite=Strict; Max-Age=0' }); return res.end() }
   if (u.pathname.startsWith('/ops') || u.pathname.startsWith('/api/ops')) {
@@ -66,7 +71,7 @@ label{display:block;font-weight:600;font-size:13px;margin:12px 0 6px}input{width
   if ((u.pathname === '/ops/create' || u.pathname === '/api/ops/boxes') && req.method === 'POST') {
     const raw = (await body(req)).toString(); const f = req.headers['content-type']?.includes('json') ? new Map(Object.entries(JSON.parse(raw || '{}'))) : new URLSearchParams(raw)
     const get = k => (f.get(k) ?? '').toString().trim()
-    const business = get('business'), emailAddr = get('email'); if (!business || !emailAddr) { if (u.pathname === '/ops/create') { res.writeHead(303, { location: '/ops?err=Business+and+email+are+needed' }); return res.end() } return json(res, 400, { error: 'business and email required' }) }
+    const business = cleanName(get('business')), emailAddr = get('email'); if (!business || !emailAddr) { if (u.pathname === '/ops/create') { res.writeHead(303, { location: '/ops?err=Business+and+email+are+needed' }); return res.end() } return json(res, 400, { error: 'business and email required' }) }
     let slug = slugify(get('slug') || business); if (Object.values(orders).some(o => o.slug === slug && o.status !== 'failed')) slug = `${slug}-${randomBytes(2).toString('hex')}`
     const plan = get('plan') === 'operators' ? 'operators' : 'business'
     const id = 'ord_' + randomBytes(8).toString('hex')

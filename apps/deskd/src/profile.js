@@ -1,6 +1,7 @@
 // Business profile: the one place the owner sets who Desk works for and how
 // it behaves. Saved as profile.json, rendered into the workspace AGENTS.md
 // (read by the model every turn) — nothing else writes that file.
+import { writeAtomic } from './fsx.js'
 import { existsSync, readFileSync, writeFileSync, copyFileSync, mkdirSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { layout, ICONS } from './ui.js'
@@ -60,9 +61,9 @@ _Edit this from Desk → Business (never by hand; it is regenerated)._
 
 export function saveProfile(p) {
   mkdirSync(dirname(PROFILE), { recursive: true }); mkdirSync(WORK, { recursive: true })
-  writeFileSync(PROFILE, JSON.stringify({ ...p, updatedAt: new Date().toISOString() }, null, 2), { mode: 0o600 })
+  writeAtomic(PROFILE, JSON.stringify({ ...p, updatedAt: new Date().toISOString() }, null, 2))
   if (existsSync(AGENTS)) copyFileSync(AGENTS, AGENTS + '.bak')
-  writeFileSync(AGENTS, renderAgents(p))
+  writeAtomic(AGENTS, renderAgents(p), 0o644)
 }
 
 const field = (id, label, value, { type = 'text', ph = '', rows = 0, hint = '' } = {}) => `<label for="${id}">${label}${hint ? ` <small>${hint}</small>` : ''}</label>${rows ? `<textarea id="${id}" name="${id}" rows="${rows}" placeholder="${esc(ph)}">${esc(value)}</textarea>` : `<input id="${id}" name="${id}" type="${type}" value="${esc(value)}" placeholder="${esc(ph)}">`}`

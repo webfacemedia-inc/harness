@@ -3,6 +3,7 @@
 // The platform decides which client/org they are. Tokens stay on this box;
 // the harness talks to a loopback proxy (/mcp/webface) that injects the
 // current access token and refreshes it, so the connector row needs no secret.
+import { writeAtomic } from './fsx.js'
 import { existsSync, readFileSync, writeFileSync, unlinkSync, chmodSync } from 'node:fs'
 import { randomBytes, createHash } from 'node:crypto'
 
@@ -10,7 +11,7 @@ const RESOURCE = 'https://mcp.webfacemedia.com'
 const MCP_URL = `${RESOURCE}/mcp`
 export const STATE_FILE = process.env.DESK_WEBFACE_OAUTH_FILE ?? '/srv/desk/webface-oauth.json'
 const read = () => { try { return JSON.parse(readFileSync(STATE_FILE, 'utf8')) } catch { return {} } }
-const write = (s) => { writeFileSync(STATE_FILE, JSON.stringify(s, null, 2), { mode: 0o600 }); chmodSync(STATE_FILE, 0o600) }
+const write = (s) => writeAtomic(STATE_FILE, JSON.stringify(s, null, 2))
 const b64url = (b) => b.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 
 let meta

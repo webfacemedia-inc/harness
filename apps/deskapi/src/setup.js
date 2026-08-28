@@ -11,7 +11,7 @@ const api = async (method, path, params) => {
   const j = await r.json(); if (!r.ok) throw new Error(`${method} ${path}: ${j.error?.message}`); return j
 }
 const PLANS = [
-  { key: 'business', name: 'Desk for Business', desc: 'Your own team on their own computer in Toronto: up to 6 named teammates, all connections, desktop, phone and web, nightly backups.', setup: 150000, monthly: 24900 },
+  { key: 'business', name: 'Desk for Business', desc: 'Your own always-on business assistant on a private computer in Toronto: every mode, all connections, desktop, phone and web, nightly backups.', setup: 150000, monthly: 24900 },
   { key: 'operators', name: 'Desk for Operators', desc: 'Everything in Business plus the studio playbook and a Desk for every client under your brand.', setup: 250000, monthly: 49900 },
 ]
 const out = []

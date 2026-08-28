@@ -1,4 +1,5 @@
 // Routines: what Desk runs on a schedule, from the mirror the harness keeps.
+import { writeAtomic } from './fsx.js'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { layout, ICONS, esc } from './ui.js'
 const FILE = process.env.DESK_ROUTINES_FILE ?? '/srv/desk/routines.json'
@@ -18,7 +19,7 @@ export async function handle(req, res, u, { business, readBody, tz }) {
     const f = new URLSearchParams(await readBody(req)); const sessionId = f.get('sessionId') ?? '', id = f.get('id') ?? ''
     if (!sessionId || !id) { res.writeHead(400); return res.end('which routine?') }
     let pending = []; try { pending = JSON.parse(readFileSync(ACTIONS, 'utf8')) } catch {}
-    pending.push({ sessionId, id }); writeFileSync(ACTIONS, JSON.stringify(pending), { mode: 0o600 })
+    pending.push({ sessionId, id }); writeAtomic(ACTIONS, JSON.stringify(pending))
     res.writeHead(303, { location: '/routines?msg=' + encodeURIComponent('Deleting — it disappears from this list within a few seconds.') }); return res.end()
   }
   return false

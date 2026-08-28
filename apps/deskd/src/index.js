@@ -6,7 +6,7 @@
 //   GET  /oauth/google/callback        store the token on this box, never centrally
 //   POST /deskd/google/client          save the owner's pasted OAuth client JSON
 // Heartbeats to DESK_API_URL every 60s when set. Loopback only; Caddy fronts it.
-import { createHmac, timingSafeEqual } from 'node:crypto'
+import { createHmac, timingSafeEqual, randomBytes } from 'node:crypto'
 import { createServer } from 'node:http'
 import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync } from 'node:fs'
 import { join, dirname } from 'node:path'
@@ -18,7 +18,7 @@ import * as connections from './connections.js'
 import * as profile from './profile.js'
 import * as routines from './routines.js'
 import * as wf from './webface-oauth.js'
-import { layout } from './ui.js'
+import { layout, esc } from './ui.js'
 import * as push from './push.js'
 import { usage } from './usage.js'
 import { execFile } from 'node:child_process'
@@ -53,12 +53,14 @@ const BUSINESS_ENV = process.env.DESK_BUSINESS ?? 'Your business'
 const businessName = () => profile.readProfile()?.business || BUSINESS_ENV
 const SIGNIN = process.env.DESK_SIGNIN_CLIENT_ID && process.env.DESK_SIGNIN_CLIENT_SECRET
   ? new OAuth2Client(process.env.DESK_SIGNIN_CLIENT_ID, process.env.DESK_SIGNIN_CLIENT_SECRET, `https://${HOST}/auth/google/callback`) : null
-const safeNext = n => (typeof n === 'string' && n.startsWith('/') && !n.startsWith('//')) ? n : '/'
+const safeNext = n => (typeof n === 'string' && /^\/(?![\/\\])/.test(n)) ? n : '/'
 // Without a local client, Google sign-in goes through the store's relay
 // (one Google client for every Desk): /auth/google → <store>/auth/google/start
 // → Google → <store>/auth/google/callback → signed ticket → /auth/google/finish.
 const RELAY = !SIGNIN && process.env.DESK_API_URL && process.env.DESK_BOX_TOKEN ? process.env.DESK_API_URL.replace(/\/api\/?$/, '') : ''
 const GOOGLE_SIGNIN = Boolean(SIGNIN || RELAY)
+const usedTickets = new Set()  // relay ticket nonces already redeemed (tickets live ≤2 min)
+const oauthStates = new Set()  // pending Google-connection states (CSRF guard on /oauth/google/callback)
 const started = Date.now()
 // A timed-out upstream (platform API, WordPress probe, harness) must never take
 // the box agent down with it: log and keep serving.
@@ -137,7 +139,9 @@ const server = createServer(async (req, res) => {
       const want = createHmac('sha256', process.env.DESK_BOX_TOKEN ?? '').update(body ?? '').digest('hex')
       let t = null
       if (RELAY && sig && sig.length === want.length && timingSafeEqual(Buffer.from(sig), Buffer.from(want))) { try { t = JSON.parse(Buffer.from(body, 'base64url').toString()) } catch { t = null } }
-      const user = t && t.exp > Date.now() && t.email && findUser({ email: t.email })
+      const fresh = t && t.exp > Date.now() && t.n && !usedTickets.has(t.n)
+      if (fresh) { usedTickets.add(t.n); setTimeout(() => usedTickets.delete(t.n), 180000).unref() }
+      const user = fresh && t.email && findUser({ email: t.email })
       if (!user) { res.writeHead(403, { 'content-type': 'text/html; charset=utf-8' }); return res.end(loginPage({ business: businessName(), google: true, error: `${t?.email ?? 'That account'} is not an owner of this Desk.` })) }
       res.writeHead(302, { location: safeNext(u.searchParams.get('next')), 'set-cookie': cookieHeader(issueSession(user)) }); return res.end()
     }
@@ -151,6 +155,19 @@ const server = createServer(async (req, res) => {
       const user = email && findUser({ email })
       if (!user) { res.writeHead(403, { 'content-type': 'text/html; charset=utf-8' }); return res.end(loginPage({ business: businessName(), google: true, error: `${email ?? 'That account'} is not an owner of this Desk.` })) }
       res.writeHead(302, { location: safeNext(u.searchParams.get('state')), 'set-cookie': cookieHeader(issueSession(user)) }); return res.end()
+    }
+    // Phone sessions are for conversation, approvals and the browser only. The
+    // settings plane (business profile, connections, file changes, routine
+    // changes, OAuth binding) needs an owner session — enforced here, not only
+    // by Caddy's route split.
+    {
+      const sess = verifySession(cookieOf(req))
+      const ownerOnly = (u.pathname === '/profile' && req.method !== 'GET')
+        || u.pathname === '/connections' || u.pathname.startsWith('/connections/')
+        || ((u.pathname === '/files' || u.pathname.startsWith('/files/')) && req.method !== 'GET')
+        || (u.pathname.startsWith('/routines/') && req.method !== 'GET')
+        || u.pathname === '/deskd/google/client' || u.pathname.startsWith('/oauth/')
+      if (ownerOnly && sess?.r === 'phone') { res.writeHead(403, { 'content-type': 'text/html; charset=utf-8' }); return res.end(page('Owner only', `<p>Settings are changed from an owner sign-in, not a phone session. <a href="/logout">Sign out</a> and sign in again without ticking "phone".</p>`)) }
     }
     if (u.pathname === '/browser') {
       if (!verifySession(cookieOf(req))) { res.writeHead(302, { location: '/login?next=/browser' }); return res.end() }
@@ -176,7 +193,7 @@ const server = createServer(async (req, res) => {
     }
     if (u.pathname === '/deskd/billing' && req.method === 'POST') {
       const tok = (req.headers.authorization ?? '').replace(/^Bearer /, '')
-      if (!process.env.DESK_BOX_TOKEN || tok !== process.env.DESK_BOX_TOKEN) { res.writeHead(401); return res.end() }
+      if (!process.env.DESK_BOX_TOKEN || !(tok.length === (process.env.DESK_BOX_TOKEN ?? '').length && tok.length > 0 && timingSafeEqual(Buffer.from(tok), Buffer.from(process.env.DESK_BOX_TOKEN ?? '')))) { res.writeHead(401); return res.end() }
       const b = JSON.parse(await readBody(req) || '{}')
       if (!['ok', 'past_due', 'cancelled'].includes(b.state)) { res.writeHead(400); return res.end('state?') }
       const cur = readBilling()
@@ -215,7 +232,7 @@ const server = createServer(async (req, res) => {
       res.writeHead(302, { location: await wf.startUrl(HOST) }); return res.end()
     }
     if (u.pathname === '/oauth/webface/callback') {
-      const code = u.searchParams.get('code'), state = u.searchParams.get('state') ?? '', err = u.searchParams.get('error')
+      const code = u.searchParams.get('code'), state = u.searchParams.get('state') ?? '', err = esc(u.searchParams.get('error') ?? '')
       if (!code) { res.writeHead(302, { location: `/connections?err=${encodeURIComponent(`webfaCeMEdia sign-in did not complete (${err ?? 'no code'}).`)}` }); return res.end() }
       try {
         const who = await wf.finish(HOST, code, state)
@@ -232,11 +249,12 @@ const server = createServer(async (req, res) => {
       return wf.proxy(req, res, HOST, req.method === 'GET' ? undefined : await readBody(req))
     }
     if (u.pathname === '/oauth/google/start') {
-      const url = oauthClient().generateAuthUrl({ access_type: 'offline', prompt: 'consent', scope: cfg.SCOPES })
+      const url = oauthClient().generateAuthUrl({ state: (() => { const st = randomBytes(12).toString('hex'); oauthStates.add(st); setTimeout(() => oauthStates.delete(st), 600000).unref(); return st })(),  access_type: 'offline', prompt: 'consent', scope: cfg.SCOPES })
       res.writeHead(302, { location: url }); return res.end()
     }
     if (u.pathname === '/oauth/google/callback') {
-      const code = u.searchParams.get('code'); const err = u.searchParams.get('error')
+      const code = u.searchParams.get('code'); const err = esc(u.searchParams.get('error') ?? '')
+      { const st = u.searchParams.get('state') ?? ''; if (!oauthStates.delete(st)) { res.writeHead(400, { 'content-type': 'text/html; charset=utf-8' }); return res.end(page('Not connected', '<p>That sign-in link is stale or was not started from this Desk. Start again from Connections.</p>')) } }
       if (!code) { res.writeHead(400, { 'content-type': 'text/html; charset=utf-8' }); return res.end(page('Not connected', `<p>${err ?? 'Google sent no code.'}</p>`)) }
       const oauth = oauthClient()
       const { tokens } = await oauth.getToken(code); oauth.setCredentials(tokens)
@@ -261,7 +279,7 @@ server.listen(PORT, '127.0.0.1', () => console.log(`deskd on 127.0.0.1:${PORT} f
 
 if (API) {
   const beat = async () => {
-    try { await fetch(`${API}/v1/boxes/${SLUG}/heartbeat`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${process.env.DESK_BOX_TOKEN ?? ''}` }, body: JSON.stringify(status()) }) }
+    try { await fetch(`${API}/boxes/${SLUG}/heartbeat`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${process.env.DESK_BOX_TOKEN ?? ''}` }, body: JSON.stringify(status()) }) }
     catch (e) { console.error('heartbeat failed:', e.message) }
   }
   beat(); setInterval(beat, 60_000).unref()

@@ -33,7 +33,10 @@ function bodyText(payload) {
   const html = pick('text/html'); if (html) return html.replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
   return parts.length ? '(no readable body)' : (payload.body?.data ? Buffer.from(payload.body.data, 'base64url').toString('utf8') : '')
 }
+const hdr = v => String(v ?? '').replace(/[\r\n]+/g, ' ').trim()  // a model-supplied value can never add a header
+const subj = v => { const h = hdr(v); return /^[\x20-\x7e]*$/.test(h) ? h : `=?UTF-8?B?${Buffer.from(h).toString('base64')}?=` }
 function mime({ to, cc, bcc, subject, body, html, inReplyTo, references, from }) {
+  to = hdr(to); cc = cc && hdr(cc); bcc = bcc && hdr(bcc); subject = subj(subject); inReplyTo = inReplyTo && hdr(inReplyTo); references = references && hdr(references); from = from && hdr(from)
   const lines = []
   if (from) lines.push(`From: ${from}`)
   lines.push(`To: ${to}`); if (cc) lines.push(`Cc: ${cc}`); if (bcc) lines.push(`Bcc: ${bcc}`)

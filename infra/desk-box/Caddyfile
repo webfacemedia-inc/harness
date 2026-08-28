@@ -1,7 +1,10 @@
-# webfaCe Desk box front door. One password for the owner (v1); the phone
-# route split (conversation/approvals only for paired phones) is owed.
+# webfaCe Desk box front door. deskd signs owners and phones in; Caddy asks it
+# per request and routes phone sessions to the conversation plane only.
 {$DESK_HOST} {
 	encode zstd gzip
+	# The role/user headers are set from deskd's answer, never from the client.
+	request_header -X-Desk-Role
+	request_header -X-Desk-User
 	# Sign-in lives in deskd (username+password, optional Google). Everything
 	# except the sign-in routes asks deskd whether the session cookie is good.
 	@public path /login /logout /auth/* /healthz /deskd/billing /sw.js

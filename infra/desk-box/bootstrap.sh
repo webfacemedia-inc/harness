@@ -54,7 +54,7 @@ echo "==> hardening: fail2ban (ssh + Desk sign-in), unattended security upgrades
 apt-get install -y -qq fail2ban unattended-upgrades >/dev/null
 cat > /etc/fail2ban/filter.d/desk-login.conf <<'F2B'
 [Definition]
-failregex = ^.*deskd.*login failed from <HOST>.*$
+failregex = login failed from <HOST>
 F2B
 cat > /etc/fail2ban/jail.d/desk.conf <<'F2B'
 [sshd]
@@ -163,7 +163,7 @@ HOME=$D
 PATH=/usr/local/bin:/usr/bin:/bin
 ENV
 chmod 600 $D/desk.env; chown desk:desk $D/desk.env
-sudo -u desk -H env $(grep -v '^#' $D/desk.env | xargs) node --import tsx/esm apps/cli/src/bin.ts --profile desk --dump-config >/dev/null 2>&1 || true
+sudo -u desk -H bash -c "set -a; . $D/desk.env; set +a; node --import tsx/esm apps/cli/src/bin.ts --profile desk --dump-config" >/dev/null 2>&1 || true
 mkdir -p $D/home/profiles/node_modules/@webface
 ln -sfn $D/harness/packages/webface/desk-models $D/home/profiles/node_modules/@webface/dsh-desk-models
 ln -sfn $D/harness/packages/webface/desk-app $D/home/profiles/node_modules/@webface/dsh-desk-app
@@ -174,7 +174,7 @@ chown -R desk:desk $D/home/profiles
 
 echo "==> workspace (the Desk folder shows up in the sidebar on first sign-in)"
 mkdir -p $D/home/storages
-if ! grep -q '"$D/work"' $D/home/storages/workspace.json 2>/dev/null; then
+if ! grep -q "\"$D/work\"" $D/home/storages/workspace.json 2>/dev/null; then
 WS_ID=$(cat /proc/sys/kernel/random/uuid); NOW=$(date -u +%FT%T.000Z)
 cat > $D/home/storages/workspace.json <<JSON
 { "unit": { "name": "workspace", "version": 2 },
@@ -281,6 +281,10 @@ systemctl daemon-reload
 systemctl enable --now desk-xvfb desk-vnc desk-novnc desk-chrome desk-harness deskd
 systemctl restart caddy
 unset DESK_OWNER_PASSWORD OPENROUTER_API_KEY
-for i in $(seq 1 60); do curl -fsS -o /dev/null http://127.0.0.1:3080/ && break; sleep 2; done
+# The cloud metadata service holds this box's bootstrap secrets; nothing on the box needs it after this point.
+ufw deny out to 169.254.169.254 >/dev/null 2>&1 || true
+HARNESS_UP=0
+for i in $(seq 1 90); do curl -fsS -o /dev/null http://127.0.0.1:3080/ && HARNESS_UP=1 && break; sleep 2; done
+if [ "$HARNESS_UP" != 1 ]; then echo "==> FAILED: the harness never answered on :3080 (see journalctl -u desk-harness)"; exit 1; fi
 touch $D/READY; chown desk:desk $D/READY
 echo "==> READY https://$DESK_HOST  (owner / the password you were given)"

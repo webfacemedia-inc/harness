@@ -21,8 +21,9 @@ const yamlStr = (s) => JSON.stringify(s)
 function askRows(self) {
   return spec.teammates.filter(t => t.id !== self.id).map(t => {
     const tool = `ask_${t.id.replace(/-/g, '_')}`
-    // Children never delegate further (no ask_* → no loops) and business teammates keep no shell.
-    const deny = [...TEAM_TOOLS, ...(t.shell ? [] : SHELL_TOOLS)]
+    // Children never delegate further (no ask_* → no loops). A shell-less parent
+    // never reaches a shell through a child either, whatever the child's own flag.
+    const deny = [...TEAM_TOOLS, ...((self.shell && t.shell) ? [] : SHELL_TOOLS)]
     return [
       `    - id: tool-${tool}`,
       `      name: '@deepseek-ai/dsh-tool-subagent'`,
@@ -47,6 +48,8 @@ for (const t of spec.teammates) {
   if (!t.shell) {
     y = y.replace(/(- id: tool-bash\n  name: '@deepseek-ai\/dsh-tool-bash'\n  disabled: )!!js [^\n]+/, '$1true')
     y = y.replace(/(- id: tool-pwsh\n  name: '@deepseek-ai\/dsh-tool-pwsh'\n  disabled: )!!js [^\n]+/, '$1true')
+    // The generic `subagent` spawns an unfiltered child; shell-less modes only delegate through ask_*.
+    y = y.replace(/(    - id: tool-subagent\n      name: '@deepseek-ai\/dsh-tool-subagent'\n)/, '$1      disabled: true\n')
   }
   // the preset's own skills/ dir (same seam the shipped `cordis` preset uses)
   if ((t.skills ?? []).length > 0) {

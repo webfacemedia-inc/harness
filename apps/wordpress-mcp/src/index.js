@@ -56,7 +56,9 @@ server.tool('wp_list_media', 'Recent media library items.', { search: z.string()
   const { data, total } = await wp(`/media?${q}`); return text({ total, media: data.map(m => ({ id: m.id, title: strip(m.title?.rendered), url: m.source_url, mime: m.mime_type, alt: m.alt_text, date: m.date })) })
 })
 server.tool('wp_upload_media', 'Upload an image or file to the media library from a URL (e.g. a file in the Desk folder served by Files, or any public URL).', { url: z.string().url(), filename: z.string(), alt: z.string().optional(), title: z.string().optional() }, async ({ url, filename, alt, title }) => {
-  const src = await fetch(url, { signal: AbortSignal.timeout(60000) }); if (!src.ok) throw new Error(`could not fetch ${url}: ${src.status}`)
+  { const h = new URL(url); const priv = /^(localhost|127\.|10\.|192\.168\.|169\.254\.|0\.|\[?::1\]?$|172\.(1[6-9]|2\d|3[01])\.)/i
+    if (h.protocol !== 'https:' || priv.test(h.hostname)) throw new Error('media can only be fetched from a public https:// address') }
+  const src = await fetch(url, { signal: AbortSignal.timeout(60000), redirect: 'error' }); if (!src.ok) throw new Error(`could not fetch ${url}: ${src.status}`)
   const buf = Buffer.from(await src.arrayBuffer()); const mime = src.headers.get('content-type') ?? 'application/octet-stream'
   const r = await fetch(`${URL_}/wp-json/wp/v2/media`, { method: 'POST', headers: { authorization: AUTH, 'content-type': mime, 'content-disposition': `attachment; filename="${filename}"` }, body: buf })
   const m = await r.json(); if (!r.ok) throw new Error(`upload failed: ${m.message ?? r.status}`)

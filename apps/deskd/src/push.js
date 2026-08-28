@@ -1,11 +1,12 @@
 // Web Push to the owner's phone. VAPID keys are generated once per box and
 // kept in push.json with the subscriptions; deskd itself is the only sender.
+import { writeAtomic } from './fsx.js'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import webpush from 'web-push'
 
 const FILE = process.env.DESK_PUSH_FILE ?? '/srv/desk/push.json'
 const read = () => { try { return JSON.parse(readFileSync(FILE, 'utf8')) } catch { return {} } }
-const write = (s) => writeFileSync(FILE, JSON.stringify(s, null, 2), { mode: 0o600 })
+const write = (s) => writeAtomic(FILE, JSON.stringify(s, null, 2))
 
 function keys(host) {
   const s = read()
