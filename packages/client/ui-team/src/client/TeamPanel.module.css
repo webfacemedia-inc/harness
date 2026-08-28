@@ -13,3 +13,17 @@
 .rail { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 0; }
 .rail .bot { width: auto; padding: 4px; justify-content: center; }
 .empty { padding: 6px 8px; font-size: 12px; color: var(--dsw-alias-text-tertiary, #8d939b); }
+
+/* Tall rosters: the list scrolls, the sidebar does not grow past the screen. */
+.list { max-height: 46vh; overflow-y: auto; overscroll-behavior: contain; }
+
+/* Phones: modes become a horizontal strip of chips so the sessions list keeps its room. */
+@media (max-width: 768px) {
+  .list { flex-direction: row; max-height: none; overflow-x: auto; overflow-y: hidden; gap: 6px; padding: 2px 0 6px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .list::-webkit-scrollbar { display: none; }
+  .bot { flex: 0 0 auto; width: auto; padding: 6px 10px 6px 6px; border: 1px solid var(--dsw-alias-border-default, rgba(127, 127, 127, 0.28)); border-radius: 999px; }
+  .bot.active { border-color: var(--dsw-static-deepseek-500, #3499cc); background: var(--dsw-alias-interactive-bg-hover, rgba(52, 153, 204, 0.10)); }
+  .avatar { width: 22px; height: 22px; font-size: 10px; }
+  .desc, .status { display: none; }
+  .name { font-size: 12.5px; }
+}
