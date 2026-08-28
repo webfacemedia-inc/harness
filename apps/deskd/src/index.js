@@ -15,6 +15,7 @@ import { google } from 'googleapis'
 import * as files from './files.js'
 import * as connections from './connections.js'
 import * as profile from './profile.js'
+import * as routines from './routines.js'
 import * as wf from './webface-oauth.js'
 import { layout } from './ui.js'
 import * as push from './push.js'
@@ -132,6 +133,10 @@ const server = createServer(async (req, res) => {
       if (!verifySession(cookieOf(req))) { res.writeHead(302, { location: '/login?next=/browser' }); return res.end() }
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' })
       return res.end(layout({ title: 'Browser', business: businessName(), head: '<style>main{max-width:none;padding:0;height:calc(100dvh - 53px)}iframe{display:block;width:100%;height:100%;border:0;background:#111}.bar{display:flex;gap:10px;align-items:center;padding:8px 14px;font-size:13px;color:var(--mute);background:var(--card);border-bottom:1px solid var(--line)}@media(max-width:600px){.bar span{display:none}main{height:calc(100dvh - 53px)}}</style>', body: `<div class="bar"><span>Desk's browser. Tap inside to take the mouse — sign in here once and Desk keeps the session.</span><a class="btn" href="/" style="margin:0 0 0 auto;padding:7px 12px;font-size:13px">I'm done — back to Desk</a></div><iframe src="/vnc/vnc.html?autoconnect=1&resize=scale&show_dot=1" allow="clipboard-read; clipboard-write" title="Desk browser"></iframe>` }))
+    }
+    if (u.pathname === '/routines' || u.pathname.startsWith('/routines/')) {
+      if (!verifySession(cookieOf(req))) { res.writeHead(302, { location: '/login?next=/routines' }); return res.end() }
+      if (await routines.handle(req, res, u, { business: businessName(), readBody, tz: process.env.DESK_TZ ?? 'America/Toronto' }) !== false) return
     }
     if (u.pathname === '/profile') {
       if (!verifySession(cookieOf(req))) { res.writeHead(302, { location: `/login?next=/profile` }); return res.end() }

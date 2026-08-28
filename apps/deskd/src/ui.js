@@ -19,6 +19,7 @@ export const ICONS = {
   check: svg('<path d="M20 6 9 17l-5-5"/>'),
   upload: svg('<path d="M12 16V4M6 10l6-6 6 6M4 20h16"/>'),
   back: svg('<path d="M19 12H5M12 19l-7-7 7-7"/>'),
+  clock: svg('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
   ext: svg('<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>'),
 }
 export const CSS = `

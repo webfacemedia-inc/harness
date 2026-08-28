@@ -48,6 +48,13 @@
       config:
         url: !!js 'process.env.DESK_NOTIFY_URL ?? "http://127.0.0.1:8090/deskd/notify"'
 
+    # Routines mirror for the Routines page (deskd reads the file; deletes flow back).
+    - id: desk-routines
+      name: '@webface/dsh-desk-routines'
+      config:
+        file: !!js 'process.env.DESK_ROUTINES_FILE ?? "/srv/desk/routines.json"'
+        actionsFile: !!js 'process.env.DESK_ROUTINES_ACTIONS ?? "/srv/desk/routines-actions.json"'
+
     # Google connector over the customer's own OAuth client. The profile
     # supplies DESK_HARNESS_DIR / DESK_GOOGLE_HOME via env (see README).
     - id: mcp-google

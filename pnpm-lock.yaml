@@ -8240,6 +8240,9 @@ importers:
       '@webface/dsh-desk-notify':
         specifier: workspace:^
         version: link:../desk-notify
+      '@webface/dsh-desk-routines':
+        specifier: workspace:^
+        version: link:../desk-routines
     devDependencies:
       '@deepseek-ai/cordis-plugin-include':
         specifier: workspace:^
@@ -8274,6 +8277,19 @@ importers:
         version: 3.2.7(@types/debug@4.1.13)(@types/node@26.1.2)(jiti@2.7.0)(jsdom@29.1.1)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0)
 
   packages/webface/desk-notify:
+    dependencies:
+      '@deepseek-ai/schemastery':
+        specifier: link:../../../vendor/schemastery
+        version: link:../../../vendor/schemastery
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../core/session
+
+  packages/webface/desk-routines:
     dependencies:
       '@deepseek-ai/schemastery':
         specifier: link:../../../vendor/schemastery

@@ -120,6 +120,8 @@ DESK_BROWSER_HOME=$D/browser
 DESK_BROWSER_CDP=http://127.0.0.1:9222
 DESK_NOTIFY_URL=http://127.0.0.1:8090/deskd/notify
 DESK_PUSH_FILE=$D/push.json
+DESK_ROUTINES_FILE=$D/routines.json
+DESK_ROUTINES_ACTIONS=$D/routines-actions.json
 DESK_HOST=$DESK_HOST
 DESK_SLUG=$DESK_SLUG
 DESK_API_URL=${DESK_API_URL:-}
@@ -143,6 +145,7 @@ ln -sfn $D/harness/packages/webface/desk-models $D/home/profiles/node_modules/@w
 ln -sfn $D/harness/packages/webface/desk-app $D/home/profiles/node_modules/@webface/dsh-desk-app
 ln -sfn $D/harness/packages/client/ui-team $D/home/profiles/node_modules/@webface/dsh-client-ui-team
 ln -sfn $D/harness/packages/webface/desk-notify $D/home/profiles/node_modules/@webface/dsh-desk-notify
+ln -sfn $D/harness/packages/webface/desk-routines $D/home/profiles/node_modules/@webface/dsh-desk-routines
 chown -R desk:desk $D/home/profiles
 
 echo "==> workspace (the Desk folder shows up in the sidebar on first sign-in)"

@@ -245,6 +245,7 @@
     { "path": "./packages/webface/desk-models" },
     { "path": "./packages/webface/desk-app" },
     { "path": "./packages/webface/desk-notify" },
+    { "path": "./packages/webface/desk-routines" },
     { "path": "./packages/boot/app-boot" },
     { "path": "./packages/boot/cmdline" },
     { "path": "./packages/sdk/server" },

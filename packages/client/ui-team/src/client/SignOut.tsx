@@ -26,6 +26,7 @@ const FILES = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke
 const BIZ = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" /></svg>
 const PLUG = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 2v6M15 2v6M7 8h10l-1 6a4 4 0 0 1-8 0z" /><path d="M12 18v4" /></svg>
 const BELL = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></svg>
+const CLOCK = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
 const BROWSER = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="M2 9h20M7 6.5h.01M10 6.5h.01" /></svg>
 const OUT = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
 
@@ -50,6 +51,7 @@ export function CloudLinks({ wide }: { wide: boolean }) {
       {!pushOn ? <button type="button" className={css.link} title="Get a notification when Desk needs you" aria-label="Turn on notifications" onClick={() => { enableNotifications().then((m) => { setNotif(m); if (m.startsWith('On')) setPushOn(true) }).catch(e => setNotif(String(e?.message ?? e))) }}>{BELL}{wide ? <span>Turn on notifications</span> : null}</button> : null}
       {notif && wide ? <span className={css.note}>{notif}</span> : null}
       <a className={css.link} href="/profile" title="Business" aria-label="Business">{BIZ}{wide ? <span>Business</span> : null}</a>
+      <a className={css.link} href="/routines" title="Routines" aria-label="Routines">{CLOCK}{wide ? <span>Routines</span> : null}</a>
       <a className={css.link} href="/connections" title="Connections" aria-label="Connections">{PLUG}{wide ? <span>Connections</span> : null}</a>
       <a className={css.link} href="/browser" title="Browser — watch Desk or take the mouse" aria-label="Browser">{BROWSER}{wide ? <span>Browser</span> : null}</a>
       <a className={css.link} href="/files" title="Files" aria-label="Files">{FILES}{wide ? <span>Files</span> : null}</a>
