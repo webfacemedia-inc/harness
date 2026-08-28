@@ -53,7 +53,7 @@ export function apply(ctx: Context, config: Config): void {
     if (String(event.type) !== 'schedule/change') return
     const sessionId = String((session as { id?: unknown }).id ?? '')
     sessions.set(sessionId, session)
-    const p = (event as { payload?: Record<string, unknown> }).payload ?? {}
+    const p = (event as { data?: Record<string, unknown> }).data ?? {}
     const op = String(p.operation ?? '')
     if (op === 'create') {
       const s = p.schedule as Record<string, unknown>

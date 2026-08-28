@@ -29,7 +29,7 @@ interface Notice { kind: 'approval' | 'question' | 'handover'; sessionId: string
 /** Classify an event into a notice, or undefined when the owner is not needed. */
 export function noticeFor(session: Session, event: SessionEvent): Notice | undefined {
   const type = String(event.type)
-  const payload = (event as { payload?: Record<string, unknown> }).payload ?? {}
+  const payload = (event as { data?: Record<string, unknown> }).data ?? {}
   const sessionId = String((session as { id?: unknown }).id ?? '')
   if (type === 'approval/asked') {
     const tool = String(payload.toolName ?? 'an action')
