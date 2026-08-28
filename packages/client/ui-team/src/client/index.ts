@@ -29,8 +29,8 @@ export const inject = ['slots', 'locale', 'connection', 'remote', 'sessions', 'a
  */
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(LOCALE_NS, {
-    zh: { 'title': '团队', 'active': '默认', 'message': '与 {name} 开始对话' },
-    en: { 'title': 'Team', 'active': 'default', 'message': 'Message {name}' },
+    zh: { 'title': '模式', 'active': '默认', 'message': '切换到 {name}' },
+    en: { 'title': 'Modes', 'active': 'default', 'message': 'Switch to {name}' },
   }), 'ui-team: dictionaries')
 
   const { api } = ctx.get('connection') as ConnectionHandle
