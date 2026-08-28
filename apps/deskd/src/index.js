@@ -21,6 +21,8 @@ import { execFile } from 'node:child_process'
 import { findUser, checkPassword, issueSession, verifySession, cookieHeader, cookieOf, loginPage } from './auth.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
+// Same Google home as the harness's Google connector row, or the token lands where the tools never look.
+if (!process.env.GOOGLE_MCP_HOME && process.env.DESK_GOOGLE_HOME) process.env.GOOGLE_MCP_HOME = process.env.DESK_GOOGLE_HOME
 const cfg = await import(join(here, '..', '..', 'google-mcp', 'src', 'config.js'))
 
 const PORT = Number(process.env.DESKD_PORT ?? 8090)
