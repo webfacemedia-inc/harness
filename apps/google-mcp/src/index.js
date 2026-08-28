@@ -101,8 +101,15 @@ server.registerTool('gmail_label', {
   try { await gmailFor(account).users.threads.modify({ userId: 'me', id: threadId, requestBody: { addLabelIds: add, removeLabelIds: remove } }); return text({ ok: true }) } catch (e) { return fail(e) }
 })
 
+server.registerTool('calendar_calendars', {
+  description: 'The calendars the connected account can see (id, name, primary, access role). Use an id from here as calendarId elsewhere.',
+  inputSchema: { account: acct },
+}, async ({ account }) => {
+  try { const r = await calFor(account).calendarList.list({ maxResults: 100 }); return text((r.data.items ?? []).map(c => ({ id: c.id, name: c.summary, primary: Boolean(c.primary), role: c.accessRole, timeZone: c.timeZone }))) } catch (e) { return fail(e) }
+})
+
 server.registerTool('calendar_list', {
-  description: 'List events between two ISO times (default: now → +7 days) on a calendar (default primary).',
+  description: 'List EVENTS between two ISO times (default: now → +7 days) on one calendar (default primary). To see which calendars exist, call calendar_calendars.',
   inputSchema: { timeMin: z.string().optional(), timeMax: z.string().optional(), calendarId: z.string().default('primary'), max: z.number().int().min(1).max(100).default(50), account: acct },
 }, async ({ timeMin, timeMax, calendarId, max, account }) => {
   try {
