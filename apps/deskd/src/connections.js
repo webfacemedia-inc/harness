@@ -80,9 +80,10 @@ export function page({ business, host, google, webface, servers, msg, err }) {
   const inner = `<h1>Connections</h1><p class="sub">Your team uses these on your behalf. Every account here is yours — nothing is shared with anyone else.</p>
 ${msg ? `<div class="msg ok">${esc(msg)}</div>` : ''}${err ? `<div class="msg err">${esc(err)}</div>` : ''}
 <section><h2>Google — Gmail, Calendar, Drive, Contacts ${accounts.length ? `<span class="pill">${accounts.length} connected</span>` : gc ? '<span class="pill off">app saved · no account yet</span>' : '<span class="pill off">not set up</span>'}</h2>
-<p style="color:var(--mute);margin:0 0 8px">Google requires each business to use its own Google app for email access. It takes about five minutes and is done once.</p>
+<p style="color:var(--mute);margin:0 0 8px">${google.central ? 'Sign in once with the Google account the business uses; Desk reads and drafts email, manages the calendar and reads Drive and contacts on your behalf.' : 'Google requires each business to use its own Google app for email access. It takes about five minutes and is done once.'}</p>
 ${accounts.length ? accounts.map(a => `<div class="row"><span>${esc(a)}<small>Gmail · Calendar · Drive (read) · Contacts (read)</small></span><form method="post" action="/connections/google/disconnect" style="margin:0"><input type="hidden" name="account" value="${esc(a)}"><button class="quiet" type="submit">Disconnect</button></form></div>`).join('') : ''}
-<details ${gc ? '' : 'open'}><summary>${gc ? 'Change the Google app' : 'Set up your Google app'}</summary>
+${google.central ? `<a class="btn" href="/oauth/google/start">Sign in with Google →</a><p style="color:var(--mute);font-size:13px;margin:10px 0 0">You'll be asked to allow Desk to read and draft email, manage your calendar and read Drive and contacts. Your sign-in stays on this Desk.</p>` : ''}
+<details ${gc || google.central ? '' : 'open'}><summary>${google.central ? 'Use your own Google app instead' : gc ? 'Change the Google app' : 'Set up your Google app'}</summary>
 <ol>
 <li>Open <a href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener">console.cloud.google.com/projectcreate</a>, name the project after your business, create it.</li>
 <li>Enable the APIs: <a href="https://console.cloud.google.com/apis/library/gmail.googleapis.com" target="_blank" rel="noopener">Gmail</a>, <a href="https://console.cloud.google.com/apis/library/calendar-json.googleapis.com" target="_blank" rel="noopener">Calendar</a>, <a href="https://console.cloud.google.com/apis/library/drive.googleapis.com" target="_blank" rel="noopener">Drive</a>, <a href="https://console.cloud.google.com/apis/library/people.googleapis.com" target="_blank" rel="noopener">People</a> — press <em>Enable</em> on each.</li>
@@ -92,7 +93,7 @@ ${accounts.length ? accounts.map(a => `<div class="row"><span>${esc(a)}<small>Gm
 </ol>
 <form method="post" action="/connections/google/client"><label for="cj">Client JSON</label><textarea id="cj" name="json" placeholder='{"web":{"client_id":"…","client_secret":"…",…}}' required></textarea><button type="submit">Save Google app</button></form>
 </details>
-${gc ? `<a class="btn" href="/oauth/google/start">Connect a Google account →</a>` : ''}
+${gc && !google.central ? `<a class="btn" href="/oauth/google/start">Connect a Google account →</a>` : ''}
 </section>
 
 ${(() => { const wfs = webface ?? { connected: false }; return `<section><h2>webfaCeMEdia — your website, campaigns, contacts and analytics ${wfs.connected ? '<span class="pill">connected</span>' : '<span class="pill off">not connected</span>'}</h2>

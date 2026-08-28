@@ -10,3 +10,6 @@ The apex box (demo, 143.198.42.231) serves the site, `deskapi` (:8095) and the d
 4. `systemctl restart deskapi` — `curl https://webfacedesk.app/api/health` shows `stripe:true, dns:true`.
 
 Flow: `/checkout?plan=business` → Stripe Checkout (setup + monthly) → webhook → droplet in tor1 (bootstrap.sh) → `/welcome?order=…` shows the address + owner password once ready (also emailed via Brevo). Orders live in `/srv/deskapi/orders.json`.
+
+## Google sign-in for every Desk (central app)
+Create ONE OAuth client in the Google Cloud project `webface-mail-tools` (APIs already enabled): **Web application**, name "webfaCe Desk", authorised redirect URI **exactly** `https://webfacedesk.app/oauth/google/callback`. Put its id/secret in `/srv/deskapi/deskapi.env` as `DESK_GOOGLE_CLIENT_ID` / `DESK_GOOGLE_CLIENT_SECRET` (new boxes get them at provisioning; for an existing box add the same two lines to `/srv/desk/desk.env`, write `/srv/desk/google/client_secret.json` in the `web` format, restart deskd). Until Google verifies the app (Gmail is a restricted scope → verification + CASA), add each owner's Google address under OAuth consent screen → Test users (max 100); they will see the "unverified app" interstitial once.

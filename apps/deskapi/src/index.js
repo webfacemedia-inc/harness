@@ -121,6 +121,13 @@ async function email(o) {
 const server = createServer(async (req, res) => {
   const u = new URL(req.url, PUBLIC)
   try {
+    // Central Google OAuth callback: Google will not accept wildcard redirect
+    // URIs, so every Desk sends the owner here and we relay to their own box.
+    if (u.pathname === '/oauth/google/callback') {
+      const state = u.searchParams.get('state') ?? ''; const m = state.match(/^([a-z0-9-]+\.webfacedesk\.app|[0-9.]+\.sslip\.io)\.([A-Za-z0-9_-]{16,})$/)
+      if (!m) return html(res, 400, shell('Sign-in link not recognised', '<h1>Sign-in link not recognised</h1><p class="sub">Start the Google sign-in again from your Desk\'s Connections page.</p>'))
+      const q = new URLSearchParams(u.searchParams); res.writeHead(302, { location: `https://${m[1]}/oauth/google/finish?${q}` }); return res.end()
+    }
     if (u.pathname === '/checkout') return html(res, 200, checkoutPage(u.searchParams.get('plan')))
     if (u.pathname === '/welcome') return html(res, 200, welcomePage(orders[u.searchParams.get('order') ?? '']))
     if (u.pathname === '/api/checkout' && req.method === 'POST') {
