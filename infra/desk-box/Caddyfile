@@ -4,11 +4,11 @@
 	encode zstd gzip
 	# Sign-in lives in deskd (username+password, optional Google). Everything
 	# except the sign-in routes asks deskd whether the session cookie is good.
-	@public path /login /logout /auth/* /healthz /deskd/billing
+	@public path /login /logout /auth/* /healthz /deskd/billing /sw.js
 	handle @public {
 		reverse_proxy 127.0.0.1:8090
 	}
-	@protected not path /login /logout /auth/* /healthz /deskd/billing
+	@protected not path /login /logout /auth/* /healthz /deskd/billing /sw.js
 	forward_auth @protected 127.0.0.1:8090 {
 		uri /auth/verify
 		copy_headers X-Desk-User
@@ -22,6 +22,9 @@
 		reverse_proxy 127.0.0.1:8090
 	}
 	# Files page + API over the Desk folder (deskd checks the session itself too).
+	handle /sw.js {
+		reverse_proxy 127.0.0.1:8090
+	}
 	handle /browser {
 		reverse_proxy 127.0.0.1:8090
 	}

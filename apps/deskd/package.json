@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "google-auth-library": "^10.7.0",
-    "googleapis": "^170.0.0"
+    "googleapis": "^170.0.0",
+    "web-push": "^3.6.7"
   }
 }

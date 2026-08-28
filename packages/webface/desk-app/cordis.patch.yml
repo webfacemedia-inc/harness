@@ -42,6 +42,12 @@
     - id: schedule
       name: '@deepseek-ai/dsh-schedule'
 
+    # Owner notices: approvals, questions, hand-overs → deskd → push to the phone.
+    - id: desk-notify
+      name: '@webface/dsh-desk-notify'
+      config:
+        url: !!js 'process.env.DESK_NOTIFY_URL ?? "http://127.0.0.1:8090/deskd/notify"'
+
     # Google connector over the customer's own OAuth client. The profile
     # supplies DESK_HARNESS_DIR / DESK_GOOGLE_HOME via env (see README).
     - id: mcp-google

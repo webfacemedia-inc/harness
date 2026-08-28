@@ -17,6 +17,7 @@ import * as connections from './connections.js'
 import * as profile from './profile.js'
 import * as wf from './webface-oauth.js'
 import { layout } from './ui.js'
+import * as push from './push.js'
 import { execFile } from 'node:child_process'
 import { findUser, checkPassword, issueSession, verifySession, cookieHeader, cookieOf, loginPage } from './auth.js'
 
@@ -67,6 +68,7 @@ function status() {
     webface: wf.status(),
     billing: readBilling(),
     harness: harnessUp,
+    push: { devices: push.count() },
   }
 }
 
@@ -153,6 +155,22 @@ const server = createServer(async (req, res) => {
       const restoreMode = cur.state === 'ok' ? (readFileSync(PATCH, 'utf8').match(/mode: (\S+)/)?.[1] ?? 'read-only') : (cur.restoreMode ?? 'read-only')
       await applyBilling({ state: b.state, portalUrl: b.portalUrl ?? cur.portalUrl ?? '', restoreMode })
       return json(res, 200, { ok: true, state: b.state })
+    }
+    if (u.pathname === '/sw.js') { res.writeHead(200, { 'content-type': 'application/javascript', 'cache-control': 'no-cache', 'service-worker-allowed': '/' }); return res.end(push.SW) }
+    if (u.pathname === '/deskd/notify' && req.method === 'POST') {
+      const ra = req.socket.remoteAddress; if (!['127.0.0.1', '::ffff:127.0.0.1', '::1'].includes(ra)) { res.writeHead(403); return res.end() }
+      const notice = JSON.parse(await readBody(req) || '{}'); if (!notice.kind || !notice.title) { res.writeHead(400); return res.end() }
+      const r = await push.send(HOST, notice); console.log('notify', notice.kind, notice.sessionId, r); return json(res, 200, r)
+    }
+    if (u.pathname === '/deskd/push/key') { if (!verifySession(cookieOf(req))) { res.writeHead(401); return res.end() } return json(res, 200, { key: push.publicKey(HOST), devices: push.count() }) }
+    if (u.pathname === '/deskd/push/subscribe' && req.method === 'POST') {
+      if (!verifySession(cookieOf(req))) { res.writeHead(401); return res.end() }
+      const b = JSON.parse(await readBody(req) || '{}'); if (!b.subscription?.endpoint) { res.writeHead(400); return res.end('subscription?') }
+      return json(res, 200, { devices: push.subscribe(b.subscription, b.label) })
+    }
+    if (u.pathname === '/deskd/push/test' && req.method === 'POST') {
+      if (!verifySession(cookieOf(req))) { res.writeHead(401); return res.end() }
+      return json(res, 200, await push.send(HOST, { kind: 'test', sessionId: '', title: 'Desk notifications are on', body: 'You will hear from Desk when it needs you.' }))
     }
     if (u.pathname === '/healthz') { res.writeHead(200, { 'content-type': 'text/plain' }); return res.end('ok') }
     if (u.pathname === '/deskd/status') { res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify(status())) }

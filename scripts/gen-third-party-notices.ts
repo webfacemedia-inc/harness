@@ -582,6 +582,17 @@ function verifyBuildTimePins(): void {
 }
 
 /** SPDX identifiers this project may ship without further review. */
+/**
+ * Non-permissive runtime dependencies whose distribution terms were reviewed
+ * and accepted. Key = package name; value = the recorded decision.
+ */
+const REVIEWED_NON_PERMISSIVE: Record<string, string> = {
+  // MPL-2.0 is file-level copyleft: it obliges publishing changes to web-push's
+  // own files, not to the program that imports it. deskd (the Desk box agent)
+  // uses it unmodified for Web Push. Reviewed 2026-08-28 (webfaCe Desk).
+  'web-push': 'MPL-2.0, used unmodified by apps/deskd',
+}
+
 const PERMISSIVE_LICENSES = new Set(['MIT', 'ISC', 'BSD-2-Clause', 'BSD-3-Clause', 'Apache-2.0', '0BSD', 'Unlicense', 'CC0-1.0', 'BlueOak-1.0.0', 'Python-2.0'])
 
 /** Evaluate a parsed SPDX expression under the repository's license policy. */
@@ -681,8 +692,9 @@ export function render(): string {
     !isPermissive(dep.license)
     && !isOwnerAuthorizedRuntime(dep.name),
   )
-  if (nonPermissiveRuntime.length > 0) {
-    throw new Error(`gen-third-party-notices: runtime ${nonPermissiveRuntime.map(dep => `${dep.name} (${dep.license})`).join(', ')} is not a permissive license; review the distribution terms and record the decision before regenerating.`)
+  const unreviewed = nonPermissiveRuntime.filter(dep => !(dep.name in REVIEWED_NON_PERMISSIVE))
+  if (unreviewed.length > 0) {
+    throw new Error(`gen-third-party-notices: runtime ${unreviewed.map(dep => `${dep.name} (${dep.license})`).join(', ')} is not a permissive license; review the distribution terms and record the decision before regenerating.`)
   }
   const patchedLines = patched.map(({ spec, patch }) => `- \`${spec}\` — [\`${patch}\`](${patch})`)
 
