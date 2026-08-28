@@ -247,3 +247,15 @@
   .list { max-height: calc(100dvh - 24px); }
   .viewport { overflow-y: auto; -webkit-overflow-scrolling: touch; }
 }
+
+/* Phones: a portal (fixed) menu is pinned inside the viewport regardless of
+ * where its anchor sits — an anchor low on the screen used to push the menu's
+ * top above the screen edge. Inline top/left from the placement pass are
+ * overridden on purpose. */
+@media (max-width: 768px) {
+  .list[style*="fixed"] {
+    top: 12px !important; left: 12px !important; right: 12px !important;
+    width: auto !important; max-width: none !important;
+    max-height: calc(100dvh - 24px) !important;
+  }
+}

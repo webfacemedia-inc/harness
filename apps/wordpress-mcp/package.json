@@ -1,0 +1,12 @@
+{
+  "name": "@webface/wordpress-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "webfaCe Desk WordPress connector: the site's own REST API with an Application Password, as an MCP server (stdio).",
+  "type": "module",
+  "bin": { "wordpress-mcp": "src/index.js" },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.25.0"
+  }
+}

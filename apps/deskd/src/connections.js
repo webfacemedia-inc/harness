@@ -25,7 +25,7 @@ function writeServers(list) {
   const rows = list.map(x => {
     const head = `# server: ${JSON.stringify(x)}\n    - id: mcp-${x.name}\n      name: '@deepseek-ai/dsh-mcp-client'\n      config:\n        serverName: ${yq(x.name)}\n        toolCallTimeoutMs: 90000\n`
     return x.transport === 'stdio'
-      ? head + `        transport: stdio\n        command: ${yq(x.command)}\n        args: [${x.args.map(yq).join(', ')}]\n        env:\n          PATH: '/usr/local/bin:/usr/bin:/bin'\n`
+      ? head + `        transport: stdio\n        command: ${yq(x.command)}\n        args: [${x.args.map(yq).join(', ')}]\n        env:\n          PATH: '/usr/local/bin:/usr/bin:/bin'\n${Object.entries(x.env ?? {}).map(([k, v]) => `          ${yq(k)}: ${yq(v)}\n`).join('')}`
       : head + `        transport: streamable-http\n        url: ${yq(x.url)}\n        headers:\n${Object.entries(x.headers).map(([k, v]) => `          ${yq(k)}: ${yq(v)}\n`).join('') || '          {}\n'}`
   }).join('')
   // New plugin rows only mount from an `insert:` list; a bare top-level id
@@ -100,9 +100,16 @@ ${w ? `<div class="row"><span><strong>Connected</strong><small>mcp.webfacemedia.
 : `<form method="post" action="/connections/webface/connect" style="margin:0"><button type="submit">Connect webfaCeMEdia</button></form>
 <details><summary style="font-size:13px">Have a connection key instead?</summary><form method="post" action="/connections/webface"><label for="wt">Connection key</label><input id="wt" name="token" pattern="wfs_[a-f0-9]{48}" placeholder="wfs_…" required title="Starts with wfs_"><button type="submit">Connect with key</button></form></details>`}
 </section>` })()}
-<section><h2>Other tools ${servers.filter(x => x.name !== 'webface').length ? `<span class="pill">${servers.filter(x => x.name !== 'webface').length} added</span>` : ''}</h2>
+${(() => { const w = servers.find(x => x.name === 'wordpress'); return `<section><h2>WordPress ${w ? '<span class="pill">connected</span>' : '<span class="pill off">not connected</span>'}</h2>
+<p style="color:var(--mute);margin:0 0 8px">If your website runs on WordPress, connect it with an Application Password and Desk can read pages and posts, draft new ones, update content and upload images — publishing and edits to live pages always wait for your approval.</p>
+${w ? `<div class="row"><span><strong>${esc(w.env?.WP_URL ?? '')}</strong><small>as ${esc(w.env?.WP_USER ?? '')} · posts, pages, media</small></span><form method="post" action="/connections/mcp/remove" style="margin:0"><input type="hidden" name="name" value="wordpress"><button class="quiet" type="submit">Disconnect</button></form></div>`
+: `<details><summary>Connect WordPress</summary>
+<ol><li>In WordPress go to <strong>Users → Profile</strong>, scroll to <strong>Application Passwords</strong>, enter the name <code>Desk</code> and press <em>Add New Application Password</em>.</li><li>Copy the password it shows (spaces are fine) and paste it below with your WordPress username and the site address.</li></ol>
+<form method="post" action="/connections/wordpress"><label for="wpu">Site address</label><input id="wpu" name="url" type="url" placeholder="https://www.yourbusiness.com" required><label for="wpn">WordPress username</label><input id="wpn" name="user" required autocomplete="off"><label for="wpp">Application password</label><input id="wpp" name="password" type="password" required autocomplete="off"><button type="submit">Connect WordPress</button></form></details>`}
+</section>` })()}
+<section><h2>Other tools ${servers.filter(x => !['webface', 'wordpress'].includes(x.name)).length ? `<span class="pill">${servers.filter(x => x.name !== 'webface').length} added</span>` : ''}</h2>
 <p style="color:var(--mute);margin:0 0 8px">Add any tool server your business uses (MCP). Your team sees its tools after a short restart.</p>
-${servers.filter(x => x.name !== 'webface').map(s => `<div class="row"><span><strong>${esc(s.name)}</strong><small>${s.transport === 'stdio' ? esc([s.command, ...s.args].join(' ')) : esc(s.url)}</small></span><form method="post" action="/connections/mcp/remove" style="margin:0"><input type="hidden" name="name" value="${esc(s.name)}"><button class="quiet" type="submit">Remove</button></form></div>`).join('')}
+${servers.filter(x => !['webface', 'wordpress'].includes(x.name)).map(s => `<div class="row"><span><strong>${esc(s.name)}</strong><small>${s.transport === 'stdio' ? esc([s.command, ...s.args].join(' ')) : esc(s.url)}</small></span><form method="post" action="/connections/mcp/remove" style="margin:0"><input type="hidden" name="name" value="${esc(s.name)}"><button class="quiet" type="submit">Remove</button></form></div>`).join('')}
 <details><summary>Add a tool server</summary>
 <form method="post" action="/connections/mcp/add">
 <label for="n">Name</label><input id="n" name="name" pattern="[a-z][a-z0-9-]{1,30}" placeholder="bookings" required title="lowercase letters, numbers, dashes">
@@ -145,6 +152,16 @@ export async function handle(req, res, u, ctx) {
     list.push({ name: 'webface', transport: 'streamable-http', url: 'https://mcp.webfacemedia.com/mcp', headers: { Authorization: `Bearer ${j.token}` } })
     writeServers(list); restartHarness(); return redirect({ msg: `webfaCeMEdia connected (${j.client}). Desk is restarting — give it half a minute.` })
   }
+  if (p === '/connections/wordpress' && req.method === 'POST') {
+    const f = new URLSearchParams(await readBody(req)); const url = (f.get('url') ?? '').trim().replace(/\/+$/, ''), user = (f.get('user') ?? '').trim(), password = (f.get('password') ?? '').trim()
+    if (!/^https?:\/\//.test(url) || !user || !password) return redirect({ err: 'Site address, username and application password are all needed.' })
+    const probe = await fetch(`${url}/wp-json/wp/v2/users/me?context=edit`, { headers: { authorization: 'Basic ' + Buffer.from(`${user}:${password}`).toString('base64') }, signal: AbortSignal.timeout(15000) }).catch(() => null)
+    if (!probe || !probe.ok) return redirect({ err: `WordPress at ${url} did not accept that username and application password (${probe ? probe.status : 'no reply'}). Check the site address and that Application Passwords are enabled.` })
+    const harness = process.env.DESK_HARNESS_DIR ?? '/srv/desk/harness'
+    const list = readServers().filter(x => x.name !== 'wordpress')
+    list.push({ name: 'wordpress', transport: 'stdio', command: process.execPath, args: [`${harness}/apps/wordpress-mcp/src/index.js`], env: { WP_URL: url, WP_USER: user, WP_APP_PASSWORD: password } })
+    writeServers(list); restartHarness(); return redirect({ msg: `WordPress connected (${url}). Desk is restarting — give it half a minute.` })
+  }
   if (p === '/connections/webface' && req.method === 'POST') {
     const f = new URLSearchParams(await readBody(req)); const token = (f.get('token') ?? '').trim()
     if (!/^wfs_[a-f0-9]{48}$/.test(token)) return redirect({ err: 'That is not a webfaCeMEdia connection key (it starts with wfs_).' })
@@ -156,7 +173,7 @@ export async function handle(req, res, u, ctx) {
   }
   if (p === '/connections/mcp/add' && req.method === 'POST') {
     const f = new URLSearchParams(await readBody(req)); const name = (f.get('name') ?? '').trim()
-    if (!NAME.test(name) || name === 'google' || name === 'browser' || name === 'webface') return redirect({ err: 'Pick a name with lowercase letters, numbers and dashes (not google or browser).' })
+    if (!NAME.test(name) || ['google', 'browser', 'webface', 'wordpress'].includes(name)) return redirect({ err: 'Pick a name with lowercase letters, numbers and dashes (not google or browser).' })
     const list = readServers().filter(s => s.name !== name)
     if (f.get('transport') === 'stdio') {
       const parts = (f.get('command') ?? '').trim().split(/\s+/).filter(Boolean); if (!parts.length) return redirect({ err: 'A command is needed.' })
@@ -170,6 +187,13 @@ export async function handle(req, res, u, ctx) {
   }
   if (p === '/connections/mcp/remove' && req.method === 'POST') {
     const f = new URLSearchParams(await readBody(req)); const name = f.get('name') ?? ''
+    if (name === 'webface') {
+      // Disconnect = revoke the key on the platform too, so it cannot be reused.
+      const w = readServers().find(x => x.name === 'webface'); const prefix = (w?.headers?.Authorization ?? '').replace(/^Bearer /, '').slice(0, 12)
+      const api = process.env.DESK_API_URL, slug = process.env.DESK_SLUG, boxTok = process.env.DESK_BOX_TOKEN
+      if (api && boxTok && prefix.startsWith('wfs_')) await fetch(`${api}/boxes/${slug}/webface-token/revoke`, { method: 'POST', headers: { authorization: `Bearer ${boxTok}`, 'content-type': 'application/json' }, body: JSON.stringify({ prefix }), signal: AbortSignal.timeout(15000) }).catch(() => {})
+      writeServers(readServers().filter(x => x.name !== 'webface')); restartHarness(); return redirect({ msg: 'webfaCeMEdia disconnected and its key revoked. Desk is restarting.' })
+    }
     writeServers(readServers().filter(s => s.name !== name)); restartHarness(); return redirect({ msg: `${name} removed. Your team is restarting.` })
   }
   return false

@@ -188,6 +188,15 @@ const server = createServer(async (req, res) => {
       if (o) { o.webfacePrefix = j.prefix; save() }
       return json(res, 200, { token: j.token, prefix: j.prefix, client })
     }
+    const wr = u.pathname.match(/^\/api\/boxes\/([a-z0-9-]+)\/webface-token\/revoke$/)
+    if (wr && req.method === 'POST') {
+      const slug = wr[1]; const o = Object.values(orders).find(x => x.slug === slug); const tok = (req.headers.authorization ?? '').replace(/^Bearer /, '')
+      const staticTok = (process.env.DESKAPI_STATIC_BOX_TOKENS ?? '').split(',').map(x => x.split(':')).find(([s]) => s === slug)?.[1]
+      if (!((o && o.boxToken && tok === o.boxToken) || (staticTok && tok === staticTok))) return json(res, 401, { error: 'no' })
+      const { prefix } = JSON.parse((await body(req)).toString() || '{}'); if (!/^wfs_[a-f0-9]{8}$/.test(prefix ?? '')) return json(res, 400, { error: 'prefix?' })
+      const r = await fetch(`${process.env.PLATFORM_CONVEX_SITE_URL ?? 'https://qualified-clownfish-173.convex.site'}/serviceTokens/revoke`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-secret': process.env.AGENT_API_SECRET ?? '' }, body: JSON.stringify({ prefix }) })
+      return json(res, r.ok ? 200 : 502, await r.json().catch(() => ({})))
+    }
     const hb = u.pathname.match(/^\/api\/boxes\/([a-z0-9-]+)\/heartbeat$/)
     if (hb && req.method === 'POST') {
       const o = Object.values(orders).find(x => x.slug === hb[1]); const tok = (req.headers.authorization ?? '').replace(/^Bearer /, '')
