@@ -39,7 +39,7 @@ You are Desk, the business assistant for ${p.business}${p.owner ? `, working for
 
 ## The business
 ${p.does}
-${p.area ? `\nArea served: ${p.area}` : ''}${p.hours ? `\nHours: ${p.hours}` : ''}${p.payment ? `\nPayment: ${p.payment}` : ''}${p.services ? `\n\nServices:\n${p.services}` : ''}${p.website ? `\nWebsite: ${p.website}` : ''}${p.phone ? `\nPhone: ${p.phone}` : ''}${p.email ? `\nEmail: ${p.email}` : ''}
+${p.address ? `\nAddress: ${p.address}` : ''}${p.area ? `\nArea served: ${p.area}` : ''}${p.hours ? `\nHours: ${p.hours}` : ''}${p.payment ? `\nPayment: ${p.payment}` : ''}${p.services ? `\n\nServices:\n${p.services}` : ''}${p.website ? `\nWebsite: ${p.website}` : ''}${p.phone ? `\nPhone: ${p.phone}` : ''}${p.email ? `\nEmail: ${p.email}` : ''}
 
 ## Tone
 ${TONES[p.tone] ?? TONES.friendly}${p.toneNotes ? `\n${p.toneNotes}` : ''}
@@ -94,6 +94,7 @@ ${field('business', 'Business name', p.business, { ph: 'Maple & Main Home Servic
 ${field('owner', 'Your name', p.owner, { ph: 'Dana Okafor', hint: '(who Desk works for)' })}
 ${field('does', 'What you do', p.does, { rows: 3, ph: 'Family-run plumbing and HVAC company: emergency plumbing, drain cleaning, water heaters, furnace and A/C service, maintenance plans for homes and small commercial buildings.' })}
 ${field('services', 'Services and typical prices', p.services, { rows: 4, ph: 'One per line. Leave prices out if you will upload a price list instead.', hint: '(optional)' })}
+${field('address', 'Business address', p.address, { ph: '57 Finch Ave West, Toronto, ON M2N 0K9', hint: '(as it should appear on the website, Google and quotes)' })}
 ${field('area', 'Area served', p.area, { ph: 'Toronto and the west GTA — Etobicoke, Mississauga, Oakville, Brampton' })}
 ${field('hours', 'Hours', p.hours, { ph: 'Mon–Sat 7am–7pm; emergencies 24/7 by phone' })}
 ${field('payment', 'How you take payment', p.payment, { ph: 'Credit, debit, e-transfer; financing on installs over $2,500' })}
@@ -127,7 +128,7 @@ export async function handle(req, res, u, { business, readBody }) {
   if (u.pathname === '/profile' && req.method === 'POST') {
     const f = new URLSearchParams(await readBody(req))
     const get = k => (f.get(k) ?? '').trim().slice(0, 4000)
-    const p = { business: get('business'), owner: get('owner'), does: get('does'), services: get('services'), area: get('area'), hours: get('hours'), payment: get('payment'), website: get('website'), phone: get('phone'), email: get('email'), tone: TONES[get('tone')] ? get('tone') : 'friendly', toneNotes: get('toneNotes'), approvals: f.getAll('approvals').filter(k => APPROVALS.some(a => a[0] === k)), rules: get('rules'), notes: get('notes') }
+    const p = { business: get('business'), owner: get('owner'), does: get('does'), services: get('services'), address: get('address'), area: get('area'), hours: get('hours'), payment: get('payment'), website: get('website'), phone: get('phone'), email: get('email'), tone: TONES[get('tone')] ? get('tone') : 'friendly', toneNotes: get('toneNotes'), approvals: f.getAll('approvals').filter(k => APPROVALS.some(a => a[0] === k)), rules: get('rules'), notes: get('notes') }
     if (!p.business || !p.does) { res.writeHead(400, { 'content-type': 'text/html; charset=utf-8' }); return res.end(page({ business, p, first: true, msg: 'Business name and what you do are needed.' })) }
     const wasComplete = isComplete(readProfile())
     saveProfile(p)
