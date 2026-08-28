@@ -23,12 +23,15 @@ function writeServers(list) {
   const a = s.indexOf(MARK_BEGIN), b = s.indexOf(MARK_END)
   if (a >= 0 && b >= 0) s = s.slice(0, a) + s.slice(b + MARK_END.length)
   const rows = list.map(x => {
-    const head = `# server: ${JSON.stringify(x)}\n- id: mcp-${x.name}\n  name: '@deepseek-ai/dsh-mcp-client'\n  config:\n    serverName: ${yq(x.name)}\n    toolCallTimeoutMs: 90000\n`
+    const head = `# server: ${JSON.stringify(x)}\n    - id: mcp-${x.name}\n      name: '@deepseek-ai/dsh-mcp-client'\n      config:\n        serverName: ${yq(x.name)}\n        toolCallTimeoutMs: 90000\n`
     return x.transport === 'stdio'
-      ? head + `    transport: stdio\n    command: ${yq(x.command)}\n    args: [${x.args.map(yq).join(', ')}]\n    env:\n      PATH: '/usr/local/bin:/usr/bin:/bin'\n`
-      : head + `    transport: streamable-http\n    url: ${yq(x.url)}\n    headers:\n${Object.entries(x.headers).map(([k, v]) => `      ${yq(k)}: ${yq(v)}\n`).join('') || '      {}\n'}`
+      ? head + `        transport: stdio\n        command: ${yq(x.command)}\n        args: [${x.args.map(yq).join(', ')}]\n        env:\n          PATH: '/usr/local/bin:/usr/bin:/bin'\n`
+      : head + `        transport: streamable-http\n        url: ${yq(x.url)}\n        headers:\n${Object.entries(x.headers).map(([k, v]) => `          ${yq(k)}: ${yq(v)}\n`).join('') || '          {}\n'}`
   }).join('')
-  s = s.trimEnd() + `\n\n${MARK_BEGIN}\n${rows}${MARK_END}\n`
+  // New plugin rows only mount from an `insert:` list; a bare top-level id
+  // would be read as a patch to an existing row and silently ignored.
+  const block = rows ? `- insert:\n${rows}` : ''
+  s = s.trimEnd() + `\n\n${MARK_BEGIN}\n${block}${MARK_END}\n`
   writeFileSync(PATCH, s)
 }
 function restartHarness() {
