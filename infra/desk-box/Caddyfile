@@ -48,13 +48,15 @@
 	handle /websockify {
 		reverse_proxy 127.0.0.1:6080
 	}
-	# The harness itself. Its /api fence pins settings/credentials to a
-	# loopback same-origin call, so the front door presents as loopback —
-	# whoever holds the owner password holds the settings plane (v1).
-	# The app shell embeds versioned plugin URLs; if a phone browser keeps an old
-	# shell it keeps old code after a deploy. Never cache the shell.
-	@shell path / /index.html
-	header @shell Cache-Control "no-store, must-revalidate"
+	# The harness itself. Its /api fence pins settings/credentials/host
+	# methods to a loopback same-origin call. A PHONE session is proxied with
+	# its real Host/Origin, so the fence keeps the settings plane away from
+	# it (chat, approvals, browser still work via --trusted-host). An OWNER
+	# session presents as loopback and gets everything.
+	@phone header X-Desk-Role phone
+	handle @phone {
+		reverse_proxy 127.0.0.1:3080
+	}
 	handle {
 		reverse_proxy 127.0.0.1:3080 {
 			header_up Host 127.0.0.1:3080
