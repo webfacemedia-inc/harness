@@ -23,13 +23,15 @@ export function usage(tz = 'America/Toronto') {
     const tu = rows.tokenUsage?.val; const st = rows.sessionStats?.val
     if (!tu) continue
     out.sessions++; out.turns += Number(st?.turns ?? 0)
-    const acc = {}; sumTokens(tu, acc)
+    const acc = {}; sumTokens(tu.totals ?? tu, acc)
     for (const [k, v] of Object.entries(acc)) {
       out.total[k] = (out.total[k] ?? 0) + v
       if (created && dayKey(created, tz) === today) out.today[k] = (out.today[k] ?? 0) + v
       if (created && monthKey(created, tz) === month) out.month[k] = (out.month[k] ?? 0) + v
     }
   }
-  const tot = o => Object.values(o).reduce((a, b) => a + b, 0)
-  return { ...out, todayTokens: tot(out.today), monthTokens: tot(out.month), totalTokens: tot(out.total) }
+  // Billable = everything except cache reads (providers price those at a fraction); cache reads reported separately.
+  const bill = o => Object.entries(o).filter(([k]) => k !== 'cacheReadTokens').reduce((a, [, v]) => a + v, 0)
+  const cached = o => o.cacheReadTokens ?? 0
+  return { ...out, todayTokens: bill(out.today), monthTokens: bill(out.month), totalTokens: bill(out.total), todayCached: cached(out.today), monthCached: cached(out.month) }
 }

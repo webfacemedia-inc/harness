@@ -99,7 +99,7 @@ ${field('notes', 'Anything else Desk should know', p.notes, { rows: 3, hint: '(o
 </section>
 <button type="submit">${first ? 'Save and start' : 'Save'}</button>
 </form>
-${!first && usage ? `<section><h2>${ICONS.clock}Usage</h2><p class="h">What Desk has used on your model account. Tokens are the unit your model provider bills in.</p><div class="row"><span>Today</span><strong>${Math.round((usage.todayTokens ?? 0) / 1000)}k tokens</strong></div><div class="row"><span>This month</span><strong>${Math.round((usage.monthTokens ?? 0) / 1000)}k tokens · ${usage.sessions ?? 0} sessions</strong></div></section>` : ''}
+${!first && usage ? `<section><h2>${ICONS.clock}Usage</h2><p class="h">What Desk has used on your model account. Tokens are the unit your model provider bills in.</p><div class="row"><span>Today</span><strong>${Math.round((usage.todayTokens ?? 0) / 1000)}k tokens <small>+ ${Math.round((usage.todayCached ?? 0) / 1000)}k cached</small></strong></div><div class="row"><span>This month</span><strong>${Math.round((usage.monthTokens ?? 0) / 1000)}k tokens · ${usage.sessions ?? 0} sessions <small>+ ${Math.round((usage.monthCached ?? 0) / 1000)}k cached</small></strong></div></section>` : ''}
 ${!first && isComplete(p) ? `<div class="next"><a class="btn ghost" href="/connections">${ICONS.plug} Connections</a><a class="btn ghost" href="/files">${ICONS.files} Files (price list)</a></div>` : ''}
 `
   return layout({ title: 'Business', business, body })
