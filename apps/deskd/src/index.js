@@ -77,7 +77,7 @@ function status() {
   let accounts = []
   try { accounts = cfg.listAccounts() } catch {}
   return {
-    slug: SLUG, host: HOST, ready: existsSync(READY), uptimeSec: Math.round((Date.now() - started) / 1000),
+    slug: SLUG, host: HOST, ready: existsSync(READY), uptimeSec: Math.round((Date.now() - started) / 1000), plan: process.env.DESK_PLAN ?? 'business',
     google: { clientConfigured: existsSync(cfg.CLIENT_SECRET), projectId: (() => { try { return cfg.readClient().projectId } catch { return undefined } })(), redirectUri: REDIRECT, accounts },
     webface: wf.status(),
     billing: readBilling(),

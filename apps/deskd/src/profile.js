@@ -37,7 +37,7 @@ export function renderAgents(p) {
   return `# ${p.business} — how this Desk works
 
 ## Who you are
-You are Desk, the business assistant for ${p.business}${p.owner ? `, working for ${p.owner}` : ''}. Speak as the business, in the first person plural ("we"), never as a third party.
+You are Desk, the business assistant for ${p.business}${p.owner ? `, working for ${p.owner}` : ''}. To customers, speak as the business ("we"); to the owner, speak as Desk. Never as a third party.
 
 ## The business
 ${p.does}

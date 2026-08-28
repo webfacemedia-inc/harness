@@ -1,6 +1,6 @@
 ---
 name: handoff-doc
-description: Operator skill. Use when a piece of work changes hands (to a client, a contractor, or a future session) — what a handoff must contain so nothing is re-learned.
+description: Use when a piece of work changes hands (to a client, a contractor, or a future session) — what a handoff must contain so nothing is re-learned.
 ---
 
 # Handoff

@@ -35,35 +35,38 @@ export function ContextInjectionRow({ content, source, provenance, form, t }: Co
   const { rendered, summary, body } = contextBody(form, { content, source, t })
 
   return (
-    <DisclosureRow
-      className={css.root}
-      icon={<IconBrowseOutline16 size={14} />}
-      chevronClassName={css.chevron}
-      title={t(provenance.role === 'recall' ? 'message.contextRecall' : 'message.contextInjection')}
-      collapsedContent={provenance.label === null ? undefined : (
-        /* ToolRow's separator shape: an aria-hidden dot, so the accessible name
-           stays the two readable parts and the two disclosure rows expose one
-           name shape. A source that names no producer drops the dot with it. */
-        <>
-          <span className={css.sep} aria-hidden />
-          <span className={css.source} data-context-source>{provenance.label}</span>
-          {summary !== null && (
-            <>
-              <span className={css.sep} aria-hidden />
-              <span className={css.summary} data-context-summary>{summary}</span>
-            </>
-          )}
-        </>
-      )}
-      keepContentWhenOpen
-      open={open}
-      expandable
-      expandOnRowClick
-      onToggle={() => { setOpen(value => !value) }}
-    >
-      <div className={css.body} data-context-injection-body data-context-form={rendered ?? undefined}>
-        {body}
-      </div>
-    </DisclosureRow>
+    // The role attribute lets a composition hide injected context (Desk) while keeping recall rows.
+    <div data-context-role={provenance.role === 'recall' ? 'recall' : 'injection'}>
+      <DisclosureRow
+        className={css.root}
+        icon={<IconBrowseOutline16 size={14} />}
+        chevronClassName={css.chevron}
+        title={t(provenance.role === 'recall' ? 'message.contextRecall' : 'message.contextInjection')}
+        collapsedContent={provenance.label === null ? undefined : (
+          /* ToolRow's separator shape: an aria-hidden dot, so the accessible name
+             stays the two readable parts and the two disclosure rows expose one
+             name shape. A source that names no producer drops the dot with it. */
+          <>
+            <span className={css.sep} aria-hidden />
+            <span className={css.source} data-context-source>{provenance.label}</span>
+            {summary !== null && (
+              <>
+                <span className={css.sep} aria-hidden />
+                <span className={css.summary} data-context-summary>{summary}</span>
+              </>
+            )}
+          </>
+        )}
+        keepContentWhenOpen
+        open={open}
+        expandable
+        expandOnRowClick
+        onToggle={() => { setOpen(value => !value) }}
+      >
+        <div className={css.body} data-context-injection-body data-context-form={rendered ?? undefined}>
+          {body}
+        </div>
+      </DisclosureRow>
+    </div>
   )
 }

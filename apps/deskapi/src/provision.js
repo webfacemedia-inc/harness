@@ -45,7 +45,7 @@ export async function provision(order, log = () => {}) {
   const env = {
     DESK_SLUG: order.slug, DESK_BUSINESS: order.business, DESK_HOST: dnsAble ? `${order.slug}.${DOMAIN}` : '',
     OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY, DESK_OWNER_PASSWORD: password, DESK_OWNER_USER: 'owner', DESK_OWNER_EMAIL: order.email,
-    DESK_HARNESS_REF: process.env.DESK_HARNESS_REF ?? 'desk', DESK_SANDBOX: 'read-only', DESK_DEFAULT_PRESET: 'team',
+    DESK_HARNESS_REF: process.env.DESK_HARNESS_REF ?? 'desk', DESK_SANDBOX: order.sandbox === 'full' ? 'workspace-write' : 'read-only', DESK_DEFAULT_PRESET: 'team', DESK_PLAN: order.plan ?? 'business',
     DESK_API_URL: process.env.DESK_PUBLIC_URL ? `${process.env.DESK_PUBLIC_URL}/api` : '', DESK_BOX_TOKEN: order.boxToken ?? '',
   }
   log('creating', 'creating your Desk computer in Toronto')

@@ -100,6 +100,7 @@ export function apply(ctx: ClientContext): void {
   // The new-session chip and the header label: one controller, because the
   // staged choice belongs to the flow rather than to any one session.
   ctx.inject(['slots', 'conversation', 'sessions', 'workspaces'], (scope: ClientContext) => {
+    let seatProvided = false
     const api = (scope.get('connection') as ConnectionHandle).api
     const seat = new AgentPresetSeatController(api, (): SeatSessionSummary | undefined => {
       const state = scope.sessions.list.getSnapshot()
@@ -165,12 +166,16 @@ export function apply(ctx: ClientContext): void {
       // webfaCe Desk: one writer for "which teammate runs the next session".
       // Other surfaces (the Team panel) route through the seat instead of
       // racing it with their own select/stage.
-      scope.provide('agentPresetSeat', {
-        select: (id: string) => seat.select(id),
-        stageAndStart: (id: string) => { seat.stage(id, true); scope.workspaces.startSession() },
-        current: () => seat.store.getSnapshot().current,
-        subscribe: (listener: () => void) => seat.store.subscribe(listener),
-      })
+      // Registered once per scope: a re-run of this effect must not re-provide.
+      if (!seatProvided) {
+        seatProvided = true
+        scope.provide('agentPresetSeat', {
+          select: (id: string) => seat.select(id),
+          stageAndStart: (id: string) => { seat.stage(id, true); scope.workspaces.startSession() },
+          current: () => seat.store.getSnapshot().current,
+          subscribe: (listener: () => void) => seat.store.subscribe(listener),
+        })
+      }
       const chip = scope.slots.register({
         name: 'conversation.hero.agentPreset',
         locale: 'settings.agentPreset',

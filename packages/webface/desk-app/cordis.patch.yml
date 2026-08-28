@@ -20,7 +20,7 @@
 # ── teammates ───────────────────────────────────────────────────────────────
 - id: agent-presets
   config:
-    default: desk-operator
+    default: team
 
 # ── workspace picker: in-app browsing (both halves) ─────────────────────────
 - id: directory-picker

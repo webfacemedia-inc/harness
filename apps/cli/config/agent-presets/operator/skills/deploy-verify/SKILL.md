@@ -1,6 +1,6 @@
 ---
 name: deploy-verify
-description: Operator skill. Use after any deploy — how to prove the new build is what is being served before telling anyone it is done.
+description: Use after any deploy — how to prove the new build is what is being served before telling anyone it is done.
 ---
 
 # Verify a deploy

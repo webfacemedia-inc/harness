@@ -40,13 +40,14 @@ let key = process.env.OPENROUTER_API_KEY
 if (!key) { const m = readFileSync(join(homedir(), '.desk', '.credentials.yaml'), 'utf8').match(/OPENROUTER_API_KEY:\s*(\S+)/); key = m?.[1] }
 if (!key) { console.error('no OPENROUTER_API_KEY'); process.exit(1) }
 const password = randomBytes(12).toString('base64url')
+const boxToken = randomBytes(16).toString('hex')  // add `${slug}:${boxToken}` to DESKAPI_STATIC_BOX_TOKENS on the apex so the box can heartbeat
 const business = opt('business', slug)
 const useDns = Boolean(process.env.CLOUDFLARE_API_TOKEN)
 const host = useDns ? `${slug}.${DOMAIN}` : ''
 const env = {
   DESK_SLUG: slug, DESK_BUSINESS: business, DESK_HOST: host, OPENROUTER_API_KEY: key, DESK_OWNER_PASSWORD: password,
   DESK_HARNESS_REF: opt('ref', 'desk'), DESK_OWNER_USER: opt('user', 'owner'), DESK_OWNER_EMAIL: opt('email', ''),
-  DESK_SIGNIN_CLIENT_ID: process.env.DESK_SIGNIN_CLIENT_ID ?? '', DESK_SIGNIN_CLIENT_SECRET: process.env.DESK_SIGNIN_CLIENT_SECRET ?? '', DESK_SANDBOX: opt('sandbox', 'read-only'), DESK_DEFAULT_PRESET: opt('preset', 'team'),
+  DESK_API_URL: process.env.DESK_PUBLIC_URL ? `${process.env.DESK_PUBLIC_URL}/api` : '', DESK_BOX_TOKEN: boxToken, DESK_PLAN: opt('plan', 'business'), DESK_SANDBOX: opt('sandbox', 'read-only'), DESK_DEFAULT_PRESET: opt('preset', 'team'),
 }
 const script = readFileSync(join(here, '..', 'infra', 'desk-box', 'bootstrap.sh'), 'utf8')
 const userData = '#!/usr/bin/env bash\n' + Object.entries(env).map(([k, v]) => `export ${k}=${JSON.stringify(v)}`).join('\n') + '\nmkdir -p /srv/desk\ncat > /srv/desk/bootstrap.sh <<"BOOTSTRAP_EOF"\n' + script + '\nBOOTSTRAP_EOF\nbash /srv/desk/bootstrap.sh\n'
@@ -63,6 +64,6 @@ if (useDns) {
     : await dns('POST', '/dns_records', { type: 'A', name: slug, content: ip, ttl: 60, proxied: false })
   if (!rec) { console.error(`DNS failed — box was told DESK_HOST=${host}; add A ${slug}.${DOMAIN} → ${ip} by hand`) }
 }
-const note = `# Desk box ${slug}\n\n- URL: https://${finalHost}\n- Droplet: ${d.id} (${ip}, tor1, ${opt('size', 's-2vcpu-4gb')})\n- Owner sign-in: user \`${opt('user', 'owner')}\`, password \`${password}\`${opt('email', '') ? ` (Google sign-in as ${opt('email', '')})` : ''}\n- SSH: ssh root@${ip}  (progress: tail -f /var/log/desk-bootstrap.log; done when /srv/desk/READY exists)\n- Created: ${new Date().toISOString()}\n`
+const note = `# Desk box ${slug}\n\n- URL: https://${finalHost}\n- Box token (add to DESKAPI_STATIC_BOX_TOKENS on the apex as \`${slug}:${boxToken}\`): ${boxToken}\n- Droplet: ${d.id} (${ip}, tor1, ${opt('size', 's-2vcpu-4gb')})\n- Owner sign-in: user \`${opt('user', 'owner')}\`, password \`${password}\`${opt('email', '') ? ` (Google sign-in as ${opt('email', '')})` : ''}\n- SSH: ssh root@${ip}  (progress: tail -f /var/log/desk-bootstrap.log; done when /srv/desk/READY exists)\n- Created: ${new Date().toISOString()}\n`
 writeFileSync(join(boxesDir, `${slug}.md`), note, { mode: 0o600 })
 console.log(note)

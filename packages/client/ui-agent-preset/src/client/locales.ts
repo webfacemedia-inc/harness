@@ -20,37 +20,37 @@ export type AgentPresetSettingsKey =
 
 /** English copy. */
 export const en: Record<AgentPresetSettingsKey, string> = {
-  title: 'Agent preset',
+  title: 'Mode',
   description: 'Applies to sessions you start from now on. Running sessions keep the preset they began with.',
   loading: 'Loading presets…',
-  error: 'Could not load agent presets.',
+  error: 'Could not load the modes.',
   userTrust: 'Custom',
-  seatHint: 'Agent preset for the session you are about to start',
-  headerHint: 'The agent preset this session runs, fixed when it started',
-  nav: 'Agent presets',
+  seatHint: 'Mode for the conversation you are about to start',
+  headerHint: 'The mode this conversation runs in, fixed when it started',
+  nav: 'Modes',
   sectionIntro:
-    'A preset is the plugin composition one session\'s agent runs — its tools, prompt, and capabilities. '
-    + 'Duplicate an existing one and make it yours, or let the agent draft one for you in Creator mode.',
+    'A mode is the set of tools, instructions and limits one conversation runs with. '
+    + 'Duplicate one and make it yours; the Advanced modes are for people who build their own.',
   builtIn: 'Built-in',
   setDefault: 'Set as default',
   view: 'View',
   presetStandardName: 'Advanced · Standard',
   presetStandardDescription:
-    'Full coding agent with file editing, shell, file and web search, skills, planning, goals, subagents, and workflows.',
+    'Everything on: file editing, shell, file and web search, skills, planning, helpers and workflows.',
   presetCodeName: 'Advanced · Code mode',
   presetCodeDescription:
-    'All Standard mode capabilities, with tools exposed through the Code Mode SDK so the model can combine multi-step operations in one TypeScript program.',
+    'Standard, with tools exposed to the model as code so it can combine several steps in one program.',
   presetMinimalName: 'Advanced · Minimal',
   presetMinimalDescription:
-    'Two-tool coding agent with persistent bash and str_replace_editor.',
+    'Just a shell and a file editor.',
   presetCordisName: 'Advanced · Preset creator',
   presetCordisDescription:
-    'Built for creating custom agent presets, with all Standard mode capabilities plus runtime inspection, plugin experiments, and preset-authoring guidance.',
+    'For building your own modes: Standard plus runtime inspection and guidance for writing one.',
   duplicate: 'Duplicate',
-  duplicateUnavailable: 'This deployment has no writable preset directory',
+  duplicateUnavailable: 'Custom modes are not enabled on this Desk',
   delete: 'Delete',
   presetId: 'Identifier',
-  presetIdPlaceholder: 'my-agent',
+  presetIdPlaceholder: 'my-mode',
   displayName: 'Name',
   displayNamePlaceholder: 'Shown in the picker; defaults to the identifier',
   inUse: 'In use',
@@ -110,7 +110,7 @@ export const zh: Record<AgentPresetSettingsKey, string> = {
   duplicateUnavailable: '此部署未配置可写的预设目录',
   delete: '删除',
   presetId: '标识符',
-  presetIdPlaceholder: 'my-agent',
+  presetIdPlaceholder: 'my-mode',
   displayName: '名称',
   displayNamePlaceholder: '选择器中显示的名字，缺省用标识符',
   inUse: '当前使用',

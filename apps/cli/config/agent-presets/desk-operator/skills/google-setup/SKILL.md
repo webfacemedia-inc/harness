@@ -1,6 +1,6 @@
 ---
 name: google-setup
-description: Use when the owner wants Desk to read their email or calendar and Google is not connected yet (google_accounts is empty), or when a Google sign-in failed — walks them through their own Google app, one step at a time, from Desk → Connections.
+description: Use when the owner wants Desk to read their email or calendar and Google is not connected yet (`mcp__google__google_accounts` is empty), or when a Google sign-in failed — walks them through their own Google app, one step at a time, from Desk → Connections.
 ---
 
 # Connecting Google, one step at a time
@@ -14,4 +14,4 @@ Google requires each business to use its **own** Google app for email access; De
 5. Download the client JSON and paste it into the box on the Connections page → Save Google app.
 6. Press "Connect a Google account" and sign in with the business Google account.
 
-If they hit an error: "access blocked" → step 3 (test user); "redirect_uri_mismatch" → step 4 (the URI must match exactly); "API not enabled" → step 2. Check `google_accounts` after step 6 and confirm what is now connected. Never ask for their Google password; never try to sign in for them.
+If they hit an error: "access blocked" → step 3 (test user); "redirect_uri_mismatch" → step 4 (the URI must match exactly); "API not enabled" → step 2. Check `mcp__google__google_accounts` after step 6 and confirm what is now connected. Never ask for their Google password; never try to sign in for them.

@@ -4,7 +4,7 @@
  * session with it — the Grok-Bot-shaped "message a teammate" move built on
  * dsh's own preset roster and settings.
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import clsx from 'clsx'
 import type { InjectFace, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import css from './TeamPanel.module.css'
@@ -27,7 +27,7 @@ export interface TeamPanelInjected {
   /** Re-read when the roster or the default changes elsewhere. */
   subscribe: (read: () => void) => () => void
   /** The preset the conversation chip shows right now (staged or current session). */
-  current: () => string
+  current: () => string | undefined
   /** Translate one key of this surface's copy. */
   t: (key: 'title' | 'active' | 'message', params?: Record<string, string>) => string
 }
@@ -50,8 +50,8 @@ export function TeamPanel({ wide, load, message, subscribe, current, t }: TeamPa
   const [bots, setBots] = useState<Teammate[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
-  // The seat's pick changes without the roster changing; re-render on its notifications too.
-  const [, bump] = useState(0)
+  // The seat's pick is an external store: read it through React's subscription so a render never tears.
+  const picked = useSyncExternalStore(subscribe, current, current)
   useEffect(() => {
     let live = true
     const read = (): void => {
@@ -61,7 +61,7 @@ export function TeamPanel({ wide, load, message, subscribe, current, t }: TeamPa
       })
     }
     read()
-    const unsubscribe = subscribe(() => { bump(n => n + 1); read() })
+    const unsubscribe = subscribe(read)
     return () => { live = false; unsubscribe() }
   }, [load, subscribe])
   if (bots === null && error === null) return null
@@ -70,13 +70,15 @@ export function TeamPanel({ wide, load, message, subscribe, current, t }: TeamPa
   if (list.length === 0) return null
   const onPick = (id: string): void => {
     setBusy(id)
-    void message(id).finally(() => { setBusy(null) })
+    void message(id)
+      .catch((cause: unknown) => { setError(cause instanceof Error ? cause.message : String(cause)) })
+      .finally(() => { setBusy(null) })
   }
   if (!wide) {
     return (
       <div className={css.rail} aria-label={t('title')}>
         {list.map(b => (
-          <button key={b.id} type="button" className={clsx(css.bot, (current() ? current() === b.id : b.isDefault) && css.active)} title={b.name} aria-label={t('message', { name: b.name })} disabled={busy !== null} onClick={() => { onPick(b.id) }}>
+          <button key={b.id} type="button" className={clsx(css.bot, (picked ? picked === b.id : b.isDefault) && css.active)} title={b.name} aria-label={t('message', { name: b.name })} disabled={busy === b.id} onClick={() => { onPick(b.id) }}>
             <span className={css.avatar}>{initials(b.name)}</span>
           </button>
         ))}
@@ -88,7 +90,7 @@ export function TeamPanel({ wide, load, message, subscribe, current, t }: TeamPa
       <div className={css.header}><span>{t('title')}</span></div>
       <div className={css.list}>
         {list.map(b => (
-          <button key={b.id} type="button" className={clsx(css.bot, (current() ? current() === b.id : b.isDefault) && css.active)} aria-label={t('message', { name: b.name })} disabled={busy !== null} onClick={() => { onPick(b.id) }}>
+          <button key={b.id} type="button" className={clsx(css.bot, (picked ? picked === b.id : b.isDefault) && css.active)} aria-label={t('message', { name: b.name })} disabled={busy === b.id} onClick={() => { onPick(b.id) }}>
             <span className={css.avatar} aria-hidden="true">{initials(b.name)}</span>
             <span className={css.text}>
               <span className={css.name}>{b.name}</span>

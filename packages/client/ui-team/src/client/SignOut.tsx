@@ -37,19 +37,20 @@ export function CloudLinks({ wide }: { wide: boolean }) {
   const [notif, setNotif] = useState<string>('')
   const [pushOn, setPushOn] = useState(false)
   useEffect(() => {
-    let live = true
-    isCloudDesk().then(async (ok) => {
-      if (!live || !ok) return
+    const alive = { current: true }
+    const isAlive = (): boolean => alive.current  // re-read after the await; the flag can flip meanwhile
+    void isCloudDesk().then(async (ok) => {
+      if (!alive.current || !ok) return
       setShown(true)
-      try { const st = await (await fetch('/deskd/status', { credentials: 'same-origin' })).json() as DeskStatus; if (live) { setBilling(st.billing); setPushOn(Boolean(st.push?.devices) && typeof Notification !== 'undefined' && Notification.permission === 'granted') } } catch { /* status is best-effort; the links still render */ }
+      try { const st = await (await fetch('/deskd/status', { credentials: 'same-origin' })).json() as DeskStatus; if (isAlive()) { setBilling(st.billing); setPushOn((st.push?.devices ?? 0) > 0 && Notification.permission === 'granted') } } catch { /* status is best-effort; the links still render */ }
     })
-    return () => { live = false }
+    return () => { alive.current = false }
   }, [])
   if (!shown) return null
   return (
     <div className={clsx(css.stack, !wide && css.railStack)}>
       {billing?.state === 'past_due' ? <a className={css.warn} href={billing.portalUrl || 'mailto:tommy@webfacemedia.com'} target="_blank" rel="noreferrer">{wide ? <span>Payment failed — update your card. Desk is in Guided mode until then.</span> : <span>!</span>}</a> : null}
-      {!pushOn ? <button type="button" className={css.link} title="Get a notification when Desk needs you" aria-label="Turn on notifications" onClick={() => { enableNotifications().then((m) => { setNotif(m); if (m.startsWith('On')) setPushOn(true) }).catch(e => setNotif(String(e?.message ?? e))) }}>{BELL}{wide ? <span>Turn on notifications</span> : null}</button> : null}
+      {!pushOn ? <button type="button" className={css.link} title="Get a notification when Desk needs you" aria-label="Turn on notifications" onClick={() => { enableNotifications().then((m) => { setNotif(m); if (m.startsWith('On')) setPushOn(true) }).catch((cause: unknown) => { setNotif(cause instanceof Error ? cause.message : String(cause)) }) }}>{BELL}{wide ? <span>Turn on notifications</span> : null}</button> : null}
       {notif && wide ? <span className={css.note}>{notif}</span> : null}
       <a className={css.link} href="/profile" title="Business" aria-label="Business">{BIZ}{wide ? <span>Business</span> : null}</a>
       <a className={css.link} href="/routines" title="Routines" aria-label="Routines">{CLOCK}{wide ? <span>Routines</span> : null}</a>
