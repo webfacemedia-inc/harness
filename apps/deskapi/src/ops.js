@@ -27,7 +27,7 @@ table{width:100%;border-collapse:collapse;border:1px solid var(--line);border-ra
 button{font:inherit;font-weight:600;padding:7px 11px;border-radius:8px;border:1px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer;margin:2px}button.ghost{background:transparent;color:var(--deep);border-color:var(--line)}button.ghost:hover{background:var(--tint);border-color:var(--blue)}button.quiet{background:transparent;color:var(--err);border-color:var(--line)}button.quiet:hover{background:rgba(180,35,24,.08);border-color:var(--err)}
 form.new{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;border:1px solid var(--line);border-radius:12px;padding:16px}form.new label{font-size:12px;font-weight:600;color:var(--mute)}form.new input,form.new select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;margin-top:4px}
 .msg{padding:10px 12px;border-radius:8px;margin-bottom:12px;font-size:14px}.ok{background:rgba(31,138,91,.1);color:var(--ok)}.err{background:rgba(180,35,24,.08);color:var(--err)}</style>
-<body><div class="wrap"><h1>Desks</h1><p class="sub">${Object.keys(orders).length} on this store · webfacedesk.app operator console</p>
+<body><div class="wrap"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px"><h1>Desks</h1><a href="/ops/logout" style="color:var(--deep);font-weight:600;text-decoration:none">Sign out</a></div><p class="sub">${Object.keys(orders).length} on this store · webfacedesk.app operator console</p>
 ${msg ? `<div class="msg ok">${esc(msg)}</div>` : ''}${err ? `<div class="msg err">${esc(err)}</div>` : ''}
 <table><thead><tr><th>Customer</th><th>Desk</th><th>State</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="4"><small>No Desks yet.</small></td></tr>'}</tbody></table>
 <h2>Create a Desk for a client</h2><p class="sub">Same build as a paid order, without the payment. The owner gets the welcome email with their sign-in.</p>
@@ -49,6 +49,7 @@ export async function handle(req, res, u, ctx) {
     const f = new URLSearchParams((await body(req)).toString()); if (!keyOk(f.get('key') ?? '')) { res.writeHead(401); return res.end('no') }
     res.writeHead(303, { location: '/ops', 'set-cookie': `desk_ops=${f.get('key')}; Path=/ops; HttpOnly; Secure; SameSite=Strict; Max-Age=43200` }); return res.end()
   }
+  if (u.pathname === '/ops/logout') { res.writeHead(303, { location: '/ops', 'set-cookie': 'desk_ops=; Path=/ops; HttpOnly; Secure; SameSite=Strict; Max-Age=0' }); return res.end() }
   if (u.pathname.startsWith('/ops') || u.pathname.startsWith('/api/ops')) {
     if (!auth(req)) {
       if (u.pathname === '/ops') return html(res, 401, `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Operator console · webfaCe Desk</title>
