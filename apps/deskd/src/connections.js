@@ -75,9 +75,14 @@ ${accounts.length ? accounts.map(a => `<div class="row"><span>${esc(a)}<small>Gm
 ${gc ? `<a class="btn" href="/oauth/google/start">Connect a Google account →</a>` : ''}
 </section>
 
-<section><h2>Other tools ${servers.length ? `<span class="pill">${servers.length} added</span>` : ''}</h2>
+${(() => { const w = servers.find(x => x.name === 'webface'); return `<section><h2>webfaCeMEdia — your website, campaigns, contacts and analytics ${w ? '<span class="pill">connected</span>' : '<span class="pill off">not connected</span>'}</h2>
+<p style="color:var(--mute);margin:0 0 8px">If webfaCeMEdia built or runs your website, connect it and Desk can update pages, draft campaigns, look up contacts and read your analytics — with your approval on anything that goes live.</p>
+${w ? `<div class="row"><span><strong>Connected</strong><small>mcp.webfacemedia.com · token ${esc((w.headers?.Authorization ?? '').replace(/^Bearer /, '').slice(0, 12))}…</small></span><form method="post" action="/connections/mcp/remove" style="margin:0"><input type="hidden" name="name" value="webface"><button class="quiet" type="submit">Disconnect</button></form></div>`
+: `<form method="post" action="/connections/webface"><label for="wt">Connection key from webfaCeMEdia</label><input id="wt" name="token" pattern="wfs_[a-f0-9]{48}" placeholder="wfs_…" required title="Starts with wfs_ — ask your webfaCeMEdia contact for it"><button type="submit">Connect and restart</button></form>`}
+</section>` })()}
+<section><h2>Other tools ${servers.filter(x => x.name !== 'webface').length ? `<span class="pill">${servers.filter(x => x.name !== 'webface').length} added</span>` : ''}</h2>
 <p style="color:var(--mute);margin:0 0 8px">Add any tool server your business uses (MCP). Your team sees its tools after a short restart.</p>
-${servers.map(s => `<div class="row"><span><strong>${esc(s.name)}</strong><small>${s.transport === 'stdio' ? esc([s.command, ...s.args].join(' ')) : esc(s.url)}</small></span><form method="post" action="/connections/mcp/remove" style="margin:0"><input type="hidden" name="name" value="${esc(s.name)}"><button class="quiet" type="submit">Remove</button></form></div>`).join('')}
+${servers.filter(x => x.name !== 'webface').map(s => `<div class="row"><span><strong>${esc(s.name)}</strong><small>${s.transport === 'stdio' ? esc([s.command, ...s.args].join(' ')) : esc(s.url)}</small></span><form method="post" action="/connections/mcp/remove" style="margin:0"><input type="hidden" name="name" value="${esc(s.name)}"><button class="quiet" type="submit">Remove</button></form></div>`).join('')}
 <details><summary>Add a tool server</summary>
 <form method="post" action="/connections/mcp/add">
 <label for="n">Name</label><input id="n" name="name" pattern="[a-z][a-z0-9-]{1,30}" placeholder="bookings" required title="lowercase letters, numbers, dashes">
@@ -110,9 +115,18 @@ export async function handle(req, res, u, ctx) {
     const f = new URLSearchParams(await readBody(req)); const a = f.get('account') ?? ''
     const t = cfg.tokenPath(a); if (existsSync(t)) unlinkSync(t); return redirect({ msg: `${a} disconnected.` })
   }
+  if (p === '/connections/webface' && req.method === 'POST') {
+    const f = new URLSearchParams(await readBody(req)); const token = (f.get('token') ?? '').trim()
+    if (!/^wfs_[a-f0-9]{48}$/.test(token)) return redirect({ err: 'That is not a webfaCeMEdia connection key (it starts with wfs_).' })
+    const probe = await fetch('https://mcp.webfacemedia.com/mcp', { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json', accept: 'application/json, text/event-stream' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-03-26', capabilities: {}, clientInfo: { name: 'desk', version: '1' } } }), signal: AbortSignal.timeout(15000) }).catch(() => null)
+    if (!probe || probe.status === 401 || probe.status === 403) return redirect({ err: 'webfaCeMEdia did not accept that key. Check it with your contact and try again.' })
+    const list = readServers().filter(x => x.name !== 'webface')
+    list.push({ name: 'webface', transport: 'streamable-http', url: 'https://mcp.webfacemedia.com/mcp', headers: { Authorization: `Bearer ${token}` } })
+    writeServers(list); restartHarness(); return redirect({ msg: 'webfaCeMEdia connected. Desk is restarting — give it half a minute.' })
+  }
   if (p === '/connections/mcp/add' && req.method === 'POST') {
     const f = new URLSearchParams(await readBody(req)); const name = (f.get('name') ?? '').trim()
-    if (!NAME.test(name) || name === 'google' || name === 'browser') return redirect({ err: 'Pick a name with lowercase letters, numbers and dashes (not google or browser).' })
+    if (!NAME.test(name) || name === 'google' || name === 'browser' || name === 'webface') return redirect({ err: 'Pick a name with lowercase letters, numbers and dashes (not google or browser).' })
     const list = readServers().filter(s => s.name !== name)
     if (f.get('transport') === 'stdio') {
       const parts = (f.get('command') ?? '').trim().split(/\s+/).filter(Boolean); if (!parts.length) return redirect({ err: 'A command is needed.' })
