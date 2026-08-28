@@ -260,5 +260,15 @@
     max-height: calc(100dvh - 24px) !important;
     display: flex; flex-direction: column;
   }
-  .viewport { overflow-y: auto !important; -webkit-overflow-scrolling: touch; }
+  .viewport {
+    overflow-y: auto !important; -webkit-overflow-scrolling: touch;
+    max-height: calc(100dvh - 24px);
+    touch-action: pan-y; overscroll-behavior: contain;
+  }
+  .list { touch-action: pan-y; overscroll-behavior: contain; }
+}
+/* While a menu is open on a phone the page behind must not scroll or bounce,
+ * or the finger moves the page instead of the list. */
+@media (max-width: 768px) {
+  html:has(.list), html:has(.list) body { overflow: hidden !important; overscroll-behavior: none; touch-action: none; }
 }
