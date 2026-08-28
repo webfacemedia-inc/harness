@@ -20,7 +20,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 
 function list(dir) {
   return readdirSync(dir, { withFileTypes: true })
-    .filter(d => !d.name.startsWith('.'))
+    .filter(d => !d.name.startsWith('.') && !d.name.endsWith('.bak'))
     .map(d => { const st = statSync(join(dir, d.name)); return { name: d.name, dir: d.isDirectory(), size: st.size, mtime: st.mtime } })
     .sort((a, b) => (a.dir === b.dir ? a.name.localeCompare(b.name) : a.dir ? -1 : 1))
 }
@@ -30,11 +30,11 @@ export function page({ business, rel }) {
   const rows = list(dir).map(e => {
     const path = [...crumbs, e.name].join('/')
     const lock = PROTECTED.has(e.name)
-    return `<tr><td class="n">${e.dir ? `📁 <a href="/files?dir=${encodeURIComponent(path)}">${esc(e.name)}</a>` : `<a href="/files/dl/${encodeURIComponent(path)}">${esc(e.name)}</a>`}</td><td class="s">${e.dir ? '' : fmtSize(e.size)}</td><td class="d">${e.mtime.toISOString().slice(0, 16).replace('T', ' ')}</td><td class="a">${e.dir || lock ? '' : `<button data-del="${esc(path)}">Delete</button>`}</td></tr>`
+    return `<tr><td class="n">${e.dir ? `📁 <a href="/files?dir=${encodeURIComponent(path)}">${esc(e.name)}</a>` : `<a href="/files/dl/${encodeURIComponent(path)}">${esc(e.name)}</a>`}</td><td class="s">${e.dir ? '' : fmtSize(e.size)}</td><td class="d">${e.mtime.toISOString().slice(0, 16).replace('T', ' ')}</td><td class="a">${e.dir || lock ? '' : `<button class="quiet" data-del="${esc(path)}">Delete</button>`}</td></tr>`
   }).join('')
   const crumbHtml = ['<a href="/files">Desk</a>', ...crumbs.map((c, i) => `<a href="/files?dir=${encodeURIComponent(crumbs.slice(0, i + 1).join('/'))}">${esc(c)}</a>`)].join(' / ')
   const body = `<h1>${ICONS.files} Files</h1><p class="sub">${crumbHtml}</p>
-<div class="drop" id="drop">Drop files here, or <label>choose files<input id="pick" type="file" multiple></label>. They land in this folder and your team can use them right away.</div>
+<div class="drop" id="drop">Drop files here, or <label>choose files<input id="pick" type="file" multiple></label>. They land in this folder and Desk can use them right away.</div>
 <div id="status"></div>
 ${rows ? `<table><thead><tr><th>Name</th><th>Size</th><th>Changed</th><th></th></tr></thead><tbody>${rows}</tbody></table>` : '<div class="empty">Nothing here yet.</div>'}
 <script>
