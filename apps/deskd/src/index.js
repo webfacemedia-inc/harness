@@ -106,6 +106,7 @@ const server = createServer(async (req, res) => {
       const user = findUser({ username: f.get('username')?.trim() })
       await new Promise(r => setTimeout(r, 300))
       if (!user || !checkPassword(f.get('password') ?? '', user.scrypt)) {
+        console.log(`login failed from ${req.headers['x-forwarded-for']?.split(',')[0]?.trim() ?? req.socket.remoteAddress} user=${JSON.stringify((f.get('username') ?? '').slice(0, 40))}`)
         res.writeHead(401, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' })
         return res.end(loginPage({ business: businessName(), google: Boolean(SIGNIN), next: safeNext(f.get('next')), error: 'That username or password is not right.' }))
       }

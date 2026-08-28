@@ -50,6 +50,30 @@ if ! command -v node >/dev/null || [[ "$(node -v)" != v22* ]]; then
 fi
 corepack enable && corepack prepare pnpm@11.7.0 --activate
 
+echo "==> hardening: fail2ban (ssh + Desk sign-in), unattended security upgrades"
+apt-get install -y -qq fail2ban unattended-upgrades >/dev/null
+cat > /etc/fail2ban/filter.d/desk-login.conf <<'F2B'
+[Definition]
+failregex = ^.*deskd.*login failed from <HOST>.*$
+F2B
+cat > /etc/fail2ban/jail.d/desk.conf <<'F2B'
+[sshd]
+enabled = true
+maxretry = 5
+bantime = 1h
+[desk-login]
+enabled = true
+filter = desk-login
+backend = systemd
+journalmatch = _SYSTEMD_UNIT=deskd.service
+maxretry = 8
+findtime = 10m
+bantime = 30m
+action = iptables-allports[name=desk-login]
+F2B
+systemctl enable --now fail2ban >/dev/null 2>&1 || true
+dpkg-reconfigure -f noninteractive unattended-upgrades >/dev/null 2>&1 || true
+
 echo "==> firewall"
 ufw allow OpenSSH >/dev/null; ufw allow 80/tcp >/dev/null; ufw allow 443/tcp >/dev/null; ufw --force enable >/dev/null
 
