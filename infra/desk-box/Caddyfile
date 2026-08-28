@@ -5,6 +5,11 @@
 	# The role/user headers are set from deskd's answer, never from the client.
 	request_header -X-Desk-Role
 	request_header -X-Desk-User
+	header {
+		X-Frame-Options SAMEORIGIN
+		Referrer-Policy strict-origin-when-cross-origin
+		X-Content-Type-Options nosniff
+	}
 	# Sign-in lives in deskd (username+password, optional Google). Everything
 	# except the sign-in routes asks deskd whether the session cookie is good.
 	@public path /login /logout /auth/* /healthz /deskd/billing /sw.js
@@ -29,9 +34,6 @@
 		reverse_proxy 127.0.0.1:8090
 	}
 	# Files page + API over the Desk folder (deskd checks the session itself too).
-	handle /sw.js {
-		reverse_proxy 127.0.0.1:8090
-	}
 	handle /routines* {
 		reverse_proxy 127.0.0.1:8090
 	}

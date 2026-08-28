@@ -43,6 +43,7 @@ const systemctl = (...a) => new Promise(r => execFile('sudo', ['-n', '/usr/bin/s
 async function applyBilling(b) {
   writeFileSync(BILLING, JSON.stringify({ ...b, at: new Date().toISOString() }, null, 2), { mode: 0o600 })
   if (!existsSync(PATCH)) return
+  if (!existsSync(PATCH)) return
   let y = readFileSync(PATCH, 'utf8')
   const want = b.state === 'past_due' ? 'read-only' : (b.state === 'ok' ? (b.restoreMode ?? 'read-only') : null)
   if (want) { const m = y.match(/(- id: sandbox-policy\n  config:\n    mode: )(\S+)/); if (m && m[2] !== want) { y = y.replace(m[0], m[1] + want); writeFileSync(PATCH, y) } }
@@ -78,7 +79,7 @@ function status() {
   let accounts = []
   try { accounts = cfg.listAccounts() } catch {}
   return {
-    slug: SLUG, host: HOST, ready: existsSync(READY), uptimeSec: Math.round((Date.now() - started) / 1000), plan: process.env.DESK_PLAN ?? 'business',
+    slug: SLUG, host: HOST, ready: existsSync(READY), uptimeSec: Math.round((Date.now() - started) / 1000), plan: process.env.DESK_PLAN ?? 'business', contact: process.env.DESK_CONTACT_EMAIL ?? 'tommy@webfacemedia.com', downloadUrl: process.env.DESK_DOWNLOAD_URL ?? 'https://webfacedesk.app/download',
     google: { clientConfigured: existsSync(cfg.CLIENT_SECRET), projectId: (() => { try { return cfg.readClient().projectId } catch { return undefined } })(), redirectUri: REDIRECT, accounts },
     webface: wf.status(),
     billing: readBilling(),
@@ -217,7 +218,7 @@ const server = createServer(async (req, res) => {
       const b = JSON.parse(await readBody(req) || '{}')
       if (!['ok', 'past_due', 'cancelled'].includes(b.state)) { res.writeHead(400); return res.end('state?') }
       const cur = readBilling()
-      const restoreMode = cur.state === 'ok' ? (readFileSync(PATCH, 'utf8').match(/mode: (\S+)/)?.[1] ?? 'read-only') : (cur.restoreMode ?? 'read-only')
+      const restoreMode = cur.state === 'ok' ? ((existsSync(PATCH) ? readFileSync(PATCH, 'utf8') : '').match(/mode: (\S+)/)?.[1] ?? 'read-only') : (cur.restoreMode ?? 'read-only')
       await applyBilling({ state: b.state, portalUrl: b.portalUrl ?? cur.portalUrl ?? '', restoreMode })
       return json(res, 200, { ok: true, state: b.state })
     }

@@ -105,11 +105,12 @@
               off:
               low: low
               high: high
+      # Only offered when the box is told where its private gateway is; there is no default host.
       sovereign:
         displayName: Private gateway
         apiKeyEnv: SOVEREIGN_GATEWAY_KEY
         api: openai-completions
-        baseURL: !!js process.env.SOVEREIGN_GATEWAY_URL ?? 'http://100.69.126.66:4000/v1'
+        baseURL: !!js process.env.SOVEREIGN_GATEWAY_URL ?? 'https://gateway.invalid/v1'
         models:
           - id: sovereign-default
             name: Private · fast agentic

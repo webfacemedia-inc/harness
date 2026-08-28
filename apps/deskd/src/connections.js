@@ -138,16 +138,6 @@ export async function handle(req, res, u, ctx) {
     const f = new URLSearchParams(await readBody(req)); const a = f.get('account') ?? ''
     const t = cfg.tokenPath(a); if (existsSync(t)) unlinkSync(t); return redirect({ msg: `${a} disconnected.` })
   }
-  if (p === '/connections/webface/connect' && req.method === 'POST') {
-    const api = process.env.DESK_API_URL, slug = process.env.DESK_SLUG, boxTok = process.env.DESK_BOX_TOKEN
-    if (!api || !boxTok) return redirect({ err: 'This Desk is not registered with webfacedesk.app yet, so it cannot connect on its own. Use a connection key instead.' })
-    const r = await fetch(`${api}/boxes/${slug}/webface-token`, { method: 'POST', headers: { authorization: `Bearer ${boxTok}` }, signal: AbortSignal.timeout(20000) }).catch(() => null)
-    const j = r ? await r.json().catch(() => ({})) : {}
-    if (!r || !r.ok) return redirect({ err: j.message ?? 'webfaCeMEdia could not link this Desk. If webfaCeMEdia runs your website, write to tommy@webfacemedia.com and we will link it.' })
-    const list = readServers().filter(x => x.name !== 'webface')
-    list.push({ name: 'webface', transport: 'streamable-http', url: 'https://mcp.webfacemedia.com/mcp', headers: { Authorization: `Bearer ${j.token}` } })
-    writeServers(list); restartHarness(); return redirect({ msg: `webfaCeMEdia connected (${j.client}). Desk is restarting — give it half a minute.` })
-  }
   if (p === '/connections/wordpress' && req.method === 'POST') {
     const f = new URLSearchParams(await readBody(req)); const url = (f.get('url') ?? '').trim().replace(/\/+$/, ''), user = (f.get('user') ?? '').trim(), password = (f.get('password') ?? '').trim()
     const wizErr = (m) => { if (f.get('from') !== 'wizard') return redirect({ err: m }); res.writeHead(303, { location: `/connections/wordpress/setup?step=3&err=${encodeURIComponent(m)}` }); res.end() }
@@ -158,15 +148,6 @@ export async function handle(req, res, u, ctx) {
     const list = readServers().filter(x => x.name !== 'wordpress')
     list.push({ name: 'wordpress', transport: 'stdio', command: process.execPath, args: [`${harness}/apps/wordpress-mcp/src/index.js`], env: { WP_URL: url, WP_USER: user, WP_APP_PASSWORD: password } })
     writeServers(list); restartHarness(); return redirect({ msg: `WordPress connected (${url}). Desk is restarting — give it half a minute.` })
-  }
-  if (p === '/connections/webface' && req.method === 'POST') {
-    const f = new URLSearchParams(await readBody(req)); const token = (f.get('token') ?? '').trim()
-    if (!/^wfs_[a-f0-9]{48}$/.test(token)) return redirect({ err: 'That is not a webfaCeMEdia connection key (it starts with wfs_).' })
-    const probe = await fetch('https://mcp.webfacemedia.com/mcp', { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json', accept: 'application/json, text/event-stream' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-03-26', capabilities: {}, clientInfo: { name: 'desk', version: '1' } } }), signal: AbortSignal.timeout(15000) }).catch(() => null)
-    if (!probe || probe.status === 401 || probe.status === 403) return redirect({ err: 'webfaCeMEdia did not accept that key. Check it with your contact and try again.' })
-    const list = readServers().filter(x => x.name !== 'webface')
-    list.push({ name: 'webface', transport: 'streamable-http', url: 'https://mcp.webfacemedia.com/mcp', headers: { Authorization: `Bearer ${token}` } })
-    writeServers(list); restartHarness(); return redirect({ msg: 'webfaCeMEdia connected. Desk is restarting — give it half a minute.' })
   }
   if (p === '/connections/mcp/add' && req.method === 'POST') {
     const f = new URLSearchParams(await readBody(req)); const name = (f.get('name') ?? '').trim()

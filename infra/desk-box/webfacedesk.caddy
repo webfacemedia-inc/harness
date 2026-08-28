@@ -1,7 +1,12 @@
 webfacedesk.app, www.webfacedesk.app {
 	encode zstd gzip
+	header {
+		X-Frame-Options SAMEORIGIN
+		Referrer-Policy strict-origin-when-cross-origin
+		X-Content-Type-Options nosniff
+	}
 	# storefront API (deskapi) — checkout, Stripe webhook, order status
-	@api path /api/* /checkout /welcome /ops* /oauth/* /auth/*
+	@api path /api/* /checkout /welcome /ops /ops/* /auth/*
 	handle @api {
 		reverse_proxy 127.0.0.1:8095
 	}

@@ -12,9 +12,13 @@ const SECRET_FILE = process.env.DESK_SESSION_SECRET_FILE ?? AUTH_FILE.replace(/a
 export const COOKIE = 'desk_session'
 const DAYS = 30
 
+// Generated once per box; created exclusively so two first requests cannot write different secrets.
+let SECRET
 function secret() {
-  if (!existsSync(SECRET_FILE)) writeFileSync(SECRET_FILE, randomBytes(32).toString('hex'), { mode: 0o600 })
-  return readFileSync(SECRET_FILE, 'utf8').trim()
+  if (SECRET) return SECRET
+  if (!existsSync(SECRET_FILE)) { try { writeFileSync(SECRET_FILE, randomBytes(32).toString('hex'), { mode: 0o600, flag: 'wx' }) } catch { /* another worker created it first; read below */ } }
+  SECRET = readFileSync(SECRET_FILE, 'utf8').trim()
+  return SECRET
 }
 export function readUsers() { return existsSync(AUTH_FILE) ? JSON.parse(readFileSync(AUTH_FILE, 'utf8')) : [] }
 export function hashPassword(pw) { const salt = randomBytes(16).toString('hex'); return `${salt}:${scryptSync(pw, salt, 64).toString('hex')}` }

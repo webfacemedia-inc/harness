@@ -1,5 +1,6 @@
 // Where the connector keeps the customer's OAuth client and per-account tokens.
 // Nothing here is ever sent anywhere except Google.
+import { writeAtomic } from './fsx.js'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, chmodSync } from 'node:fs'
@@ -26,7 +27,7 @@ export function readClient() {
     throw new Error(`No Google OAuth client at ${CLIENT_SECRET}. Create a Desktop-app OAuth client in your own Google Cloud project and save its JSON there (Desk's Connections page walks you through it).`)
   }
   const raw = JSON.parse(readFileSync(CLIENT_SECRET, 'utf8'))
-  const c = raw.installed ?? raw.web
+  const c = raw.web ?? raw.installed  // Desk issues Web clients; the same precedence deskd uses
   if (!c?.client_id || !c?.client_secret) throw new Error(`${CLIENT_SECRET} is not a Google OAuth client JSON`)
   return { clientId: c.client_id, clientSecret: c.client_secret, projectId: c.project_id }
 }
@@ -47,7 +48,7 @@ export function readToken(account) {
 export function writeToken(account, token) {
   ensureDirs()
   const p = tokenPath(account)
-  writeFileSync(p, JSON.stringify(token, null, 2), { mode: 0o600 })
+  writeAtomic(p, JSON.stringify(token, null, 2))
   chmodSync(p, 0o600)
 }
 

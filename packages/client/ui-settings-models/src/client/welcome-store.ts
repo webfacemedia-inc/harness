@@ -106,10 +106,12 @@ export class WelcomeNoticeStore {
       }
       return true
     } catch (error) {
+      // The durable write failed: closed for this page load, shown again next
+      // load, and the failure is visible as an error state.
       this.persistence = 'memory'
       if (generation === this.generation) {
         this.store.update((state) => {
-          state.status = 'ready'
+          state.status = 'error'
           state.acknowledged = true
           state.error = messageOf(error)
         })

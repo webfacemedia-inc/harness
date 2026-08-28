@@ -286,6 +286,7 @@ echo "==> owner account"
 sudo -u desk -H env DESK_AUTH_FILE=$D/auth.json node $D/harness/apps/deskd/src/cli.js set "${DESK_OWNER_USER:-owner}" "${DESK_OWNER_EMAIL:-}" "$DESK_OWNER_PASSWORD" >/dev/null
 
 echo "==> caddy front door"
+mkdir -p /etc/caddy/conf.d
 cp $D/harness/infra/desk-box/Caddyfile /etc/caddy/Caddyfile
 mkdir -p /etc/systemd/system/caddy.service.d
 cat > /etc/systemd/system/caddy.service.d/desk.conf <<UNIT

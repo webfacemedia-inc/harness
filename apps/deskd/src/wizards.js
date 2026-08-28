@@ -11,7 +11,7 @@ const writeP = (p) => { mkdirSync(dirname(PROGRESS), { recursive: true }); write
 
 function shell(title, business, inner) { return layout({ title, business, back: '/connections', body: `<script>function cp(t,b){navigator.clipboard.writeText(t).then(()=>{b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1500)})}</script>` + inner }) }
 const bar = (n, total, done) => `<div class="steps">${Array.from({ length: total }, (_, i) => `<i class="${i + 1 < n || done.includes(i + 1) ? 'done' : i + 1 === n ? 'now' : ''}"></i>`).join('')}</div>`
-const copyRow = (t) => `<div class="copy"><code>${esc(t)}</code><button type="button" class="ghost" onclick="cp(${JSON.stringify(t)},this)">Copy</button></div>`
+const copyRow = (t) => `<div class="copy"><code>${esc(t)}</code><button type="button" class="ghost" data-copy="${esc(t)}" onclick="cp(this.dataset.copy,this)">Copy</button></div>`
 
 // ── Google: the owner's own Google app ──────────────────────────────────────
 export function googleStep({ business, host, step, msg, err, google, cfg }) {

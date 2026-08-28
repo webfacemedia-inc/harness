@@ -7,6 +7,7 @@ import { google } from 'googleapis'
 import { SCOPES, readClient, readToken, writeToken } from './config.js'
 
 const PORT = Number(process.env.GOOGLE_MCP_AUTH_PORT ?? 8765)
+let tokenWrites = Promise.resolve()
 
 export function clientFor(account) {
   const { clientId, clientSecret } = readClient()
@@ -14,7 +15,8 @@ export function clientFor(account) {
   const token = readToken(account)
   if (!token) throw new Error(`Account ${account} is not connected. Run: google-mcp auth --account ${account}`)
   oauth.setCredentials(token)
-  oauth.on('tokens', t => writeToken(account, { ...readToken(account), ...t }))
+  // Refreshes are serialised per account so two concurrent tool calls cannot interleave read-modify-write.
+  oauth.on('tokens', t => { tokenWrites = tokenWrites.then(() => { writeToken(account, { ...readToken(account), ...t }) }).catch(() => {}) })
   return oauth
 }
 

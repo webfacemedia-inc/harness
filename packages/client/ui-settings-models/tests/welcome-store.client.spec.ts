@@ -87,9 +87,9 @@ describe('WelcomeNoticeStore', () => {
     const save = new WelcomeNoticeStore({
       settings: { mutate: () => Promise.reject(new Error('disk full')) },
     } as never)
-    // A refused write is accepted locally so a fronted Desk never re-shows the notice.
+    // A refused write closes the notice for this page load and surfaces the failure; the next load shows it again.
     await expect(save.acknowledge()).resolves.toBe(true)
-    expect(save.store.getSnapshot()).toEqual({ status: 'ready', acknowledged: true, error: 'disk full' })
+    expect(save.store.getSnapshot()).toEqual({ status: 'error', acknowledged: true, error: 'disk full' })
 
     const nonError = new WelcomeNoticeStore({
       // Durable/wire failures are unknown; exercise containment of a non-Error rejection.

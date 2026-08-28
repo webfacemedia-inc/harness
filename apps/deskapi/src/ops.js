@@ -12,6 +12,8 @@ const KEY = () => process.env.DESKAPI_OPS_KEY ?? ''
 const mintSession = () => { const ts = String(Date.now()); return `${ts}.${createHmac('sha256', KEY()).update(ts).digest('hex')}` }
 const sessionOk = (c) => { const [ts, sig] = String(c).split('.'); if (!ts || !sig || !KEY() || Date.now() - Number(ts) > 43200000) return false; const want = createHmac('sha256', KEY()).update(ts).digest('hex'); return sig.length === want.length && timingSafeEqual(Buffer.from(sig), Buffer.from(want)) }
 const cleanName = v => String(v ?? '').replace(/[^\x20-\x7e]/g, '').trim().slice(0, 80)
+// Wrong keys per IP: five in fifteen minutes locks the console login for that IP.
+const loginStrikes = new Map()
 const auth = (req) => { const m = (req.headers.cookie ?? '').match(/(?:^|;\s*)desk_ops=([^;]+)/); const bearer = (req.headers.authorization ?? '').replace(/^Bearer /, ''); return keyOk(bearer) || sessionOk(m?.[1] ?? '') }
 const when = iso => iso ? new Date(iso).toLocaleString('en-CA', { timeZone: 'America/Toronto', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—'
 
@@ -51,7 +53,15 @@ ${msg ? `<div class="msg ok">${esc(msg)}</div>` : ''}${err ? `<div class="msg er
 export async function handle(req, res, u, ctx) {
   const { orders, save, json, html, body, slugify, fulfil, email, tellBox, destroyBox } = ctx
   if (u.pathname === '/ops/login' && req.method === 'POST') {
-    const f = new URLSearchParams((await body(req)).toString()); if (!keyOk(f.get('key') ?? '')) { res.writeHead(401); return res.end('no') }
+    const ip = String(req.headers['x-forwarded-for'] ?? req.socket.remoteAddress ?? '').split(',')[0].trim()
+    const strikes = loginStrikes.get(ip)
+    if (strikes && strikes.count >= 5 && Date.now() - strikes.at < 900000) { res.writeHead(429, { 'retry-after': '900' }); return res.end('Too many attempts. Try again in 15 minutes.') }
+    const f = new URLSearchParams((await body(req)).toString())
+    if (!keyOk(f.get('key') ?? '')) {
+      loginStrikes.set(ip, { count: (strikes && Date.now() - strikes.at < 900000 ? strikes.count : 0) + 1, at: Date.now() })
+      console.error(`ops login failed from ${ip}`); await new Promise(r => setTimeout(r, 300)); res.writeHead(401); return res.end('no')
+    }
+    loginStrikes.delete(ip)
     res.writeHead(303, { location: '/ops', 'set-cookie': `desk_ops=${mintSession()}; Path=/ops; HttpOnly; Secure; SameSite=Strict; Max-Age=43200` }); return res.end()
   }
   if (u.pathname === '/ops/logout') { res.writeHead(303, { location: '/ops', 'set-cookie': 'desk_ops=; Path=/ops; HttpOnly; Secure; SameSite=Strict; Max-Age=0' }); return res.end() }
