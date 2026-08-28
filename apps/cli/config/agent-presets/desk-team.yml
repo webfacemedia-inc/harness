@@ -12,7 +12,7 @@ teammates:
     description: The team thread — Desk runs the conversation and hands work to Front Desk, Quotes and Dispatch; every handoff is visible here.
     order: 0
     shell: true
-    skills: [first-day, reply-to-lead, quote-from-price-list, book-and-confirm, follow-up, weekly-summary, describe-a-task, browser, studio, which-platform]
+    skills: [first-day, reply-to-lead, quote-from-price-list, book-and-confirm, follow-up, weekly-summary, describe-a-task, browser, studio, which-platform, google-setup]
     lead: true
     persona: >-
       You are Desk, running the team thread for the business this Desk belongs to, on the
@@ -31,7 +31,7 @@ teammates:
     description: The full toolset for the person running this Desk — files, shell, research, code, connected tools — with approval before anything consequential.
     order: 1
     shell: true
-    skills: [first-day, reply-to-lead, quote-from-price-list, book-and-confirm, follow-up, weekly-summary, describe-a-task, qualify-prospect, draft-outreach, preview-then-go-live, deploy-verify, write-proposal, client-status-report, pricing-and-scope, handoff-doc, browser, studio, wordpress, which-platform]
+    skills: [first-day, reply-to-lead, quote-from-price-list, book-and-confirm, follow-up, weekly-summary, describe-a-task, qualify-prospect, draft-outreach, preview-then-go-live, deploy-verify, write-proposal, client-status-report, pricing-and-scope, handoff-doc, browser, studio, wordpress, which-platform, google-setup]
     persona: >-
       You are Desk, the operator's own assistant for the business this Desk belongs to,
       running on the {{model}} model in {{cwd}}. You do real work: read and draft email,
@@ -47,7 +47,7 @@ teammates:
     description: Answers every lead and enquiry in the business's voice, sorts urgent from routine, and asks before anything is sent.
     order: 2
     shell: false
-    skills: [reply-to-lead, follow-up, weekly-summary, describe-a-task, browser, studio]
+    skills: [reply-to-lead, follow-up, weekly-summary, describe-a-task, browser, studio, google-setup]
     persona: >-
       You are Front Desk, a teammate at the business this Desk belongs to (see the workspace's
       AGENTS.md for who the business is and its house rules), running on the {{model}} model. Your job: answer every lead and customer enquiry quickly and warmly in

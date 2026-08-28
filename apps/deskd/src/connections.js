@@ -92,7 +92,9 @@ ${accounts.length ? accounts.map(a => `<div class="row"><span>${esc(a)}<small>Gm
 </ol>
 <form method="post" action="/connections/google/client"><label for="cj">Client JSON</label><textarea id="cj" name="json" placeholder='{"web":{"client_id":"…","client_secret":"…",…}}' required></textarea><button type="submit">Save Google app</button></form>
 </details>
-${gc ? `<a class="btn" href="/oauth/google/start">Connect a Google account →</a>` : ''}
+${gc ? `<div class="row" style="border-top:0;padding-top:4px"><span><strong>Google app saved</strong><small>project <code>${esc(google.projectId ?? '?')}</code>. If the sign-in shows "access blocked" or "API not enabled", use these — they open on your project:</small>
+<small style="margin-top:6px;display:flex;flex-wrap:wrap;gap:8px 14px">${['gmail.googleapis.com|Gmail API', 'calendar-json.googleapis.com|Calendar API', 'drive.googleapis.com|Drive API', 'people.googleapis.com|People API'].map(x => { const [api, label] = x.split('|'); return `<a href="https://console.cloud.google.com/apis/library/${api}?project=${encodeURIComponent(google.projectId ?? '')}" target="_blank" rel="noopener">Enable ${label}</a>` }).join('')}<a href="https://console.cloud.google.com/auth/audience?project=${encodeURIComponent(google.projectId ?? '')}" target="_blank" rel="noopener">Add test users</a><a href="https://console.cloud.google.com/auth/clients?project=${encodeURIComponent(google.projectId ?? '')}" target="_blank" rel="noopener">Redirect URIs</a></small></span></div>
+<a class="btn" href="/oauth/google/start">Connect a Google account →</a>` : ''}
 </section>
 
 ${(() => { const wfs = webface ?? { connected: false }; return `<section><h2>webfaCeMEdia — your website, campaigns, contacts and analytics ${wfs.connected ? '<span class="pill">connected</span>' : '<span class="pill off">not connected</span>'}</h2>
@@ -134,8 +136,9 @@ export async function handle(req, res, u, ctx) {
     const f = new URLSearchParams(await readBody(req)); let raw
     try { raw = JSON.parse(f.get('json') ?? '') } catch { return redirect({ err: 'That was not valid JSON. Download the client file from Google and paste its whole contents.' }) }
     const c = raw.web ?? raw.installed
-    if (!c?.client_id || !c?.client_secret) return redirect({ err: 'That JSON is not a Google OAuth client (expected a "web" client with client_id and client_secret).' })
-    if (raw.web && !(raw.web.redirect_uris ?? []).includes(`https://${host}/oauth/google/callback`)) return redirect({ err: `The client has no redirect URI https://${host}/oauth/google/callback — add it in Google Cloud, download the JSON again, and paste that.` })
+    if (!c?.client_id || !c?.client_secret) return redirect({ err: 'That JSON is not a Google OAuth client file. In Google Cloud → Clients, press the download icon on your "Desk" client and paste the whole file.' })
+    if (raw.installed) return redirect({ err: 'That client is a "Desktop app" type. Desk needs a "Web application" client — create one (step 4), add the redirect URI shown, download its JSON and paste that.' })
+    if (!(raw.web.redirect_uris ?? []).includes(`https://${host}/oauth/google/callback`)) return redirect({ err: `The client has no redirect URI https://${host}/oauth/google/callback — in Google Cloud → Clients → Desk, add it under "Authorised redirect URIs" exactly as shown, save, download the JSON again, and paste that.` })
     cfg.saveClient(raw); return redirect({ msg: 'Google app saved. Now connect a Google account.' })
   }
   if (p === '/connections/google/disconnect' && req.method === 'POST') {

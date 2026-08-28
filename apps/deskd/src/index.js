@@ -60,7 +60,7 @@ function status() {
   try { accounts = cfg.listAccounts() } catch {}
   return {
     slug: SLUG, host: HOST, ready: existsSync(READY), uptimeSec: Math.round((Date.now() - started) / 1000),
-    google: { clientConfigured: existsSync(cfg.CLIENT_SECRET), redirectUri: REDIRECT, accounts },
+    google: { clientConfigured: existsSync(cfg.CLIENT_SECRET), projectId: (() => { try { return cfg.readClient().projectId } catch { return undefined } })(), redirectUri: REDIRECT, accounts },
     webface: wf.status(),
     billing: readBilling(),
     harness: harnessUp,
@@ -194,8 +194,13 @@ const server = createServer(async (req, res) => {
     res.writeHead(404); res.end('not found')
   } catch (e) {
     console.error(e)
+    const msg = String(e.message ?? e)
+    const hint = /redirect_uri_mismatch/.test(msg) ? 'The redirect URI on the Google client does not match this Desk. Open Connections → "Redirect URIs" and add the one shown there.'
+      : /access_denied|unverified|not completed the Google verification/.test(msg) ? 'Google blocked the sign-in because this account is not a test user of your app yet. Open Connections → "Add test users" and add the Google address you are signing in with.'
+      : /accessNotConfigured|has not been used in project|API has not been enabled/i.test(msg) ? 'One of the Google APIs is not enabled on your project. Open Connections and press each "Enable … API" link.'
+      : 'Try again from Desk\'s Connections page.'
     res.writeHead(500, { 'content-type': 'text/html; charset=utf-8' })
-    res.end(page('Something went wrong', `<p>${String(e.message ?? e)}</p><p>Try again from Desk's Connections page.</p>`))
+    res.end(page('Google sign-in did not complete', `<p>${msg}</p><p>${hint}</p><p><a href="/connections">Back to Connections</a></p>`))
   }
 })
 server.listen(PORT, '127.0.0.1', () => console.log(`deskd on 127.0.0.1:${PORT} for ${SLUG} (${HOST})`))
