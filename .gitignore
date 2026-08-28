@@ -40,3 +40,6 @@ worktrees/
 .typert-*/
 apps/site/.vercel
 CREDENTIALS.local.md
+apps/desktop/build/bin
+apps/desktop/frontend/dist
+apps/desktop/frontend/node_modules

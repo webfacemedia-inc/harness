@@ -1,0 +1,13 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "webfaCe Desk",
+  "outputfilename": "webfaCe Desk",
+  "frontend:install": "",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "webfaCeMEdia",
+    "email": "tommy@webfacemedia.com"
+  }
+}
