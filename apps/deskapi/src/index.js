@@ -113,7 +113,8 @@ async function snapshots() {
   const statics = (process.env.DESKAPI_STATIC_BOXES ?? '').split(',').filter(Boolean).map(x => { const [slug, dropletId] = x.split(':'); return { slug, dropletId: Number(dropletId), status: 'ready', static: true } })
   for (const o of [...Object.values(orders).filter(x => x.status === 'ready' && x.dropletId && x.billing !== 'cancelled'), ...statics]) {
     try {
-      await fetch(`https://api.digitalocean.com/v2/droplets/${o.dropletId}/actions`, { method: 'POST', headers: h, body: JSON.stringify({ type: 'snapshot', name: `desk-${o.slug}-${new Date().toISOString().slice(0, 10)}` }) })
+      const a = await fetch(`https://api.digitalocean.com/v2/droplets/${o.dropletId}/actions`, { method: 'POST', headers: h, body: JSON.stringify({ type: 'snapshot', name: `desk-${o.slug}-${new Date().toISOString().slice(0, 10)}` }) })
+      if (!a.ok) throw new Error(`snapshot action ${a.status}`)
       const snaps = (await (await fetch(`https://api.digitalocean.com/v2/droplets/${o.dropletId}/snapshots?per_page=50`, { headers: h })).json()).snapshots ?? []
       for (const s of snaps.sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(3)) await fetch(`https://api.digitalocean.com/v2/snapshots/${s.id}`, { method: 'DELETE', headers: h })
       o.lastSnapshot = new Date().toISOString(); if (!o.static) save(); console.log('snapshot ok', o.slug, snaps.length)
