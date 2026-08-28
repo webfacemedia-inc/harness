@@ -88,7 +88,7 @@ const server = createServer(async (req, res) => {
     // ── sign-in (Caddy forward_auth asks /auth/verify for every other route) ──
     if (u.pathname === '/auth/verify') {
       const s = verifySession(cookieOf(req))
-      if (s) { res.writeHead(200, { 'x-desk-user': s.u }); return res.end() }
+      if (s) { res.writeHead(200, { 'x-desk-user': s.u, 'x-desk-role': s.r ?? 'owner' }); return res.end() }
       res.writeHead(401); return res.end()
     }
     if (u.pathname === '/login' && req.method === 'GET' && readBilling().state === 'cancelled') {
@@ -109,7 +109,7 @@ const server = createServer(async (req, res) => {
         return res.end(loginPage({ business: businessName(), google: Boolean(SIGNIN), next: safeNext(f.get('next')), error: 'That username or password is not right.' }))
       }
       const landing = profile.isComplete(profile.readProfile()) ? safeNext(f.get('next')) : '/profile'
-      res.writeHead(302, { location: landing, 'set-cookie': cookieHeader(issueSession(user)) }); return res.end()
+      res.writeHead(302, { location: landing, 'set-cookie': cookieHeader(issueSession(user, f.get('phone') ? 'phone' : 'owner')) }); return res.end()
     }
     if (u.pathname === '/logout') { res.writeHead(302, { location: '/login', 'set-cookie': cookieHeader('', true) }); return res.end() }
     if (u.pathname === '/auth/google') {

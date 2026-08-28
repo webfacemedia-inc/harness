@@ -11,7 +11,7 @@
 	@protected not path /login /logout /auth/* /healthz /deskd/billing /sw.js
 	forward_auth @protected 127.0.0.1:8090 {
 		uri /auth/verify
-		copy_headers X-Desk-User
+		copy_headers X-Desk-User X-Desk-Role
 		@bad status 401
 		handle_response @bad {
 			redir https://{http.request.host}/login?next={http.request.uri} 302
