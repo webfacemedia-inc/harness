@@ -168,6 +168,8 @@ export function apply(ctx: ClientContext): void {
       scope.provide('agentPresetSeat', {
         select: (id: string) => seat.select(id),
         stageAndStart: (id: string) => { seat.stage(id, true); scope.workspaces.startSession() },
+        current: () => seat.store.getSnapshot().current,
+        subscribe: (listener: () => void) => seat.store.subscribe(listener),
       })
       const chip = scope.slots.register({
         name: 'conversation.hero.agentPreset',
@@ -236,6 +238,10 @@ export interface AgentPresetSeatService {
   select: (id: string) => Promise<void>
   /** Stage a preset and start a session for it to land on. */
   stageAndStart: (id: string) => void
+  /** The preset the chip shows right now (staged pick, else the current session's). */
+  current: () => string
+  /** Notified whenever the seat's state changes. */
+  subscribe: (listener: () => void) => () => void
 }
 
 declare module '@deepseek-ai/cordis' {

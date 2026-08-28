@@ -26,6 +26,8 @@ export interface TeamPanelInjected {
   message: (id: string) => Promise<void>
   /** Re-read when the roster or the default changes elsewhere. */
   subscribe: (read: () => void) => () => void
+  /** The preset the conversation chip shows right now (staged or current session). */
+  current: () => string
   /** Translate one key of this surface's copy. */
   t: (key: 'title' | 'active' | 'message', params?: Record<string, string>) => string
 }
@@ -44,10 +46,12 @@ const initials = (name: string): string =>
  * @param props - composed slot props.
  * @returns the list, or nothing when the deployment composes no presets.
  */
-export function TeamPanel({ wide, load, message, subscribe, t }: TeamPanelProps) {
+export function TeamPanel({ wide, load, message, subscribe, current, t }: TeamPanelProps) {
   const [bots, setBots] = useState<Teammate[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
+  // The seat's pick changes without the roster changing; re-render on its notifications too.
+  const [, bump] = useState(0)
   useEffect(() => {
     let live = true
     const read = (): void => {
@@ -57,7 +61,7 @@ export function TeamPanel({ wide, load, message, subscribe, t }: TeamPanelProps)
       })
     }
     read()
-    const unsubscribe = subscribe(read)
+    const unsubscribe = subscribe(() => { bump(n => n + 1); read() })
     return () => { live = false; unsubscribe() }
   }, [load, subscribe])
   if (bots === null && error === null) return null
@@ -72,7 +76,7 @@ export function TeamPanel({ wide, load, message, subscribe, t }: TeamPanelProps)
     return (
       <div className={css.rail} aria-label={t('title')}>
         {list.map(b => (
-          <button key={b.id} type="button" className={clsx(css.bot, b.isDefault && css.active)} title={b.name} aria-label={t('message', { name: b.name })} disabled={busy !== null} onClick={() => { onPick(b.id) }}>
+          <button key={b.id} type="button" className={clsx(css.bot, (current() ? current() === b.id : b.isDefault) && css.active)} title={b.name} aria-label={t('message', { name: b.name })} disabled={busy !== null} onClick={() => { onPick(b.id) }}>
             <span className={css.avatar}>{initials(b.name)}</span>
           </button>
         ))}
@@ -84,7 +88,7 @@ export function TeamPanel({ wide, load, message, subscribe, t }: TeamPanelProps)
       <div className={css.header}><span>{t('title')}</span></div>
       <div className={css.list}>
         {list.map(b => (
-          <button key={b.id} type="button" className={clsx(css.bot, b.isDefault && css.active)} aria-label={t('message', { name: b.name })} disabled={busy !== null} onClick={() => { onPick(b.id) }}>
+          <button key={b.id} type="button" className={clsx(css.bot, (current() ? current() === b.id : b.isDefault) && css.active)} aria-label={t('message', { name: b.name })} disabled={busy !== null} onClick={() => { onPick(b.id) }}>
             <span className={css.avatar} aria-hidden="true">{initials(b.name)}</span>
             <span className={css.text}>
               <span className={css.name}>{b.name}</span>

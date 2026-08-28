@@ -240,3 +240,10 @@
   left: -10px;
   width: 10px;
 }
+
+/* Phones: every menu scrolls inside the viewport — there is no room for a
+ * side card, and an unclipped list runs off the bottom of the screen. */
+@media (max-width: 768px) {
+  .list { max-height: calc(100dvh - 24px); }
+  .viewport { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+}

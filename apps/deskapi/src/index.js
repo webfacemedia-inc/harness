@@ -171,6 +171,23 @@ const server = createServer(async (req, res) => {
       const o = orders[u.pathname.split('/')[3]]; if (!o) return json(res, 404, { error: 'not found' })
       return json(res, 200, { id: o.id, status: o.status, detail: o.detail ?? '', host: o.status === 'ready' ? o.host : undefined })
     }
+    // One-click webfaCeMEdia connection: the box asks with its own token; the
+    // client slug comes from the order (studio clients) or DESKAPI_STATIC_CLIENTS
+    // ("slug:client,slug:client" — e.g. demo:webface). Mints a wfs_ key on the platform.
+    const wc = u.pathname.match(/^\/api\/boxes\/([a-z0-9-]+)\/webface-token$/)
+    if (wc && req.method === 'POST') {
+      const slug = wc[1]; const o = Object.values(orders).find(x => x.slug === slug); const tok = (req.headers.authorization ?? '').replace(/^Bearer /, '')
+      const staticTok = (process.env.DESKAPI_STATIC_BOX_TOKENS ?? '').split(',').map(x => x.split(':')).find(([s]) => s === slug)?.[1]
+      if (!((o && o.boxToken && tok === o.boxToken) || (staticTok && tok === staticTok))) return json(res, 401, { error: 'no' })
+      const client = o?.webfaceClient ?? (process.env.DESKAPI_STATIC_CLIENTS ?? '').split(',').map(x => x.split(':')).find(([s]) => s === slug)?.[1]
+      if (!client) return json(res, 404, { error: 'not_a_client', message: 'This Desk is not linked to a webfaCeMEdia client yet.' })
+      const secret = process.env.AGENT_API_SECRET; const site = process.env.PLATFORM_CONVEX_SITE_URL ?? 'https://qualified-clownfish-173.convex.site'
+      if (!secret) return json(res, 503, { error: 'platform_unavailable' })
+      const r = await fetch(`${site}/serviceTokens/mint`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-secret': secret }, body: JSON.stringify({ clerkOrgId: process.env.WEBFACE_ORG_ID ?? 'org_3ESfU569aFHHJPiV9dAUhqpc8e0', createdBy: process.env.WEBFACE_MINT_USER ?? 'user_34rSBDwip8mI5VaHkovOt6mTzIJ', clientSlug: client, label: `Desk ${slug}` }) })
+      const j = await r.json().catch(() => ({})); if (!r.ok) return json(res, 502, { error: 'mint_failed', detail: j.error })
+      if (o) { o.webfacePrefix = j.prefix; save() }
+      return json(res, 200, { token: j.token, prefix: j.prefix, client })
+    }
     const hb = u.pathname.match(/^\/api\/boxes\/([a-z0-9-]+)\/heartbeat$/)
     if (hb && req.method === 'POST') {
       const o = Object.values(orders).find(x => x.slug === hb[1]); const tok = (req.headers.authorization ?? '').replace(/^Bearer /, '')

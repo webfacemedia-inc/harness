@@ -97,7 +97,8 @@ ${gc ? `<a class="btn" href="/oauth/google/start">Connect a Google account →</
 ${(() => { const w = servers.find(x => x.name === 'webface'); return `<section><h2>webfaCeMEdia — your website, campaigns, contacts and analytics ${w ? '<span class="pill">connected</span>' : '<span class="pill off">not connected</span>'}</h2>
 <p style="color:var(--mute);margin:0 0 8px">If webfaCeMEdia built or runs your website, connect it and Desk can update pages, draft campaigns, look up contacts and read your analytics — with your approval on anything that goes live.</p>
 ${w ? `<div class="row"><span><strong>Connected</strong><small>mcp.webfacemedia.com · token ${esc((w.headers?.Authorization ?? '').replace(/^Bearer /, '').slice(0, 12))}…</small></span><form method="post" action="/connections/mcp/remove" style="margin:0"><input type="hidden" name="name" value="webface"><button class="quiet" type="submit">Disconnect</button></form></div>`
-: `<form method="post" action="/connections/webface"><label for="wt">Connection key from webfaCeMEdia</label><input id="wt" name="token" pattern="wfs_[a-f0-9]{48}" placeholder="wfs_…" required title="Starts with wfs_ — ask your webfaCeMEdia contact for it"><button type="submit">Connect and restart</button></form>`}
+: `<form method="post" action="/connections/webface/connect" style="margin:0"><button type="submit">Connect webfaCeMEdia</button></form>
+<details><summary style="font-size:13px">Have a connection key instead?</summary><form method="post" action="/connections/webface"><label for="wt">Connection key</label><input id="wt" name="token" pattern="wfs_[a-f0-9]{48}" placeholder="wfs_…" required title="Starts with wfs_"><button type="submit">Connect with key</button></form></details>`}
 </section>` })()}
 <section><h2>Other tools ${servers.filter(x => x.name !== 'webface').length ? `<span class="pill">${servers.filter(x => x.name !== 'webface').length} added</span>` : ''}</h2>
 <p style="color:var(--mute);margin:0 0 8px">Add any tool server your business uses (MCP). Your team sees its tools after a short restart.</p>
@@ -133,6 +134,16 @@ export async function handle(req, res, u, ctx) {
   if (p === '/connections/google/disconnect' && req.method === 'POST') {
     const f = new URLSearchParams(await readBody(req)); const a = f.get('account') ?? ''
     const t = cfg.tokenPath(a); if (existsSync(t)) unlinkSync(t); return redirect({ msg: `${a} disconnected.` })
+  }
+  if (p === '/connections/webface/connect' && req.method === 'POST') {
+    const api = process.env.DESK_API_URL, slug = process.env.DESK_SLUG, boxTok = process.env.DESK_BOX_TOKEN
+    if (!api || !boxTok) return redirect({ err: 'This Desk is not registered with webfacedesk.app yet, so it cannot connect on its own. Use a connection key instead.' })
+    const r = await fetch(`${api}/boxes/${slug}/webface-token`, { method: 'POST', headers: { authorization: `Bearer ${boxTok}` }, signal: AbortSignal.timeout(20000) }).catch(() => null)
+    const j = r ? await r.json().catch(() => ({})) : {}
+    if (!r || !r.ok) return redirect({ err: j.message ?? 'webfaCeMEdia could not link this Desk. If webfaCeMEdia runs your website, write to tommy@webfacemedia.com and we will link it.' })
+    const list = readServers().filter(x => x.name !== 'webface')
+    list.push({ name: 'webface', transport: 'streamable-http', url: 'https://mcp.webfacemedia.com/mcp', headers: { Authorization: `Bearer ${j.token}` } })
+    writeServers(list); restartHarness(); return redirect({ msg: `webfaCeMEdia connected (${j.client}). Desk is restarting — give it half a minute.` })
   }
   if (p === '/connections/webface' && req.method === 'POST') {
     const f = new URLSearchParams(await readBody(req)); const token = (f.get('token') ?? '').trim()

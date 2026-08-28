@@ -69,7 +69,12 @@ export function apply(ctx: ClientContext): void {
       if (current !== undefined && current.blank) await ctx.agentPresetSeat.select(id)
       else ctx.agentPresetSeat.stageAndStart(id)
     },
-    subscribe: (read) => { readers.add(read); return () => { readers.delete(read) } },
+    subscribe: (read) => {
+      readers.add(read)
+      const off = ctx.agentPresetSeat.subscribe(read)
+      return () => { readers.delete(read); off() }
+    },
+    current: () => ctx.agentPresetSeat.current(),
     t: ctx.locale.bind(LOCALE_NS) as unknown as TeamPanelInjected['t'],
   })
 
