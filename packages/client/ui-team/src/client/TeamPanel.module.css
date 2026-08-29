@@ -3,15 +3,17 @@
 .header { display: none; }
 .headerLegacy { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px 4px; font-size: 12px; letter-spacing: 0.02em; color: var(--dsw-alias-text-tertiary, #8d939b); }
 .list { display: flex; flex-direction: column; gap: 2px; }
-.bot { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 8px; border: 0; border-radius: 8px; background: transparent; color: inherit; text-align: left; cursor: pointer; font: inherit; }
+.bot { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 8px; border: 0; border-radius: 8px; background: transparent; color: inherit; text-align: left; cursor: pointer; font: inherit; }
 .bot:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(52,153,204,0.10)); }
 .bot:focus-visible { outline: 2px solid var(--dsw-static-deepseek-500, #3499cc); outline-offset: 1px; }
+.bot.active { background: var(--dsw-alias-interactive-bg-hover, rgba(52,153,204,0.10)); }
 .bot.active .avatar { box-shadow: 0 0 0 2px var(--dsw-static-deepseek-500, #3499cc); }
+.bot.active::before { content: ""; position: absolute; left: 0; top: 6px; bottom: 6px; width: 3px; border-radius: 0 3px 3px 0; background: var(--dsw-static-deepseek-500, #3499cc); }
 .avatar { flex: 0 0 auto; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 700; color: #fff; background: var(--dsw-static-deepseek-500, #3499cc); }
 .text { min-width: 0; display: flex; flex-direction: column; }
 .name { font-size: 13px; font-weight: 600; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .desc { font-size: 11.5px; line-height: 1.25; color: var(--dsw-alias-text-tertiary, #8d939b); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.status { margin-left: auto; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dsw-static-deepseek-500, #3499cc); }
+.status { margin-left: auto; flex: none; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--dsw-static-deepseek-500, #3499cc); background: var(--dsw-alias-interactive-bg-hover, rgba(52,153,204,0.14)); padding: 2px 7px; border-radius: 999px; }
 .rail { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 0; }
 .rail .bot { width: auto; padding: 4px; justify-content: center; }
 .empty { padding: 6px 8px; font-size: 12px; color: var(--dsw-alias-text-tertiary, #8d939b); }
@@ -24,7 +26,6 @@
 /* The Modes accordion holds the list on every width, so modes stay a vertical list on phones too. */
 @media (max-width: 1023.98px) {
   .avatar { width: 22px; height: 22px; font-size: 10px; }
-  .desc, .status { display: none; }
   .name { font-size: 12.5px; }
 }
 

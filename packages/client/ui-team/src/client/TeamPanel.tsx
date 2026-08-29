@@ -90,13 +90,13 @@ export function TeamPanel({ wide, load, message, subscribe, current, t }: TeamPa
       <div className={css.header}><span>{t('title')}</span></div>
       <div className={css.list}>
         {list.map(b => (
-          <button key={b.id} type="button" className={clsx(css.bot, (picked ? picked === b.id : b.isDefault) && css.active)} aria-label={t('message', { name: b.name })} disabled={busy === b.id} onClick={() => { onPick(b.id) }}>
+          <button key={b.id} type="button" className={clsx(css.bot, (picked ? picked === b.id : b.isDefault) && css.active)} aria-label={t('message', { name: b.name })} aria-current={(picked ? picked === b.id : b.isDefault) ? 'true' : undefined} disabled={busy === b.id} onClick={() => { onPick(b.id) }}>
             <span className={css.avatar} aria-hidden="true">{initials(b.name)}</span>
             <span className={css.text}>
               <span className={css.name}>{b.name}</span>
               {b.description !== '' && <span className={css.desc}>{b.description}</span>}
             </span>
-            {b.isDefault && <span className={css.status}>{t('active')}</span>}
+            {(picked ? picked === b.id : b.isDefault) && <span className={css.status}>{t('active')}</span>}
           </button>
         ))}
       </div>
