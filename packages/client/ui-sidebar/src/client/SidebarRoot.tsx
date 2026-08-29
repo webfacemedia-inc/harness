@@ -124,7 +124,7 @@ export function SidebarRoot({
   }, [])
   const accordion = (k: 'modes' | 'recent' | 'more', label: string) => (
     <button type="button" className={css.acc} aria-expanded={open[k]} onClick={() => { toggleSection(k) }}>
-      <span className={css.accChevron} aria-hidden="true" />{label}
+      <svg className={css.accIcon} viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5 12 8l-8 5.5z" fill="currentColor" /></svg><span>{label}</span>
     </button>
   )
   // Drag the modes/sessions divider: writes --desk-team-share on the sidebar column and remembers it.

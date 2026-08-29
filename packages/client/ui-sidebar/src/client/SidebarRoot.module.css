@@ -340,12 +340,12 @@
 .acc {
   flex: none;
   display: flex; align-items: center; gap: 8px;
-  width: 100%; margin: 6px 0 2px; padding: 6px 10px;
-  border: 0; background: transparent; color: var(--dsw-alias-text-tertiary, #8d939b);
-  font: inherit; font-size: 12px; letter-spacing: 0.02em; text-align: left; cursor: pointer; border-radius: 8px;
+  width: 100%; margin: 8px 0 2px; padding: 7px 8px;
+  border: 0; background: transparent; color: var(--dsw-alias-text-secondary, #5a6a78);
+  font: inherit; font-size: 13px; font-weight: 600; letter-spacing: 0.01em; text-align: left; cursor: pointer; border-radius: 8px;
 }
 .acc:hover { background: var(--dsw-bg-hover, rgba(127, 127, 127, 0.12)); color: inherit; }
-.accChevron { width: 8px; height: 8px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); transition: transform .15s; margin: -3px 2px 0 2px; }
-.acc[aria-expanded="false"] .accChevron { transform: rotate(-45deg); margin-top: 0; }
+.accIcon { width: 14px; height: 14px; flex: none; color: var(--dsw-static-deepseek-500, #3499cc); transform: rotate(90deg); transition: transform .15s; }
+.acc[aria-expanded="false"] .accIcon { transform: rotate(0deg); }
 .teamArea[data-open="false"], .regionArea[data-open="false"], .footerActions[data-open="false"], .split[data-open="false"] { display: none; }
 .collapsed .acc { display: none; }
