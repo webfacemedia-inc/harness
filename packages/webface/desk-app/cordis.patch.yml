@@ -69,6 +69,23 @@
           GOOGLE_MCP_HOME: !!js 'process.env.DESK_GOOGLE_HOME ?? `${process.env.HOME}/.config/webface-desk/google`'
         toolCallTimeoutMs: 60000
 
+    # Deliverables kit: documents, PDFs, decks, spreadsheets, text and images on the
+    # business's own brand. Runs outside the sandbox, so Guided mode can make files too.
+    - id: mcp-kit
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: kit
+        transport: stdio
+        command: !!js process.execPath
+        args: !!js '["--import", "tsx/esm", `${process.env.DESK_HARNESS_DIR ?? process.cwd()}/apps/desk-kit/src/index.js`]'
+        cwd: !!js '`${process.env.DESK_HARNESS_DIR ?? process.cwd()}/apps/desk-kit`'
+        env:
+          DESK_WORK_DIR: !!js 'process.env.DESK_WORK_DIR ?? `${process.env.HOME}/Desk`'
+          DESK_PROFILE_FILE: !!js 'process.env.DESK_PROFILE_FILE ?? `${process.env.HOME}/.desk/profile.json`'
+          DESK_BRAND_DIR: !!js 'process.env.DESK_BRAND_DIR ?? `${process.env.HOME}/.desk/brand`'
+          FAL_KEY: !!js 'process.env.FAL_KEY ?? ""'
+        toolCallTimeoutMs: 120000
+
     - id: mcp-browser
       # The Desk browser: a real Chrome with a persistent profile, headed so the
       # owner can watch and take the mouse for logins/2FA. On a cloud Desk the

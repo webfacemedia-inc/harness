@@ -47,7 +47,7 @@ const host = useDns ? `${slug}.${DOMAIN}` : ''
 const env = {
   DESK_SLUG: slug, DESK_BUSINESS: business, DESK_HOST: host, OPENROUTER_API_KEY: key, DESK_OWNER_PASSWORD: password,
   DESK_HARNESS_REF: opt('ref', 'desk'), DESK_OWNER_USER: opt('user', 'owner'), DESK_OWNER_EMAIL: opt('email', ''),
-  DESK_API_URL: process.env.DESK_PUBLIC_URL ? `${process.env.DESK_PUBLIC_URL}/api` : '', DESK_BOX_TOKEN: boxToken, DESK_PLAN: opt('plan', 'business'), DESK_SANDBOX: opt('sandbox', 'read-only'), DESK_DEFAULT_PRESET: opt('preset', 'team'),
+  DESK_API_URL: process.env.DESK_PUBLIC_URL ? `${process.env.DESK_PUBLIC_URL}/api` : '', DESK_BOX_TOKEN: boxToken, DESK_PLAN: opt('plan', 'business'), FAL_KEY: process.env.FAL_KEY ?? '', DESK_SANDBOX: opt('sandbox', 'read-only'), DESK_DEFAULT_PRESET: opt('preset', 'team'),
 }
 const script = readFileSync(join(here, '..', 'infra', 'desk-box', 'bootstrap.sh'), 'utf8')
 const userData = '#!/usr/bin/env bash\n' + Object.entries(env).map(([k, v]) => `export ${k}=${JSON.stringify(v)}`).join('\n') + '\nmkdir -p /srv/desk\ncat > /srv/desk/bootstrap.sh <<"BOOTSTRAP_EOF"\n' + script + '\nBOOTSTRAP_EOF\nbash /srv/desk/bootstrap.sh\n'

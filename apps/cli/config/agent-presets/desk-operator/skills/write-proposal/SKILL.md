@@ -9,4 +9,4 @@ description: Operator skill. Use when a prospect needs a scope, a quote, or a pr
 - Gate-based billing: deposit to start, balance at a named gate the client can see, care plan monthly after go-live.
 - Additions outside scope are quoted separately and small; anything the original scope implied is not an addition — check the scope before quoting.
 - No effort or time claims that are not real; no "AI/generated" wording; product names as "webfaCe <Thing>".
-- Put the full proposal in the reply; save it to the Desk folder as markdown only when the session has file-writing (Full access).
+- Produce it with `mcp__kit__make_document` (Word + PDF on the letterhead); add `mcp__kit__make_deck` when a presentation is wanted. Reply with the links the tools return.

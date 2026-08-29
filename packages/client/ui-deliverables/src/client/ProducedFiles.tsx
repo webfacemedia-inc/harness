@@ -125,7 +125,12 @@ export function ProducedFiles({
             // that share a basename; the chip itself stays short.
             title={path}
             aria-label={t('produced.open', { name: path })}
-            onClick={() => { openFile(path) }}
+            // On a cloud Desk (deskd in front) the Host opener has no desktop to open on:
+            // the file is served by deskd instead, in a new tab (PDFs and images preview there).
+            onClick={() => {
+              if (document.documentElement.hasAttribute('data-desk-cloud')) window.open(`/files/open?path=${encodeURIComponent(path)}`, '_blank', 'noopener')
+              else openFile(path)
+            }}
           >
             {basename(path)}
           </button>

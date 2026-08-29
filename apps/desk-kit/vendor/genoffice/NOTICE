@@ -1,0 +1,20 @@
+genoffice engines (vendored copy)
+=================================
+
+The TypeScript packages under this directory:
+
+  docx-engine/
+  pptx-engine/
+
+are derived from GenOffice — https://github.com/genspark-ai/genoffice
+Copyright (c) Mainfunc, Inc. / Genspark. Licensed under the Apache License 2.0
+(see LICENSE.genoffice in this directory).
+
+They were extracted verbatim (source-only; the engine packages have no Electron
+dependency) for reuse as document/presentation generation engines inside
+Sovereign Forge. Apache-2.0 requires preserving this notice and the license with
+the code; any modifications must be marked as such.
+
+"GenOffice" and "Genspark" are trademarks of Mainfunc, Inc. The Apache-2.0
+license does not grant permission to use these marks; this derivative does not
+use them to endorse or promote the project.

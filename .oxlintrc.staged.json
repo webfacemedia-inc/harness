@@ -5,6 +5,7 @@
     "typeAware": false
   },
   "ignorePatterns": [
+    "apps/desk-kit/vendor/**",
     "**/lib/**",
     "**/node_modules/**",
     "**/.sessions/**",

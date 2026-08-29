@@ -193,7 +193,23 @@ const server = createServer(async (req, res) => {
     if (u.pathname === '/browser') {
       if (!verifySession(cookieOf(req))) { res.writeHead(302, { location: '/login?next=/browser' }); return res.end() }
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' })
-      return res.end(layout({ title: 'Browser', business: businessName(), head: '<style>main{max-width:none;padding:0;height:calc(100dvh - 53px)}iframe{display:block;width:100%;height:100%;border:0;background:#111}.bar{display:flex;gap:10px;align-items:center;padding:8px 14px;font-size:13px;color:var(--mute);background:var(--card);border-bottom:1px solid var(--line)}@media(max-width:600px){.bar span{display:none}main{height:calc(100dvh - 53px)}}</style>', body: `<div class="bar"><span>Desk's browser. Tap inside to take the mouse — sign in here once and Desk keeps the session.</span><a class="btn" href="/" style="margin:0 0 0 auto;padding:7px 12px;font-size:13px">I'm done — back to Desk</a></div><iframe src="/vnc/vnc.html?autoconnect=1&resize=scale&show_dot=1" allow="clipboard-read; clipboard-write" title="Desk browser"></iframe>` }))
+      // noVNC is embedded through its library (core/rfb.js) rather than its full UI app in an iframe:
+      // same origin, no package.json/UI fetches, and it behaves in WebKit (the desktop app) too.
+      return res.end(layout({ title: 'Browser', business: businessName(), head: `<style>main{max-width:none;padding:0;height:calc(100dvh - 53px);display:flex;flex-direction:column}#screen{flex:1;min-height:0;background:#111;position:relative}#screen>div{width:100%;height:100%}.bar{display:flex;gap:10px;align-items:center;padding:8px 14px;font-size:13px;color:var(--mute);background:var(--card);border-bottom:1px solid var(--line)}#st{margin-left:auto;font-size:12px}@media(max-width:600px){.bar span.h{display:none}}</style>`, body: `<div class="bar"><span class="h">Desk's browser. Tap inside to take the mouse — sign in here once and Desk keeps the session.</span><span id="st">Connecting…</span><a class="btn" href="/" style="margin:0 0 0 10px;padding:7px 12px;font-size:13px">I'm done — back to Desk</a></div><div id="screen"></div>
+<script type="module">
+import RFB from '/vnc/core/rfb.js'
+const st = document.getElementById('st'), host = document.getElementById('screen')
+const say = (m, bad) => { st.textContent = m; st.style.color = bad ? '#b42318' : '' }
+try {
+  const url = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/websockify'
+  const rfb = new RFB(host, url, { shared: true })
+  rfb.scaleViewport = true; rfb.resizeSession = false; rfb.showDotCursor = true; rfb.background = '#111'
+  rfb.addEventListener('connect', () => say('Connected — you have the mouse.'))
+  rfb.addEventListener('disconnect', e => say(e.detail?.clean ? 'Disconnected.' : 'Lost the connection — reload to reconnect.', !e.detail?.clean))
+  rfb.addEventListener('securityfailure', e => say('Could not connect: ' + (e.detail?.reason || 'refused'), true))
+  addEventListener('resize', () => { rfb.scaleViewport = true })
+} catch (e) { say('The browser view could not start: ' + (e && e.message ? e.message : e), true) }
+</script>` }))
     }
     if (u.pathname === '/routines' || u.pathname.startsWith('/routines/')) {
       if (!verifySession(cookieOf(req))) { res.writeHead(302, { location: '/login?next=/routines' }); return res.end() }

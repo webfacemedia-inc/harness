@@ -54,9 +54,17 @@ export async function handle(req, res, u, { business }) {
   if (p === '/files' && req.method === 'GET') {
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' }); return res.end(page({ business, rel: u.searchParams.get('dir') ?? '' }))
   }
+  if (p === '/files/open') {
+    // Produced-file chips hand over an absolute path; only paths inside the Desk folder are served.
+    const abs = resolve(u.searchParams.get('path') ?? '')
+    if (!abs.startsWith(resolve(ROOT) + '/')) { res.writeHead(404); return res.end('Not in the Desk folder') }
+    const rel = abs.slice(resolve(ROOT).length + 1)
+    const inline = /\.(pdf|png|jpe?g|gif|webp|svg|txt|md|csv|html?)$/i.test(rel)
+    res.writeHead(302, { location: `/files/dl/${rel.split('/').map(encodeURIComponent).join('/')}${inline ? '?inline=1' : ''}` }); return res.end()
+  }
   if (p.startsWith('/files/dl/') && req.method === 'GET') {
     const f = safe(p.slice('/files/dl/'.length)); if (!existsSync(f) || statSync(f).isDirectory()) { res.writeHead(404); return res.end('Not found') }
-    res.writeHead(200, { 'content-type': MIME[extname(f).toLowerCase()] ?? 'application/octet-stream', 'content-length': statSync(f).size, 'content-disposition': `attachment; filename="${encodeURIComponent(basename(f))}"` })
+    res.writeHead(200, { 'content-type': MIME[extname(f).toLowerCase()] ?? 'application/octet-stream', 'content-length': statSync(f).size, 'content-disposition': `${u.searchParams.get('inline') ? 'inline' : 'attachment'}; filename="${encodeURIComponent(basename(f))}"` })
     return pipeline(createReadStream(f), res)
   }
   if (p.startsWith('/files/up/') && req.method === 'PUT') {

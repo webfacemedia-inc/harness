@@ -7,13 +7,13 @@ mode; a mode without a shell denies shell and file-write tools to everything it 
 
 | Preset | Mode | Shell | Skills |
 |---|---|---|---|
-| `team` | Desk | yes | first-day, reply-to-lead, quote-from-price-list, book-and-confirm, follow-up, weekly-summary, describe-a-task, browser, studio, which-platform, google-setup, google-business-profile |
-| `desk-operator` | Everything else | yes | first-day, reply-to-lead, quote-from-price-list, book-and-confirm, follow-up, weekly-summary, describe-a-task, write-proposal, browser, studio, wordpress, which-platform, google-setup, google-business-profile |
-| `front-desk` | Front desk | no | reply-to-lead, follow-up, weekly-summary, describe-a-task, browser, studio, google-setup |
-| `quotes` | Quotes | no | quote-from-price-list, browser, studio |
-| `dispatch` | Bookings | no | book-and-confirm, follow-up, describe-a-task, browser, studio |
-| `website` | Website & marketing | no | studio, follow-up, describe-a-task, browser, wordpress, which-platform, google-business-profile |
-| `operator` | Studio | yes | qualify-prospect, draft-outreach, preview-then-go-live, deploy-verify, write-proposal, client-status-report, pricing-and-scope, handoff-doc, operator-provision, browser, studio, which-platform |
+| `team` | Desk | yes | first-day, reply-to-lead, quote-from-price-list, book-and-confirm, follow-up, weekly-summary, describe-a-task, browser, studio, which-platform, google-setup, google-business-profile, deliverables, brand-kit |
+| `desk-operator` | Everything else | yes | first-day, reply-to-lead, quote-from-price-list, book-and-confirm, follow-up, weekly-summary, describe-a-task, write-proposal, browser, studio, wordpress, which-platform, google-setup, google-business-profile, deliverables, brand-kit |
+| `front-desk` | Front desk | no | reply-to-lead, follow-up, weekly-summary, describe-a-task, browser, studio, google-setup, deliverables, brand-kit |
+| `quotes` | Quotes | no | quote-from-price-list, browser, studio, deliverables, brand-kit |
+| `dispatch` | Bookings | no | book-and-confirm, follow-up, describe-a-task, browser, studio, deliverables, brand-kit |
+| `website` | Website & marketing | no | studio, follow-up, describe-a-task, browser, wordpress, which-platform, google-business-profile, deliverables, brand-kit |
+| `operator` | Studio | yes | qualify-prospect, draft-outreach, preview-then-go-live, deploy-verify, write-proposal, client-status-report, pricing-and-scope, handoff-doc, operator-provision, browser, studio, which-platform, deliverables, brand-kit |
 
 The presets live in the shipped preset root, so every profile mounts them with `system` trust. The
 `operator` mode is shown only on Operators-plan Desks (`DESK_PLAN=operators`).

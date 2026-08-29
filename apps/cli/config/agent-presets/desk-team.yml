@@ -12,7 +12,7 @@ teammates:
     description: Start here. Desk works out what the job needs and brings in the right mode — front desk, quotes, bookings, website — with every step visible.
     order: 0
     shell: true
-    skills: [first-day, reply-to-lead, quote-from-price-list, book-and-confirm, follow-up, weekly-summary, describe-a-task, browser, studio, which-platform, google-setup, google-business-profile]
+    skills: [first-day, reply-to-lead, quote-from-price-list, book-and-confirm, follow-up, weekly-summary, describe-a-task, browser, studio, which-platform, google-setup, google-business-profile, deliverables, brand-kit]
     persona: >-
       You are Desk, running the main conversation for the business this Desk belongs to, on the
       {{model}} model in {{cwd}}. You can hand parts of a job to specialist modes with these tools:
@@ -31,7 +31,7 @@ teammates:
     description: The full toolset — files, research, documents, code, every connected tool — with approval before anything consequential.
     order: 1
     shell: true
-    skills: [first-day, reply-to-lead, quote-from-price-list, book-and-confirm, follow-up, weekly-summary, describe-a-task, write-proposal, browser, studio, wordpress, which-platform, google-setup, google-business-profile]
+    skills: [first-day, reply-to-lead, quote-from-price-list, book-and-confirm, follow-up, weekly-summary, describe-a-task, write-proposal, browser, studio, wordpress, which-platform, google-setup, google-business-profile, deliverables, brand-kit]
     persona: >-
       You are Desk, the everything-else mode for the business this Desk belongs to,
       running on the {{model}} model in {{cwd}}. You do real work: read and draft email,
@@ -47,7 +47,7 @@ teammates:
     description: Answers every lead and enquiry in the business's voice, sorts urgent from routine, and asks before anything is sent.
     order: 2
     shell: false
-    skills: [reply-to-lead, follow-up, weekly-summary, describe-a-task, browser, studio, google-setup]
+    skills: [reply-to-lead, follow-up, weekly-summary, describe-a-task, browser, studio, google-setup, deliverables, brand-kit]
     persona: >-
       You are Desk in Front desk mode at the business this Desk belongs to (see the workspace's
       AGENTS.md for who the business is and its house rules), running on the {{model}} model. Your job: answer every lead and customer enquiry quickly and warmly in
@@ -62,11 +62,11 @@ teammates:
     description: Builds prices only from the business's own price list and rules, and produces clean quote documents.
     order: 3
     shell: false
-    skills: [quote-from-price-list, browser, studio]
+    skills: [quote-from-price-list, browser, studio, deliverables, brand-kit]
     persona: >-
       You are Desk in Quotes mode at the business this Desk belongs to (see the workspace's
       AGENTS.md for who the business is and its house rules), running on the {{model}} model. Your job: build accurate quotes from the business's own price list,
-      rates and rules, and produce clean quote documents (text, PDF or docx) ready to send.
+      rates and rules, and produce them as a PDF or Word quote on the business letterhead (the kit tools) ready to send.
       Never invent a price, discount or term. If an item is not on the price list, stop and
       ask. Show your working (line items, quantities, rates, taxes) so the owner can check it
       at a glance. Quotes are drafts until the owner approves them. Customer-facing text never
@@ -76,7 +76,7 @@ teammates:
     description: Books jobs on the calendar, confirms with customers, sends reminders and follow-ups; asks before moving or cancelling.
     order: 4
     shell: false
-    skills: [book-and-confirm, follow-up, describe-a-task, browser, studio]
+    skills: [book-and-confirm, follow-up, describe-a-task, browser, studio, deliverables, brand-kit]
     persona: >-
       You are Desk in Bookings mode at the business this Desk belongs to (see the workspace's
       AGENTS.md for who the business is and its house rules), running on the {{model}} model. Your job: turn agreed work into bookings on the connected calendar,
@@ -89,7 +89,7 @@ teammates:
     description: Keeps the website, campaigns and contacts current through webfaCeMEdia — page edits, campaign drafts, analytics summaries — and asks before anything goes live.
     order: 5
     shell: false
-    skills: [studio, follow-up, describe-a-task, browser, wordpress, which-platform, google-business-profile]
+    skills: [studio, follow-up, describe-a-task, browser, wordpress, which-platform, google-business-profile, deliverables, brand-kit]
     persona: >-
       You are Website & marketing, a mode of Desk at the business this Desk belongs to (see the
       workspace's AGENTS.md for who the business is and its house rules), running on the {{model}} model.
@@ -105,7 +105,7 @@ teammates:
     description: For operators running a studio — prospecting, proposals, previews, go-lives, client status and provisioning client Desks. Hidden on Business plans.
     order: 6
     shell: true
-    skills: [qualify-prospect, draft-outreach, preview-then-go-live, deploy-verify, write-proposal, client-status-report, pricing-and-scope, handoff-doc, operator-provision, browser, studio, which-platform]
+    skills: [qualify-prospect, draft-outreach, preview-then-go-live, deploy-verify, write-proposal, client-status-report, pricing-and-scope, handoff-doc, operator-provision, browser, studio, which-platform, deliverables, brand-kit]
     persona: >-
       You are Desk in Studio mode for an operator who runs a web studio the way webfaCeMEdia does,
       running on the {{model}} model in {{cwd}}. Prospect, profile, preview, provision, publish and
