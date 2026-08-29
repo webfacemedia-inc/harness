@@ -47,11 +47,14 @@ export function noticeFor(session: Session, event: SessionEvent): Notice | undef
     if (/I need you for a moment/i.test(text)) return { kind: 'handover', sessionId, title: 'Desk needs you at the browser', body: text.slice(0, 140) }
   }
   if (type === 'tool/result') {
-    // A kit tool finished with a file: tell the phone where it is.
-    const name = str(payload.toolName) || str(payload.name)
-    const body = str(payload.result) || str(payload.content) || str(payload.text) || JSON.stringify(payload).slice(0, 2000)
-    const m = /mcp__kit__make_|mcp__kit__brand_image/.test(name) ? /\[([^\]]+)\]\((\/files\/dl\/[^)]+)\)/.exec(body) : null
-    if (m && m[1] !== undefined && m[2] !== undefined) return { kind: 'deliverable', sessionId, title: 'Your file is ready', body: m[1], url: m[2] }
+    // A kit tool finished with a file: tell the phone where it is. The text sits in the
+    // tool-result block's nested content.
+    const msg = payload.message as { content?: Array<{ toolCallId?: unknown; content?: Array<{ text?: unknown }> }> } | undefined
+    const texts = (msg?.content ?? []).flatMap(b => (b.content ?? []).map(c => str(c.text)))
+    const m = /\[([^\]]+)\]\(((?:https?:\/\/[^/\s)]+)?\/files\/dl\/[^)\s]+)\)/.exec(texts.join('\n'))
+    if (m && m[1] !== undefined && m[2] !== undefined && /FILE READY/.test(texts.join('\n'))) {
+      return { kind: 'deliverable', sessionId, title: 'Your file is ready', body: m[1], url: m[2] }
+    }
   }
   return undefined
 }

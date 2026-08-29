@@ -126,8 +126,9 @@ export const deliverablesDefinition: ConversationNodeDefinition<DeliverablesStat
       .map(path => ({ seq: match.event.seq, path }))
     // A file made by a kit tool (webfaCe Desk) announces itself as a served link in
     // its result text; the link is the "path" the chip opens.
-    const text = (result as { text?: string }).text ?? ''
-    for (const m of text.matchAll(/\]\((\/files\/dl\/[^)\s]+)\)/g)) {
+    const nested = (result as { content?: Array<{ text?: string }> }).content ?? []
+    const text = [(result as { text?: string }).text ?? '', ...nested.map(c => c.text ?? '')].join('\n')
+    for (const m of text.matchAll(/\]\(((?:https?:\/\/[^/\s)]+)?\/files\/dl\/[^)\s]+)\)/g)) {
       const path = m[1]
       if (path !== undefined) additions.push({ seq: match.event.seq, path })
     }

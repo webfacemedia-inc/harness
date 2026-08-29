@@ -128,7 +128,7 @@ export function ProducedFiles({
             // On a cloud Desk (deskd in front) the Host opener has no desktop to open on:
             // the file is served by deskd instead, in a new tab (PDFs and images preview there).
             onClick={() => {
-              if (path.startsWith('/files/dl/')) window.open(`${path}${path.includes('?') ? '&' : '?'}inline=1`, '_blank', 'noopener')
+              if (/^(https?:\/\/[^/]+)?\/files\/dl\//.test(path)) window.open(`${path}${path.includes('?') ? '&' : '?'}inline=1`, '_blank', 'noopener')
               else if (document.documentElement.hasAttribute('data-desk-cloud')) window.open(`/files/open?path=${encodeURIComponent(path)}`, '_blank', 'noopener')
               else openFile(path)
             }}

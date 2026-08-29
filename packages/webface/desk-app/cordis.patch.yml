@@ -84,6 +84,7 @@
           DESK_PROFILE_FILE: !!js 'process.env.DESK_PROFILE_FILE ?? `${process.env.HOME}/.desk/profile.json`'
           DESK_BRAND_DIR: !!js 'process.env.DESK_BRAND_DIR ?? `${process.env.HOME}/.desk/brand`'
           FAL_KEY: !!js 'process.env.FAL_KEY ?? ""'
+          DESK_PUBLIC_ORIGIN: !!js 'process.env.DESK_HOST ? `https://${process.env.DESK_HOST}` : ""'
         toolCallTimeoutMs: 120000
 
     - id: mcp-browser
