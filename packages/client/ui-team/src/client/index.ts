@@ -31,8 +31,8 @@ export const inject = ['slots', 'locale', 'connection', 'remote', 'sessions']
  */
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(LOCALE_NS, {
-    zh: { 'title': '模式', 'active': '默认', 'message': '切换到 {name}' },
-    en: { 'title': 'Modes', 'active': 'default', 'message': 'Switch to {name}' },
+    zh: { 'title': '模式', 'active': '使用中', 'message': '切换到 {name}' },
+    en: { 'title': 'Modes', 'active': 'Active', 'message': 'Switch to {name}' },
   }), 'ui-team: dictionaries')
 
   // Desk hides harness plumbing a business owner never needs: the per-turn
