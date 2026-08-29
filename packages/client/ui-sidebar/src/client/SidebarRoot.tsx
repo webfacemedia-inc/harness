@@ -116,18 +116,19 @@ export function SidebarRoot({
 
   // Drag the modes/sessions divider: writes --desk-team-share on the sidebar column and remembers it.
   useEffect(() => {
-    try { const v = localStorage.getItem('desk.teamShare'); if (v && column.current) column.current.style.setProperty('--desk-team-share', v) } catch { /* storage may be unavailable */ }
+    try { const v = localStorage.getItem('desk.teamShare'); if (v && column.current) { column.current.style.setProperty('--desk-team-basis', v); column.current.style.setProperty('--desk-team-grow', '0') } } catch { /* storage may be unavailable */ }
   }, [])
   const onSplitDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     const root = column.current; if (root === null) return
     e.preventDefault(); const rect = root.getBoundingClientRect()
     const move = (ev: PointerEvent): void => {
-      const pct = Math.min(70, Math.max(10, ((ev.clientY - rect.top) / rect.height) * 100))
-      root.style.setProperty('--desk-team-share', `${pct.toFixed(1)}%`)
+      const top = root.querySelector('[role="separator"]')?.previousElementSibling?.getBoundingClientRect().top ?? rect.top
+      const px = Math.min(rect.height * 0.7, Math.max(72, ev.clientY - top))
+      root.style.setProperty('--desk-team-basis', `${Math.round(px)}px`); root.style.setProperty('--desk-team-grow', '0')
     }
     const up = (): void => {
       window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up)
-      try { localStorage.setItem('desk.teamShare', root.style.getPropertyValue('--desk-team-share')) } catch { /* storage may be unavailable */ }
+      try { localStorage.setItem('desk.teamShare', root.style.getPropertyValue('--desk-team-basis')) } catch { /* storage may be unavailable */ }
     }
     window.addEventListener('pointermove', move); window.addEventListener('pointerup', up)
   }, [])

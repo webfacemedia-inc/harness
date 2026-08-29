@@ -225,7 +225,7 @@
    cancels the wide shell inset so the nested scrollbar can sit at the sidebar
    edge; the browser restores that inset inside its own rows. */
 .regionArea {
-  flex: 1;
+  flex: 3 1 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -286,8 +286,9 @@
 /* webfaCe Desk: teammates list between the controls and the browsing region. */
 .teamArea {
   /* Modes : sessions = 1 : 3 by default; the divider below rewrites the share. */
-  flex: 0 0 var(--desk-team-share, 25%);
-  min-height: 96px;
+  /* grow 1 vs the sessions region's 3 → exactly 1:3 of the space left after the foot; a drag pins a pixel basis instead. */
+  flex: var(--desk-team-grow, 1) 1 var(--desk-team-basis, 0px);
+  min-height: 72px;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
