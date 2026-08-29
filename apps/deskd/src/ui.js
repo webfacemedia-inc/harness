@@ -66,7 +66,7 @@ td.n a{color:inherit;text-decoration:none;font-weight:500}td.n a:hover{color:var
 `
 /** Page frame shared by every deskd page. */
 export function layout({ title, business, body, back = '/', backLabel = 'Back to Desk', head = '' }) {
-  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)} · webfaCe Desk</title><script src="https://insights.webfacemedia.com/api/script.js" data-site="webface" defer></script>
+  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)} · webfaCe Desk</title><script>/* Inside the desktop app the WebView cannot save files; hand the URL to the system browser (Wails 'BO:' message). */function deskDownload(u){var h=window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.external;if(h){h.postMessage('BO:'+new URL(u,location.href).href);return false}return true}</script><script src="https://insights.webfacemedia.com/api/script.js" data-site="webface" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
 <style>${CSS}.two{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}@media(max-width:600px){.two{grid-template-columns:1fr}}</style>${head}
