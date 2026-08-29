@@ -515,3 +515,5 @@
 
 /* webfaCe Desk: the sidebar's accordion header names this section; the inline label would duplicate it. */
 .sectionLabel.wide { display: none; }
+/* With the label gone the icon row sits tight under the accordion header. */
+.sectionHeader { margin-top: -30px; justify-content: flex-end; min-height: 0; }
