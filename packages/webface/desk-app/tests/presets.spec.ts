@@ -45,3 +45,13 @@ describe('generated Desk presets', () => {
     })
   }
 })
+
+describe('deliverables kit reaches every mode', () => {
+  for (const t of spec.teammates) {
+    it(`${t.id} never denies the kit tools to its delegations`, () => {
+      for (const a of rows(t.id).filter(r => r.id.startsWith('tool-ask_'))) {
+        for (const d of a.config?.agentOptions?.toolFilter?.deny ?? []) expect(d.startsWith('mcp__kit__')).toBe(false)
+      }
+    })
+  }
+})

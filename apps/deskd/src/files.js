@@ -19,10 +19,11 @@ const fmtSize = n => n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
 
 function list(dir) {
-  return readdirSync(dir, { withFileTypes: true })
+  const out = readdirSync(dir, { withFileTypes: true })
     .filter(d => !d.name.startsWith('.') && !d.name.endsWith('.bak'))
     .map(d => { const st = statSync(join(dir, d.name)); return { name: d.name, dir: d.isDirectory(), size: st.size, mtime: st.mtime } })
     .sort((a, b) => (a.dir === b.dir ? a.name.localeCompare(b.name) : a.dir ? -1 : 1))
+  return out.sort((x, y) => (y.name === 'deliverables') - (x.name === 'deliverables') || (y.dir - x.dir) || x.name.localeCompare(y.name))
 }
 
 export function page({ business, rel }) {
@@ -30,7 +31,8 @@ export function page({ business, rel }) {
   const rows = list(dir).map(e => {
     const path = [...crumbs, e.name].join('/')
     const lock = PROTECTED.has(e.name)
-    return `<tr><td class="n">${e.dir ? `📁 <a href="/files?dir=${encodeURIComponent(path)}">${esc(e.name)}</a>` : `<a href="/files/dl/${encodeURIComponent(path)}">${esc(e.name)}</a>`}</td><td class="s">${e.dir ? '' : fmtSize(e.size)}</td><td class="d">${e.mtime.toISOString().slice(0, 16).replace('T', ' ')}</td><td class="a">${e.dir || lock ? '' : `<button class="quiet" data-del="${esc(path)}">Delete</button>`}</td></tr>`
+    const previewable = /\.(pdf|png|jpe?g|gif|webp|svg|txt|md|csv|html?)$/i.test(e.name)
+    return `<tr><td class="n">${e.dir ? `📁 <a href="/files?dir=${encodeURIComponent(path)}">${esc(e.name)}</a>` : `<a href="/files/dl/${encodeURIComponent(path)}${previewable ? '?inline=1' : ''}" ${previewable ? 'target="_blank"' : ''}>${esc(e.name)}</a>`}</td><td class="s">${e.dir ? '' : fmtSize(e.size)}</td><td class="d">${e.mtime.toISOString().slice(0, 16).replace('T', ' ')}</td><td class="a">${e.dir || lock ? '' : `<button class="quiet" data-del="${esc(path)}">Delete</button>`}</td></tr>`
   }).join('')
   const crumbHtml = ['<a href="/files">Desk</a>', ...crumbs.map((c, i) => `<a href="/files?dir=${encodeURIComponent(crumbs.slice(0, i + 1).join('/'))}">${esc(c)}</a>`)].join(' / ')
   const body = `<h1>${ICONS.files} Files</h1><p class="sub"><a href="/files/export">Download everything (files and conversations)</a> · ${crumbHtml}</p>
