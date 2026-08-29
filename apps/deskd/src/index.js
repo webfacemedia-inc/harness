@@ -215,7 +215,7 @@ try {
       if (!verifySession(cookieOf(req))) { res.writeHead(302, { location: '/login?next=/routines' }); return res.end() }
       if (await routines.handle(req, res, u, { business: businessName(), readBody, tz: process.env.DESK_TZ ?? 'America/Toronto' }) !== false) return
     }
-    if (u.pathname === '/profile') {
+    if (u.pathname === '/profile' || u.pathname.startsWith('/profile/')) {
       if (!verifySession(cookieOf(req))) { res.writeHead(302, { location: `/login?next=/profile` }); return res.end() }
       if (await profile.handle(req, res, u, { business: businessName(), readBody }) !== false) return
     }

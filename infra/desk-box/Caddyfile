@@ -40,7 +40,7 @@
 	handle /browser {
 		reverse_proxy 127.0.0.1:8090
 	}
-	handle /profile {
+	handle /profile* {
 		reverse_proxy 127.0.0.1:8090
 	}
 	handle /connections* {
