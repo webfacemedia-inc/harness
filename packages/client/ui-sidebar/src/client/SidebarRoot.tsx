@@ -15,7 +15,8 @@
  * scrollbar indirection away while it is elsewhere, so a list the user is not
  * pointing at carries no bar.
  */
-import { useEffect, useRef, useState } from 'react'
+import type React from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import clsx from 'clsx'
 import {
   BrandWordmark, FishLogo,
@@ -113,6 +114,23 @@ export function SidebarRoot({
     }
   }, [pointerInside])
 
+  // Drag the modes/sessions divider: writes --desk-team-share on the sidebar column and remembers it.
+  useEffect(() => {
+    try { const v = localStorage.getItem('desk.teamShare'); if (v && column.current) column.current.style.setProperty('--desk-team-share', v) } catch { /* storage may be unavailable */ }
+  }, [])
+  const onSplitDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const root = column.current; if (root === null) return
+    e.preventDefault(); const rect = root.getBoundingClientRect()
+    const move = (ev: PointerEvent): void => {
+      const pct = Math.min(70, Math.max(10, ((ev.clientY - rect.top) / rect.height) * 100))
+      root.style.setProperty('--desk-team-share', `${pct.toFixed(1)}%`)
+    }
+    const up = (): void => {
+      window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up)
+      try { localStorage.setItem('desk.teamShare', root.style.getPropertyValue('--desk-team-share')) } catch { /* storage may be unavailable */ }
+    }
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up)
+  }, [])
   return (
     <div
       ref={column}
@@ -179,6 +197,8 @@ export function SidebarRoot({
         })}
       </div>
 
+      {/* webfaCe Desk: the modes/sessions split is 1:3 by default and draggable; the share persists per browser. */}
+      <div className={css.split} role="separator" aria-orientation="horizontal" aria-label="Resize modes and sessions" onPointerDown={onSplitDown} />
       <div className={css.regionArea}>
         {renderSlot('sidebar.workspaces', {
           wide,

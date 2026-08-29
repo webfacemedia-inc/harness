@@ -15,7 +15,8 @@
 .empty { padding: 6px 8px; font-size: 12px; color: var(--dsw-alias-text-tertiary, #8d939b); }
 
 /* Tall rosters: the list scrolls, the sidebar does not grow past the screen. */
-.list { max-height: 46vh; overflow-y: auto; overscroll-behavior: contain; }
+/* The pane (sidebar .teamArea) scrolls; the list itself is unbounded. */
+.list { max-height: none; }
 
 /* Phones: modes become a horizontal strip of chips so the sessions list keeps its room. */
 @media (max-width: 1023.98px) {
