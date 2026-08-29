@@ -13,6 +13,8 @@
 	# Sign-in lives in deskd (username+password, optional Google). Everything
 	# except the sign-in routes asks deskd whether the session cookie is good.
 	@public path /login /logout /auth/* /healthz /deskd/billing /sw.js
+	# The web shell's static server does not type PNG; the PWA icons must be image/png for iOS.
+	header /icon-*.png Content-Type image/png
 	# The desktop app probes /healthz cross-origin to validate an address.
 	header /healthz Access-Control-Allow-Origin "*"
 	handle @public {
