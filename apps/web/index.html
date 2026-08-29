@@ -13,6 +13,108 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      /* webfaCe Desk — the update experience. Inline on purpose: it must survive
+         whatever the bundle does, including a bundle that fails to load. It (a) heals a
+         page whose chunks were replaced by a deploy, and (b) offers a new build the way
+         a product should — one line of what changed, one click, same place afterwards. */
+      (function () {
+        var BUILD = null, LATER_UNTIL = 0, CARD = null, HIDDEN_SINCE = 0
+        var HEAL = 'desk.healed', KEEP = 'desk.resume'
+
+        function ss(k, v) { try { return v === undefined ? sessionStorage.getItem(k) : (v === null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v)) } catch (e) { return null } }
+        function composer() { return document.querySelector('textarea') }
+
+        /* Keep the half-written message and the place in the page across the reload. */
+        function stash() {
+          var t = composer(), sc = 0
+          try { document.querySelectorAll('*').forEach(function (e) { if (e.scrollHeight > e.clientHeight + 40 && e.scrollTop > sc) sc = e.scrollTop }) } catch (e) {}
+          ss(KEEP, JSON.stringify({ draft: t ? t.value : '', scroll: sc, at: Date.now() }))
+        }
+        function restore() {
+          var raw = ss(KEEP); if (!raw) return; ss(KEEP, null)
+          var keep; try { keep = JSON.parse(raw) } catch (e) { return }
+          if (!keep || Date.now() - keep.at > 120000) return
+          var tries = 0
+          var timer = setInterval(function () {
+            var t = composer(); tries++
+            if (t) {
+              clearInterval(timer)
+              if (keep.draft) {
+                var set = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set
+                set.call(t, keep.draft); t.dispatchEvent(new Event('input', { bubbles: true })); t.focus()
+              }
+              if (keep.scroll) setTimeout(function () {
+                document.querySelectorAll('*').forEach(function (e) { if (e.scrollHeight > e.clientHeight + 40) e.scrollTop = keep.scroll })
+              }, 400)
+            } else if (tries > 40) clearInterval(timer)
+          }, 250)
+        }
+
+        function update() { stash(); location.reload() }
+
+        function card(headline) {
+          if (CARD || Date.now() < LATER_UNTIL) return
+          var wrap = document.createElement('div')
+          wrap.setAttribute('role', 'status')
+          wrap.style.cssText = 'position:fixed;left:16px;bottom:16px;z-index:2147483000;max-width:330px;background:#fff;color:#152029;border:1px solid #dfe6ec;border-left:4px solid #3499cc;border-radius:12px;box-shadow:0 12px 34px rgba(21,32,41,.16);padding:14px 16px;font:14px/1.5 "Inter Tight",-apple-system,"Segoe UI",system-ui,sans-serif'
+          var h = document.createElement('div'); h.textContent = 'Desk just got better'; h.style.cssText = 'font-weight:600;margin-bottom:2px'
+          var p = document.createElement('div'); p.textContent = headline || 'A new version is ready.'; p.style.cssText = 'color:#5a6a78;font-size:13px;margin-bottom:10px'
+          var row = document.createElement('div'); row.style.cssText = 'display:flex;gap:8px;align-items:center'
+          var go = document.createElement('button'); go.textContent = 'Update'
+          go.style.cssText = 'border:0;background:#1f6f99;color:#fff;font:inherit;font-weight:600;font-size:13px;padding:7px 14px;border-radius:8px;cursor:pointer'
+          go.onclick = update
+          var later = document.createElement('button'); later.textContent = 'Later'
+          later.style.cssText = 'border:0;background:transparent;color:#5a6a78;font:inherit;font-size:13px;padding:7px 6px;cursor:pointer'
+          later.onclick = function () { LATER_UNTIL = Date.now() + 1800000; wrap.remove(); CARD = null }
+          var more = document.createElement('a'); more.textContent = "What's new"; more.href = '/whats-new'
+          more.style.cssText = 'margin-left:auto;color:#1f6f99;font-size:12.5px;text-decoration:none'
+          row.appendChild(go); row.appendChild(later); row.appendChild(more)
+          wrap.appendChild(h); wrap.appendChild(p); wrap.appendChild(row)
+          document.body.appendChild(wrap); CARD = wrap
+        }
+
+        /* An update while nobody is looking should simply happen. */
+        function unattended() {
+          if (document.hidden && HIDDEN_SINCE && Date.now() - HIDDEN_SINCE > 60000) return true
+          var t = composer()
+          if (t && (t.value.trim() || document.activeElement === t)) return false
+          return document.hidden
+        }
+
+        function check() {
+          fetch('/deskd/build', { credentials: 'same-origin', cache: 'no-store' })
+            .then(function (r) { return r.ok ? r.json() : null })
+            .then(function (j) {
+              if (!j || !j.build) return
+              if (BUILD === null) { BUILD = j.build; return }
+              if (j.build === BUILD) return
+              if (unattended()) update(); else card(j.headline)
+            })
+            .catch(function () {})
+        }
+
+        /* A page whose chunks a deploy replaced: reload once, never in a loop. */
+        function healable(m) { return /dynamically imported module|Importing a module script failed|Unexpected token '<'|MIME type|Failed to fetch/i.test(String(m || '')) }
+        function heal(m) {
+          if (!healable(m) || ss(HEAL)) return
+          ss(HEAL, '1'); stash(); location.reload()
+        }
+        addEventListener('error', function (e) { heal(e && (e.message || (e.target && e.target.src))) }, true)
+        addEventListener('unhandledrejection', function (e) { heal(e && e.reason && (e.reason.message || e.reason)) })
+
+        addEventListener('visibilitychange', function () {
+          if (document.hidden) { HIDDEN_SINCE = Date.now(); return }
+          HIDDEN_SINCE = 0; check()
+        })
+        addEventListener('load', function () {
+          restore()
+          /* The app mounted, so whatever we healed is behind us. */
+          setTimeout(function () { if (document.querySelector('#root') && document.querySelector('#root').childElementCount) ss(HEAL, null) }, 4000)
+        })
+        check(); setInterval(check, 60000)
+      })()
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

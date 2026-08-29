@@ -8,7 +8,7 @@
 // Heartbeats to DESK_API_URL every 60s when set. Loopback only; Caddy fronts it.
 import { createHmac, timingSafeEqual, randomBytes } from 'node:crypto'
 import { createServer } from 'node:http'
-import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync , statSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { OAuth2Client } from 'google-auth-library'
@@ -75,6 +75,24 @@ const page = (title, body) => layout({ title, business: businessName(), body: `<
 let harnessUp = false
 async function probeHarness() { try { const r = await fetch('http://127.0.0.1:3080/', { signal: AbortSignal.timeout(2000) }); harnessUp = r.ok } catch { harnessUp = false } }
 probeHarness(); setInterval(probeHarness, 3000).unref()
+/** The shell's build, as a date the owner and support can compare. */
+function buildLine() {
+  try {
+    const st = statSync(join(process.env.DESK_HARNESS_DIR ?? '/srv/desk/harness', 'apps/web/dist/index.html'))
+    const day = new Date(st.mtimeMs).toLocaleDateString('en-CA', { year: 'numeric', month: 'short', day: 'numeric' })
+    return `<p class="h" style="float:right;margin:0;font-size:12px">Build ${esc(day)} · <a href="/whats-new">What's new</a></p>`
+  } catch { return '' }
+}
+/** Owner-facing release notes from WHATS-NEW.md, newest first. */
+function whatsNew() {
+  try {
+    const md = readFileSync(join(process.env.DESK_HARNESS_DIR ?? '/srv/desk/harness', 'WHATS-NEW.md'), 'utf8')
+    return md.split(/^## /m).slice(1).map(block => {
+      const [date, ...rest] = block.split('\n')
+      return { date: date.trim(), lines: rest.map(l => l.trim()).filter(Boolean) }
+    }).filter(e => e.lines.length > 0)
+  } catch { return [] }
+}
 function status() {
   let accounts = []
   try { accounts = cfg.listAccounts() } catch {}
@@ -171,6 +189,14 @@ const server = createServer(async (req, res) => {
         || u.pathname === '/deskd/google/client' || u.pathname.startsWith('/oauth/') || u.pathname === '/billing' || u.pathname === '/files/export'
       if (ownerOnly && sess?.r === 'phone') { res.writeHead(403, { 'content-type': 'text/html; charset=utf-8' }); return res.end(page('Owner only', `<p>Settings are changed from an owner sign-in, not a phone session. <a href="/logout">Sign out</a> and sign in again without ticking "phone".</p>`)) }
     }
+    if (u.pathname === '/whats-new') {
+      if (!verifySession(cookieOf(req))) { res.writeHead(302, { location: '/login?next=/whats-new' }); return res.end() }
+      const entries = whatsNew().slice(0, 10)
+      const body = `<h1>What's new</h1><p class="sub">Desk improves in the background; this is what changed.</p>
+${entries.map(e => `<section><h2>${ICONS.clock}${esc(e.date)}</h2>${e.lines.map(l => `<p class="h">${esc(l)}</p>`).join('')}</section>`).join('') || '<section><p class="h">Nothing noted yet.</p></section>'}`
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' })
+      return res.end(layout({ title: "What's new", business: businessName(), body }))
+    }
     if (u.pathname === '/billing') {
       // Plan, status and usage for this Desk; the Stripe portal only when the store bills it.
       const sess = verifySession(cookieOf(req)); if (!sess || sess.r === 'phone') { res.writeHead(302, { location: '/login?next=/billing' }); return res.end() }
@@ -189,7 +215,7 @@ const server = createServer(async (req, res) => {
 <section><h2>${ICONS.business}Plan</h2><div class="row"><span>Desk for ${plan === 'operators' ? 'Operators' : 'Business'}</span><strong><span class="${state[1]}">${esc(state[0])}</span></strong></div><div class="row"><span>Includes</span><strong>${plan === 'operators' ? 'Everything in Business, the studio playbook, a Desk per client' : 'Every mode, all connections, desktop + phone + web, 10 GB of files, nightly backups kept 30 days'}</strong></div>${bill.portalUrl && bill.state === 'past_due' ? `<p class="h"><a class="btn" href="${esc(bill.portalUrl)}">Update your card</a></p>` : ''}</section>
 <section><h2>${ICONS.clock}Usage</h2><p class="h">Tokens are the unit the model account bills in; this is what Desk has used on yours.</p><div class="row"><span>Today</span><strong>${k(use.todayTokens)} tokens <small>+ ${k(use.todayCached)} cached</small></strong></div><div class="row"><span>This month</span><strong>${k(use.monthTokens)} tokens · ${use.sessions ?? 0} conversations</strong></div></section>
 <section><h2>${ICONS.shield}Subscription</h2>${portal ? `<p class="h">Invoices, receipts, the card on file, and cancelling — all on your Stripe page. It comes back here when you're done.</p><a class="btn" href="${esc(portal)}">Manage subscription</a>` : `<p class="h">${esc(portalNote)} For invoices or changes, write to <a href="mailto:${esc(process.env.DESK_CONTACT_EMAIL ?? 'tommy@webfacemedia.com')}">${esc(process.env.DESK_CONTACT_EMAIL ?? 'tommy@webfacemedia.com')}</a>.</p>`}</section>
-<section><h2>${ICONS.files}Your data</h2><p class="h">Backed up nightly in Toronto and kept 30 days. You can <a href="/files/export">download everything</a> at any time; if the subscription ends, the Desk stops and a final copy is kept 30 days.</p></section>`
+<section><h2>${ICONS.files}Your data</h2>${buildLine()}<p class="h">Backed up nightly in Toronto and kept 30 days. You can <a href="/files/export">download everything</a> at any time; if the subscription ends, the Desk stops and a final copy is kept 30 days.</p></section>`
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' })
       return res.end(layout({ title: 'Billing', business: businessName(), body }))
     }
@@ -270,6 +296,15 @@ try {
       return json(res, 200, await push.send(HOST, { kind: 'test', sessionId: '', title: 'Desk notifications are on', body: 'You will hear from Desk when it needs you.' }))
     }
     if (u.pathname === '/healthz') { res.writeHead(200, { 'content-type': 'text/plain' }); return res.end('ok') }
+    if (u.pathname === '/deskd/build') {
+      // What an open page compares itself against: the shell's build stamp, and the one
+      // line of what changed that the update notice shows.
+      const dist = join(process.env.DESK_HARNESS_DIR ?? '/srv/desk/harness', 'apps/web/dist/index.html')
+      let build = 'dev'
+      try { const st = statSync(dist); build = `${Math.round(st.mtimeMs)}-${st.size}` } catch {}
+      res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' })
+      return res.end(JSON.stringify({ build, headline: whatsNew()[0]?.lines[0] ?? '' }))
+    }
     if (u.pathname === '/deskd/status') { res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify(status())) }
     if (u.pathname === '/deskd/google/client' && req.method === 'POST') {
       const raw = JSON.parse(await readBody(req))

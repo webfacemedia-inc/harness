@@ -31,20 +31,16 @@ Env keys and what reads them: `infra/desk-box/bootstrap.sh` writes `desk.env`; `
 
 ## Deploying to a box (the demo)
 
-```
-ssh root@143.198.42.231
-cd /srv/desk/harness && sudo -u desk git checkout -q -- . && sudo -u desk git pull -q origin desk
-sudo -u desk pnpm install --frozen-lockfile            # only when dependencies changed
-sudo -u desk pnpm run build:lib:host                    # packages/webface/* (host plugins) changed
-sudo -u desk pnpm run build:lib:client                  # packages/client/* changed
-sudo -u desk pnpm run build:web                         # the web shell
-systemctl restart deskd deskapi desk-harness
-install -o caddy -g caddy -m 644 apps/site/X /srv/desk/site/X   # site pages (served from /srv/desk/site, NOT the checkout)
-cp infra/desk-box/Caddyfile /etc/caddy/Caddyfile; cp infra/desk-box/webfacedesk.caddy /etc/caddy/conf.d/; systemctl reload caddy
-```
-`apps/deskd` and `apps/deskapi` are plain Node — restart is enough. `apps/desk-kit`, `apps/google-mcp`, `apps/wordpress-mcp` are spawned per session — restart `desk-harness`. Presets (`apps/cli/config`) and `packages/webface/desk-app/cordis.patch.yml` are read at harness start.
+Always through the script — never `build:web` by hand:
 
-Verify like a customer, not with grep: Playwright against `https://demo.webfacedesk.app` (owner password in `~/PROJECTS/2026/webface-desk/CREDENTIALS.local.md`), WebKit engine for anything the desktop app shows, iPhone profile for phone layouts. Every page deskd serves is `no-store`.
+```
+ssh root@143.198.42.231 'bash /srv/desk/harness/scripts/desk-deploy.sh --client --web'
+```
+Flags: `--install` (dependencies changed), `--host` (packages/webface), `--client` (packages/client), `--web` (the shell), `--site` (apps/site → /srv/desk/site), `--caddy` (Caddyfile + conf.d, validated before reload), `--all`, `--no-pull`.
+
+**Why the script and not the commands.** The shell's chunks are content-hashed and `build:web` empties `apps/web/dist/assets`; a page that is already open then asks for chunks that no longer exist, and the SPA fallback answers those with `index.html` — HTTP 200 of HTML, which the browser tries to run as JavaScript. That is the white screen. The script keeps the previous build's files beside the new ones (pruned after 14 days untouched), so open pages keep working until they take the update. `apps/deskd` and `apps/deskapi` are plain Node — a restart is enough; MCP servers (`desk-kit`, `google-mcp`, `wordpress-mcp`) are spawned per session, so restart `desk-harness`.
+
+Every user-visible change adds a line to `WHATS-NEW.md` (owner language, no jargon): it is what the update notice and `/whats-new` show.
 
 ## Releasing the desktop app
 
