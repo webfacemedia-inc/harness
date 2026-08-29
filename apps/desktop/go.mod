@@ -36,3 +36,6 @@ require (
 )
 
 // replace github.com/wailsapp/wails/v2 v2.12.0 => /Users/webfacemedia/go/pkg/mod
+
+// Local copy with a WKDownload delegate: the stock WebView cannot save files (apps/desktop/third_party/wails).
+replace github.com/wailsapp/wails/v2 => ./third_party/wails
