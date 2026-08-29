@@ -34,9 +34,14 @@ function writeServers(list) {
   }).join('')
   // New plugin rows only mount from an `insert:` list; a bare top-level id
   // would be read as a patch to an existing row and silently ignored.
-  const block = rows ? `- insert:\n${rows}` : ''
+  const block = rows ? `- insert:\n    # generation: ${Date.now()}\n${rows}` : ''
   s = s.trimEnd() + `\n\n${MARK_BEGIN}\n${block}${MARK_END}\n`
   writeAtomic(PATCH, s)  // holds MCP headers / app passwords: private + atomic
+}
+function harnessLogMarker() { return Date.now() }
+async function harnessReconnected(sinceMs) {
+  const { execFile } = await import('node:child_process')
+  return new Promise(resolve => execFile('journalctl', ['-u', 'desk-harness', '--since', new Date(sinceMs - 1000).toISOString(), '--no-pager', '-o', 'cat'], (e, out) => resolve(!e && /mcp.*(reconnect|connected|discover|tools)/i.test(out))))
 }
 function restartHarness() {
   return new Promise(r => execFile('sudo', ['-n', '/usr/bin/systemctl', 'restart', 'desk-harness'], () => r()))
@@ -46,7 +51,7 @@ function shell(title, inner, business) { return layout({ title, business, body: 
 
 export function page({ business, host, google, webface, servers, msg, err }) {
   const gc = google.clientConfigured, accounts = google.accounts
-  const inner = `<h1>Connections</h1><p class="sub">Desk uses these on your behalf. Every account here is yours — nothing is shared with anyone else.</p>
+  const inner = `<h1>Connections</h1><form method="post" action="/connections/refresh" style="float:right;margin:4px 0 0"><button type="submit" class="ghost" title="Re-discover the tools every connected service offers">Refresh tools</button></form><p class="sub">Desk uses these on your behalf. Every account here is yours — nothing is shared with anyone else.</p>
 ${msg ? `<div class="msg ok">${esc(msg)}</div>` : ''}${err ? `<div class="msg err">${esc(err)}</div>` : ''}
 <section><h2>${ICONS.mail}Google — Gmail, Calendar, Drive, Contacts ${accounts.length ? `<span class="pill">${accounts.length} connected</span>` : gc ? '<span class="pill off">app saved · no account yet</span>' : '<span class="pill off">not set up</span>'}</h2>
 <p style="color:var(--mute);margin:0 0 8px">Google requires each business to use its own Google app for email access. It takes about five minutes and is done once.</p>
@@ -137,6 +142,16 @@ export async function handle(req, res, u, ctx) {
   if (p === '/connections/google/disconnect' && req.method === 'POST') {
     const f = new URLSearchParams(await readBody(req)); const a = f.get('account') ?? ''
     const t = cfg.tokenPath(a); if (existsSync(t)) unlinkSync(t); return redirect({ msg: `${a} disconnected.` })
+  }
+  if (p === '/connections/refresh' && req.method === 'POST') {
+    // Re-discover tools on every connection: rewriting the managed block is a config change the
+    // harness hot-swaps (disconnect + reconnect + tools/list), so new tools a service added show up
+    // without a full restart. Falls back to a restart if the hot swap does not happen.
+    const before = harnessLogMarker()
+    writeServers(readServers())
+    await new Promise(r => setTimeout(r, 6000))
+    if (!(await harnessReconnected(before))) { restartHarness(); return redirect({ msg: 'Tools are being refreshed — Desk is restarting, give it half a minute.' }) }
+    return redirect({ msg: 'Tools refreshed. New tools show from the next message.' })
   }
   if (p === '/connections/wordpress' && req.method === 'POST') {
     const f = new URLSearchParams(await readBody(req)); const url = (f.get('url') ?? '').trim().replace(/\/+$/, ''), user = (f.get('user') ?? '').trim(), password = (f.get('password') ?? '').trim()
