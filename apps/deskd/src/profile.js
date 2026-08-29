@@ -2,7 +2,7 @@
 // it behaves. Saved as profile.json, rendered into the workspace AGENTS.md
 // (read by the model every turn) — nothing else writes that file.
 import { writeAtomic } from './fsx.js'
-import { existsSync, readFileSync, writeFileSync, copyFileSync, mkdirSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync, copyFileSync, mkdirSync, unlinkSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { layout, ICONS } from './ui.js'
 
@@ -43,6 +43,7 @@ You are Desk, the business assistant for ${p.business}${p.owner ? `, working for
 ${p.does}
 ${p.address ? `\nAddress: ${p.address}` : ''}${p.area ? `\nArea served: ${p.area}` : ''}${p.hours ? `\nHours: ${p.hours}` : ''}${p.payment ? `\nPayment: ${p.payment}` : ''}${p.services ? `\n\nServices:\n${p.services}` : ''}${p.website ? `\nWebsite: ${p.website}` : ''}${p.phone ? `\nPhone: ${p.phone}` : ''}${p.email ? `\nEmail: ${p.email}` : ''}
 
+${p.brand?.primary || p.brand?.logo ? `\n## Brand\nColours: ${p.brand.primary ?? '—'} (primary), ${p.brand.accent ?? p.brand.primary ?? '—'} (accent). Font: ${p.brand.font ?? 'classic'}.${p.brand.tagline ? ` Tagline: "${p.brand.tagline}".` : ''} The kit tools (make_pdf, make_document, make_deck, make_sheet, brand_image) apply it to every file.\n` : ''}
 ## Tone
 ${TONES[p.tone] ?? TONES.friendly}${p.toneNotes ? `\n${p.toneNotes}` : ''}
 
@@ -59,6 +60,9 @@ _Edit this from Desk → Business (never by hand; it is regenerated)._
 `
 }
 
+/** Write the profile as-is (no AGENTS.md rebuild) — used for brand/logo side-saves. */
+export function saveProfileRaw(p) { mkdirSync(dirname(PROFILE), { recursive: true }); writeAtomic(PROFILE, JSON.stringify({ ...p, updatedAt: new Date().toISOString() }, null, 2)) }
+export const BRAND_DIR = process.env.DESK_BRAND_DIR ?? join(dirname(WORK), 'brand')
 export function saveProfile(p) {
   mkdirSync(dirname(PROFILE), { recursive: true }); mkdirSync(WORK, { recursive: true })
   writeAtomic(PROFILE, JSON.stringify({ ...p, updatedAt: new Date().toISOString() }, null, 2))
@@ -94,6 +98,14 @@ ${field('toneNotes', 'Anything else about the voice', p.toneNotes, { rows: 2, ph
 <section><h2>${ICONS.shield}Always ask you first before</h2><p class="h">Desk stops and waits for your approval on these. Untick only what you are happy for it to do on its own.</p>
 <div class="checks">${APPROVALS.map(([k, label]) => `<label><input type="checkbox" name="approvals" value="${k}" ${(p.approvals ?? APPROVALS.map(a => a[0])).includes(k) ? 'checked' : ''}>${label}</label>`).join('')}</div>
 </section>
+<section><h2>${ICONS.business}Brand</h2><p class="h">Every document, quote, deck and graphic Desk makes wears this. Leave it blank and Desk can find it from your website — say "set up my brand" in chat.</p>
+<div class="two">${field('brand_primary', 'Main colour', p.brand?.primary ?? '', { ph: '#3499cc', hint: '(hex)' })}${field('brand_accent', 'Accent colour', p.brand?.accent ?? '', { ph: '#1f6f99', hint: '(hex, optional)' })}</div>
+<label for="brand_font">Type style</label><select id="brand_font" name="brand_font">${['editorial', 'classic', 'plain'].map(k => `<option value="${k}" ${(p.brand?.font ?? 'classic') === k ? 'selected' : ''}>${{ editorial: 'Editorial — serif headings, clean text', classic: 'Classic — Georgia headings, Helvetica text', plain: 'Plain — Arial throughout' }[k]}</option>`).join('')}</select>
+${field('brand_tagline', 'Tagline', p.brand?.tagline ?? '', { ph: 'We write, design and build.', hint: '(optional; appears on letterhead footers)' })}
+<div class="row"><span>Logo</span><strong>${p.brand?.logo ? `<img src="/profile/logo" alt="" style="height:36px;vertical-align:middle;margin-right:8px">saved` : 'none yet'}</strong></div>
+<p class="h">Upload a PNG, JPG or SVG logo: <input type="file" id="logo" accept=".png,.jpg,.jpeg,.svg,.webp"> <span id="logostatus"></span></p>
+<script>document.getElementById('logo').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; const st = document.getElementById('logostatus'); st.textContent = 'Uploading…'; const r = await fetch('/profile/logo', { method: 'PUT', body: f, credentials: 'same-origin', headers: { 'x-filename': f.name } }); st.textContent = r.ok ? 'Saved — it will show after you press Save.' : 'Upload failed (' + r.status + ')' })</script>
+</section>
 <section><h2>${ICONS.rules}House rules</h2><p class="h">Things Desk must never say or promise, and anything it should always do. One per line.</p>
 ${field('rules', 'Rules', p.rules, { rows: 5, ph: 'Never promise same-day service.\nAlways offer the maintenance plan after a repair.\nQuotes are valid for 30 days.' })}
 ${field('notes', 'Anything else Desk should know', p.notes, { rows: 3, hint: '(optional)' })}
@@ -113,10 +125,27 @@ export async function handle(req, res, u, { business, readBody }) {
     const { usage } = await import('./usage.js')
     return res.end(page({ business: p?.business ?? business, p, first: !isComplete(p), msg: u.searchParams.get('msg') ?? '', usage: usage(process.env.DESK_TZ ?? 'America/Toronto') }))
   }
+  if (u.pathname === '/profile/logo' && req.method === 'PUT') {
+    const name = String(req.headers['x-filename'] ?? 'logo.png'); const ext = (name.match(/\.(png|jpe?g|svg|webp)$/i)?.[1] ?? 'png').toLowerCase()
+    const chunks = []; let size = 0
+    for await (const c of req) { size += c.length; if (size > 5 * 1024 * 1024) { res.writeHead(413); return res.end('Logo must be under 5 MB') } chunks.push(c) }
+    mkdirSync(BRAND_DIR, { recursive: true })
+    for (const old of ['png', 'jpg', 'jpeg', 'svg', 'webp']) { const q = join(BRAND_DIR, `logo.${old}`); if (existsSync(q)) unlinkSync(q) }
+    const dest = join(BRAND_DIR, `logo.${ext}`); writeFileSync(dest, Buffer.concat(chunks), { mode: 0o644 })
+    const cur = readProfile() ?? {}; cur.brand = { ...(cur.brand ?? {}), logo: dest }; saveProfileRaw(cur)
+    res.writeHead(200); return res.end('ok')
+  }
+  if (u.pathname === '/profile/logo' && req.method === 'GET') {
+    const b = readProfile()?.brand; if (!b?.logo || !existsSync(b.logo)) { res.writeHead(404); return res.end() }
+    const ext = b.logo.split('.').pop().toLowerCase(); res.writeHead(200, { 'content-type': ext === 'svg' ? 'image/svg+xml' : ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg', 'cache-control': 'no-cache' }); return res.end(readFileSync(b.logo))
+  }
   if (u.pathname === '/profile' && req.method === 'POST') {
     const f = new URLSearchParams(await readBody(req))
     const get = k => (f.get(k) ?? '').trim().slice(0, 4000)
-    const p = { business: get('business'), owner: get('owner'), does: get('does'), services: get('services'), address: get('address'), area: get('area'), hours: get('hours'), payment: get('payment'), website: get('website'), phone: get('phone'), email: get('email'), tone: TONES[get('tone')] ? get('tone') : 'friendly', toneNotes: get('toneNotes'), approvals: f.getAll('approvals').filter(k => APPROVALS.some(a => a[0] === k)), rules: get('rules'), notes: get('notes') }
+    const prev = readProfile() ?? {}
+    const hex = v => (/^#?[0-9a-f]{6}$/i.test(get(v)) ? '#' + get(v).replace('#', '').toLowerCase() : (prev.brand?.[v.replace('brand_', '')] ?? ''))
+    const brand = { ...(prev.brand ?? {}), primary: hex('brand_primary'), accent: hex('brand_accent'), font: ['editorial', 'classic', 'plain'].includes(get('brand_font')) ? get('brand_font') : (prev.brand?.font ?? 'classic'), tagline: get('brand_tagline') }
+    const p = { brand, business: get('business'), owner: get('owner'), does: get('does'), services: get('services'), address: get('address'), area: get('area'), hours: get('hours'), payment: get('payment'), website: get('website'), phone: get('phone'), email: get('email'), tone: TONES[get('tone')] ? get('tone') : 'friendly', toneNotes: get('toneNotes'), approvals: f.getAll('approvals').filter(k => APPROVALS.some(a => a[0] === k)), rules: get('rules'), notes: get('notes') }
     if (!p.business || !p.does) { res.writeHead(400, { 'content-type': 'text/html; charset=utf-8' }); return res.end(page({ business, p, first: true, msg: 'Business name and what you do are needed.' })) }
     const wasComplete = isComplete(readProfile())
     saveProfile(p)

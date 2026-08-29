@@ -128,11 +128,12 @@ export function ProducedFiles({
             // On a cloud Desk (deskd in front) the Host opener has no desktop to open on:
             // the file is served by deskd instead, in a new tab (PDFs and images preview there).
             onClick={() => {
-              if (document.documentElement.hasAttribute('data-desk-cloud')) window.open(`/files/open?path=${encodeURIComponent(path)}`, '_blank', 'noopener')
+              if (path.startsWith('/files/dl/')) window.open(`${path}${path.includes('?') ? '&' : '?'}inline=1`, '_blank', 'noopener')
+              else if (document.documentElement.hasAttribute('data-desk-cloud')) window.open(`/files/open?path=${encodeURIComponent(path)}`, '_blank', 'noopener')
               else openFile(path)
             }}
           >
-            {basename(path)}
+            {basename(path).replace(/\?.*$/, '')}
           </button>
         ))}
         {hidden > 0 && <span className={css.more}>{moreLabel(t, hidden)}</span>}
@@ -151,7 +152,7 @@ export function ProducedFiles({
             tabIndex={-1}
             className={`${css.file} ${css.probe}`}
           >
-            {basename(path)}
+            {basename(path).replace(/\?.*$/, '')}
           </button>
         ))}
         <span ref={moreProbe} className={`${css.more} ${css.probe}`} />

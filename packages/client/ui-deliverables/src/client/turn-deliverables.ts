@@ -124,6 +124,13 @@ export const deliverablesDefinition: ConversationNodeDefinition<DeliverablesStat
     const callId = String(match.event.data.message.source.callId)
     const additions = producedPaths(context.state.calls.get(callId) ?? null)
       .map(path => ({ seq: match.event.seq, path }))
+    // A file made by a kit tool (webfaCe Desk) announces itself as a served link in
+    // its result text; the link is the "path" the chip opens.
+    const text = (result as { text?: string }).text ?? ''
+    for (const m of text.matchAll(/\]\((\/files\/dl\/[^)\s]+)\)/g)) {
+      const path = m[1]
+      if (path !== undefined) additions.push({ seq: match.event.seq, path })
+    }
     return additions.length === 0
       ? context.state
       : { ...context.state, produced: [...context.state.produced, ...additions] }

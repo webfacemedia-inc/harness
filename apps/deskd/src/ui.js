@@ -69,6 +69,6 @@ export function layout({ title, business, body, back = '/', backLabel = 'Back to
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)} · webfaCe Desk</title><script src="https://insights.webfacemedia.com/api/script.js" data-site="webface" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
-<style>${CSS}</style>${head}
+<style>${CSS}.two{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}@media(max-width:600px){.two{grid-template-columns:1fr}}</style>${head}
 <body><div class="top"><a class="brand" href="${esc(back)}">${MARK}<span class="wm">webfaCe<em>Desk</em></span></a><span class="who">${esc(business)}</span></div><main>${body}</main></body></html>`
 }

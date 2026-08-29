@@ -24,7 +24,7 @@ export const count = () => (read().subs ?? []).length
 /** Send to every device; drop subscriptions the push service says are gone. */
 export async function send(host, notice) {
   keys(host); const s = read(); const subs = s.subs ?? []
-  const url = notice.kind === 'handover' ? '/browser' : '/'
+  const url = notice.url ?? (notice.kind === 'handover' ? '/browser' : '/')
   const payload = JSON.stringify({ title: notice.title, body: notice.body, url, tag: `${notice.kind}:${notice.sessionId}` })
   let ok = 0
   for (const entry of subs) {
