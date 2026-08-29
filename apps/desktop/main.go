@@ -8,7 +8,6 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/menu/keys"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 //go:embed all:frontend/dist
@@ -27,7 +26,7 @@ func main() {
 	desk := appMenu.AddSubmenu("Desk")
 	// A keyboard path back to the address screen: focus inside the Desk iframe never reaches the overlay button.
 	desk.AddText("Change Desk…", keys.Combo("d", keys.CmdOrCtrlKey, keys.ShiftKey), func(_ *menu.CallbackData) {
-		runtime.EventsEmit(app.ctx, "desk:change")
+		app.RequestChange()
 	})
 	appMenu.Append(menu.EditMenu())
 

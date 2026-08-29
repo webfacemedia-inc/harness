@@ -8,7 +8,8 @@ import (
 
 // App is the Wails-bound application: a window onto a Desk.
 type App struct {
-	ctx context.Context
+	ctx             context.Context
+	changeRequested bool
 }
 
 // NewApp creates the application struct.
@@ -26,6 +27,19 @@ func (a *App) startup(ctx context.Context) {
 			runtime.EventsEmit(ctx, "desk:translocated")
 		}
 	}()
+}
+
+// RequestChange is called from the Desk menu: the next load of the app page shows the address screen instead of opening the saved Desk.
+func (a *App) RequestChange() {
+	a.changeRequested = true
+	runtime.WindowReloadApp(a.ctx)
+}
+
+// ChangeRequested reports (and clears) a pending Change Desk request.
+func (a *App) ChangeRequested() bool {
+	v := a.changeRequested
+	a.changeRequested = false
+	return v
 }
 
 // Version reports the build's release version ("dev" for local builds).
