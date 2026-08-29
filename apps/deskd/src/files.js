@@ -73,8 +73,9 @@ ${kind === 'image' ? `<div class="view"><img src="${dl}?inline=1" alt=""></div>`
     const rel = abs.slice(resolve(ROOT).length + 1)
     res.writeHead(302, { location: `/files/view?p=${encodeURIComponent(rel)}` }); return res.end()
   }
-  if (p.startsWith('/files/dl/') && req.method === 'GET') {
+  if (p.startsWith('/files/dl/') && (req.method === 'GET' || req.method === 'HEAD')) {
     const f = safe(p.slice('/files/dl/'.length)); if (!existsSync(f) || statSync(f).isDirectory()) { res.writeHead(404); return res.end('Not found') }
+    if (req.method === 'HEAD') { res.writeHead(200, { 'content-type': MIME[extname(f).toLowerCase()] ?? 'application/octet-stream', 'content-length': statSync(f).size, 'content-disposition': `${u.searchParams.get('inline') ? 'inline' : 'attachment'}; filename="${encodeURIComponent(basename(f))}"` }); return res.end() }
     res.writeHead(200, { 'content-type': MIME[extname(f).toLowerCase()] ?? 'application/octet-stream', 'content-length': statSync(f).size, 'content-disposition': `${u.searchParams.get('inline') ? 'inline' : 'attachment'}; filename="${encodeURIComponent(basename(f))}"` })
     return pipeline(createReadStream(f), res)
   }
