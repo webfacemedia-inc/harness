@@ -58,10 +58,19 @@ fi
 if [ "$CADDY" = 1 ]; then
   echo "==> caddy"
   mkdir -p /etc/caddy/conf.d
+  BACKUP=/etc/caddy/Caddyfile.prev
+  [ -f /etc/caddy/Caddyfile ] && cp /etc/caddy/Caddyfile "$BACKUP"
   cp "$H/infra/desk-box/Caddyfile" /etc/caddy/Caddyfile
-  [ -f "$H/infra/desk-box/webfacedesk.caddy" ] && [ -d /etc/caddy/conf.d ] && cp "$H/infra/desk-box/webfacedesk.caddy" /etc/caddy/conf.d/ || true
-  caddy validate --config /etc/caddy/Caddyfile >/dev/null 2>&1 || { echo "caddy config is invalid — not reloading" >&2; exit 1; }
-  systemctl reload caddy
+  [ -f "$H/infra/desk-box/webfacedesk.caddy" ] && cp "$H/infra/desk-box/webfacedesk.caddy" /etc/caddy/conf.d/ || true
+  # The site address comes from $DESK_HOST, so validation needs the box's environment —
+  # without it the site block reads as a global options block and every directive looks unknown.
+  if ( set -a; . "$D/desk.env" >/dev/null 2>&1; set +a; caddy validate --adapter caddyfile --config /etc/caddy/Caddyfile >/dev/null 2>&1 ); then
+    systemctl reload caddy
+  else
+    echo "caddy config is invalid — restoring the previous one and stopping" >&2
+    [ -f "$BACKUP" ] && cp "$BACKUP" /etc/caddy/Caddyfile
+    exit 1
+  fi
 fi
 echo "==> restart"
 systemctl restart deskd
