@@ -172,15 +172,26 @@ const server = createServer(async (req, res) => {
       if (ownerOnly && sess?.r === 'phone') { res.writeHead(403, { 'content-type': 'text/html; charset=utf-8' }); return res.end(page('Owner only', `<p>Settings are changed from an owner sign-in, not a phone session. <a href="/logout">Sign out</a> and sign in again without ticking "phone".</p>`)) }
     }
     if (u.pathname === '/billing') {
-      // Owner-only (the phone fence above covers /billing via the ownerOnly list below); opens the store's customer portal.
+      // Plan, status and usage for this Desk; the Stripe portal only when the store bills it.
       const sess = verifySession(cookieOf(req)); if (!sess || sess.r === 'phone') { res.writeHead(302, { location: '/login?next=/billing' }); return res.end() }
-      if (!API || !process.env.DESK_BOX_TOKEN) return res.end(page('Billing', '<p>This Desk is not billed through the store. Write to <a href="mailto:tommy@webfacemedia.com">tommy@webfacemedia.com</a>.</p>'))
-      try {
-        const r = await fetch(`${API}/boxes/${SLUG}/portal`, { method: 'POST', headers: { authorization: `Bearer ${process.env.DESK_BOX_TOKEN}` }, signal: AbortSignal.timeout(15000) })
-        const j = await r.json()
-        if (!r.ok || !j.url) { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); return res.end(page('Billing', `<p>${esc(j.message ?? 'Billing is not available right now.')}</p>`)) }
-        res.writeHead(302, { location: j.url }); return res.end()
-      } catch (e) { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); return res.end(page('Billing', `<p>Could not reach the store: ${esc(e.message)}</p>`)) }
+      const { usage } = await import('./usage.js'); const use = usage(process.env.DESK_TZ ?? 'America/Toronto'); const bill = readBilling()
+      const plan = process.env.DESK_PLAN ?? 'business'
+      let portal = null, portalNote = ''
+      if (API && process.env.DESK_BOX_TOKEN) {
+        try {
+          const r = await fetch(`${API}/boxes/${SLUG}/portal`, { method: 'POST', headers: { authorization: `Bearer ${process.env.DESK_BOX_TOKEN}` }, signal: AbortSignal.timeout(10000) })
+          const j = await r.json().catch(() => ({})); if (r.ok && j.url) portal = j.url; else if (j.error === 'no_billing') portalNote = 'This Desk is looked after directly by webfaCeMEdia — there is no card on file here.'; else portalNote = 'The store did not answer just now; try again in a minute.'
+        } catch { portalNote = 'The store could not be reached just now; try again in a minute.' }
+      } else portalNote = 'This Desk is looked after directly by webfaCeMEdia — there is no card on file here.'
+      const state = { ok: ['Active', 'pill'], past_due: ['Payment failed — Desk is in Guided mode until the card is updated', 'pill off'], cancelled: ['Ended', 'pill off'] }[bill.state ?? 'ok'] ?? ['Active', 'pill']
+      const k = n => `${Math.round((n ?? 0) / 1000)}k`
+      const body = `<h1>Billing</h1><p class="sub">What this Desk is on, what it has used, and where to change it.</p>
+<section><h2>${ICONS.business}Plan</h2><div class="row"><span>Desk for ${plan === 'operators' ? 'Operators' : 'Business'}</span><strong><span class="${state[1]}">${esc(state[0])}</span></strong></div><div class="row"><span>Includes</span><strong>${plan === 'operators' ? 'Everything in Business, the studio playbook, a Desk per client' : 'Every mode, all connections, desktop + phone + web, 10 GB of files, nightly backups kept 30 days'}</strong></div>${bill.portalUrl && bill.state === 'past_due' ? `<p class="h"><a class="btn" href="${esc(bill.portalUrl)}">Update your card</a></p>` : ''}</section>
+<section><h2>${ICONS.clock}Usage</h2><p class="h">Tokens are the unit the model account bills in; this is what Desk has used on yours.</p><div class="row"><span>Today</span><strong>${k(use.todayTokens)} tokens <small>+ ${k(use.todayCached)} cached</small></strong></div><div class="row"><span>This month</span><strong>${k(use.monthTokens)} tokens · ${use.sessions ?? 0} conversations</strong></div></section>
+<section><h2>${ICONS.shield}Subscription</h2>${portal ? `<p class="h">Invoices, receipts, the card on file, and cancelling — all on your Stripe page. It comes back here when you're done.</p><a class="btn" href="${esc(portal)}">Manage subscription</a>` : `<p class="h">${esc(portalNote)} For invoices or changes, write to <a href="mailto:${esc(process.env.DESK_CONTACT_EMAIL ?? 'tommy@webfacemedia.com')}">${esc(process.env.DESK_CONTACT_EMAIL ?? 'tommy@webfacemedia.com')}</a>.</p>`}</section>
+<section><h2>${ICONS.files}Your data</h2><p class="h">Backed up nightly in Toronto and kept 30 days. You can <a href="/files/export">download everything</a> at any time; if the subscription ends, the Desk stops and a final copy is kept 30 days.</p></section>`
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' })
+      return res.end(layout({ title: 'Billing', business: businessName(), body }))
     }
     if (u.pathname === '/files/export') {
       // Everything on this Desk as one archive: the Desk folder and every conversation.
