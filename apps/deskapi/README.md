@@ -1,0 +1,3 @@
+# deskapi — the webfacedesk.app store back end
+
+Node service on the apex box (`127.0.0.1:8095` behind Caddy). Stripe Checkout → webhook → `provision.js` (DigitalOcean droplet from `infra/desk-box/bootstrap.sh` as user-data, Cloudflare DNS, wait for `/healthz`) → welcome page + email (Brevo) → heartbeats from boxes → nightly snapshots (30 days), the 14-day past-due stop, churn → box billing state, usage alerts, the operator console `/ops` (`ops.js`, key = `DESKAPI_OPS_KEY`), and the one-client Google sign-in relay (`/auth/google/*`, tickets signed with each box's token). State: `orders.json` (atomic, hourly `.bak`). `setup.js` creates the Stripe products/prices/webhook once. All env keys: `infra/desk-box/STOREFRONT.md`.

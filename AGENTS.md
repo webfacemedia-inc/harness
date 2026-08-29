@@ -1,5 +1,7 @@
 # AGENTS.md
 
+> **This fork ships webfaCe Desk.** Everything Desk-specific — product rules, box layout, deploy and release recipes, how to add a mode/skill/connector, the traps — is in [DESK.md](DESK.md). Read it first when the task touches `apps/desk*`, `packages/webface`, `packages/client/ui-team`, `infra/desk-box`, `apps/site`, or `apps/cli/config/desk-*`.
+
 DeepSeek Harness is a plugin-based agent harness on vendored Cordis: **everything is a plugin**. Read [docs/architecture.md](docs/architecture.md) before changing `packages/`; follow [docs/AGENTS.md](docs/AGENTS.md) for documentation.
 
 ## Pre-release stance: foundation over blast radius

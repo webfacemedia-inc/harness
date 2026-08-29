@@ -1,0 +1,5 @@
+# desk-kit — deliverables on the business's own brand
+
+MCP server (stdio) spawned by the harness for every mode (`mcp-kit` row in `packages/webface/desk-app/cordis.patch.yml`). Runs outside the sandbox, so Guided mode can make files; creating a file is never consequential, sending it is. Tools: `make_document` (Word via the vendored GenOffice docx engine + PDF), `make_pdf` (letterhead HTML → headless Chrome), `make_deck` (pptxgenjs + PDF preview), `make_sheet` (exceljs + CSV), `make_text`, `brand_image` (sharp), `make_image` (fal, needs `FAL_KEY`), `brand_get` / `brand_detect` (website or uploaded file) / `brand_set`.
+
+Every file lands in `DESK_WORK_DIR/deliverables/<date>/` and the result carries a `FILE READY` line with an absolute `/files/view?p=` link (`DESK_PUBLIC_ORIGIN`); the model repeats it, the chat chips and the phone push read it. Brand comes from `DESK_PROFILE_FILE` (`brand`) and `DESK_BRAND_DIR/logo.*`; no brand → neutral style, never ours. `pptxgenjs` is loaded from its CJS build by path (its ESM build breaks under the tsx loader). Self-test: `DESK_PROFILE_FILE=… DESK_BRAND_DIR=… DESK_WORK_DIR=… node --import tsx/esm src/selftest.js`.
