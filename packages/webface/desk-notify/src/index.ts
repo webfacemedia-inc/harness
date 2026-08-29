@@ -51,7 +51,7 @@ export function noticeFor(session: Session, event: SessionEvent): Notice | undef
     // tool-result block's nested content.
     const msg = payload.message as { content?: Array<{ toolCallId?: unknown; content?: Array<{ text?: unknown }> }> } | undefined
     const texts = (msg?.content ?? []).flatMap(b => (b.content ?? []).map(c => str(c.text)))
-    const m = /\[([^\]]+)\]\(((?:https?:\/\/[^/\s)]+)?\/files\/dl\/[^)\s]+)\)/.exec(texts.join('\n'))
+    const m = /\[([^\]]+)\]\(((?:https?:\/\/[^/\s)]+)?\/files\/(?:dl\/|view\?p=)[^)\s]+)\)/.exec(texts.join('\n'))
     if (m && m[1] !== undefined && m[2] !== undefined && /FILE READY/.test(texts.join('\n'))) {
       return { kind: 'deliverable', sessionId, title: 'Your file is ready', body: m[1], url: m[2] }
     }

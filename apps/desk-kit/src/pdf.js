@@ -34,12 +34,13 @@ h1, h2, h3 { font-family: ${brand.font.display}; color: var(--accent); margin: 1
 p { margin: 0 0 9px } ul, ol { margin: 0 0 10px 20px } li { margin: 2px 0 }
 table { border-collapse: collapse; width: 100%; margin: 8px 0 14px; font-size: 10pt } th { background: var(--accent); color: #fff; text-align: left; padding: 6px 8px } td { padding: 6px 8px; border-bottom: 1px solid var(--line) } tr:nth-child(even) td { background: var(--soft) }
 blockquote { margin: 10px 0; padding: 8px 12px; border-left: 4px solid var(--accent); background: var(--soft) } code { font-family: "Courier New", monospace; font-size: 9.5pt } pre { background: #F3F4F6; padding: 10px; border-radius: 6px; font-size: 9pt; white-space: pre-wrap }
-.foot { position: fixed; bottom: -8mm; left: 0; right: 0; font-size: 8pt; color: var(--muted); display:flex; justify-content:space-between }
+.end { margin-top: 28px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 8pt; color: var(--muted); display:flex; justify-content:space-between }
+thead { display: table-header-group } tr, blockquote, pre { page-break-inside: avoid } h2, h3 { page-break-after: avoid }
 </style></head><body>
 <div class="head"><div>${logo ? `<img src="${logo}" alt="">` : ''}</div><div style="text-align:right"><div class="biz">${esc(brand.business)}</div>${line ? `<div class="line">${esc(line)}</div>` : ''}</div></div>
 ${heading ? `<h1 class="doc">${esc(heading)}</h1><div class="date">${esc(today)}</div>` : ''}
 ${body}
-<div class="foot"><span>${esc(brand.business)}${brand.tagline ? ' · ' + esc(brand.tagline) : ''}</span><span>${esc(today)}</span></div>
+<div class="end"><span>${esc(brand.business)}${brand.tagline ? ' · ' + esc(brand.tagline) : ''}</span><span>${esc(today)}</span></div>
 </body></html>`
 }
 

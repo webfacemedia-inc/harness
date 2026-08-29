@@ -31,8 +31,7 @@ export function page({ business, rel }) {
   const rows = list(dir).map(e => {
     const path = [...crumbs, e.name].join('/')
     const lock = PROTECTED.has(e.name)
-    const previewable = /\.(pdf|png|jpe?g|gif|webp|svg|txt|md|csv|html?)$/i.test(e.name)
-    return `<tr><td class="n">${e.dir ? `📁 <a href="/files?dir=${encodeURIComponent(path)}">${esc(e.name)}</a>` : `<a href="/files/dl/${encodeURIComponent(path)}${previewable ? '?inline=1' : ''}" ${previewable ? 'target="_blank"' : ''}>${esc(e.name)}</a>`}</td><td class="s">${e.dir ? '' : fmtSize(e.size)}</td><td class="d">${e.mtime.toISOString().slice(0, 16).replace('T', ' ')}</td><td class="a">${e.dir || lock ? '' : `<button class="quiet" data-del="${esc(path)}">Delete</button>`}</td></tr>`
+    return `<tr><td class="n">${e.dir ? `📁 <a href="/files?dir=${encodeURIComponent(path)}">${esc(e.name)}</a>` : `<a href="/files/view?p=${encodeURIComponent(path)}">${esc(e.name)}</a>`}</td><td class="s">${e.dir ? '' : fmtSize(e.size)}</td><td class="d">${e.mtime.toISOString().slice(0, 16).replace('T', ' ')}</td><td class="a">${e.dir || lock ? '' : `<button class="quiet" data-del="${esc(path)}">Delete</button>`}</td></tr>`
   }).join('')
   const crumbHtml = ['<a href="/files">Desk</a>', ...crumbs.map((c, i) => `<a href="/files?dir=${encodeURIComponent(crumbs.slice(0, i + 1).join('/'))}">${esc(c)}</a>`)].join(' / ')
   const body = `<h1>${ICONS.files} Files</h1><p class="sub"><a href="/files/export">Download everything (files and conversations)</a> · ${crumbHtml}</p>
@@ -56,13 +55,23 @@ export async function handle(req, res, u, { business }) {
   if (p === '/files' && req.method === 'GET') {
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' }); return res.end(page({ business, rel: u.searchParams.get('dir') ?? '' }))
   }
+  if (p === '/files/view') {
+    // A file with a way back: the viewer keeps the Desk's bar (Back, Download) and previews what a browser can show.
+    const rel = (u.searchParams.get('p') ?? '').replace(/^\/+/, ''); const f = safe(rel)
+    if (!existsSync(f) || statSync(f).isDirectory()) { res.writeHead(404, { 'content-type': 'text/html; charset=utf-8' }); return res.end(page({ business, rel: '' })) }
+    const dl = `/files/dl/${rel.split('/').map(encodeURIComponent).join('/')}`
+    const kind = /\.(png|jpe?g|gif|webp|svg)$/i.test(rel) ? 'image' : /\.(pdf|txt|md|csv|html?)$/i.test(rel) ? 'frame' : 'none'
+    const body = `<div class="bar"><a class="btn ghost" href="/" style="margin:0;padding:7px 12px;font-size:13px">← Back to Desk</a><span class="h" style="margin-left:12px;font-size:13px;color:var(--mute)">${esc(rel.split('/').pop())}</span><a class="btn" href="${dl}" download style="margin:0 0 0 auto;padding:7px 12px;font-size:13px">Download</a></div>
+${kind === 'image' ? `<div class="view"><img src="${dl}?inline=1" alt=""></div>` : kind === 'frame' ? `<iframe class="view" src="${dl}?inline=1" title="${esc(rel)}"></iframe>` : `<div class="view none"><p>This file type has no preview here. <a href="${dl}" download>Download it</a> and open it on your computer.</p></div>`}`
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' })
+    return res.end(layout({ title: rel.split('/').pop(), business, back: '/files', head: '<style>main{max-width:none;padding:0;height:calc(100dvh - 53px);display:flex;flex-direction:column}.bar{display:flex;gap:10px;align-items:center;padding:8px 14px;background:var(--card);border-bottom:1px solid var(--line)}.view{flex:1;min-height:0;width:100%;border:0;background:#f3f4f6;display:block}img.view,.view img{max-width:100%;max-height:100%;object-fit:contain;margin:auto;display:block}.view.none{display:grid;place-items:center;color:var(--mute)}@media(max-width:600px){.bar .h{display:none}}</style>', body }))
+  }
   if (p === '/files/open') {
     // Produced-file chips hand over an absolute path; only paths inside the Desk folder are served.
     const abs = resolve(u.searchParams.get('path') ?? '')
     if (!abs.startsWith(resolve(ROOT) + '/')) { res.writeHead(404); return res.end('Not in the Desk folder') }
     const rel = abs.slice(resolve(ROOT).length + 1)
-    const inline = /\.(pdf|png|jpe?g|gif|webp|svg|txt|md|csv|html?)$/i.test(rel)
-    res.writeHead(302, { location: `/files/dl/${rel.split('/').map(encodeURIComponent).join('/')}${inline ? '?inline=1' : ''}` }); return res.end()
+    res.writeHead(302, { location: `/files/view?p=${encodeURIComponent(rel)}` }); return res.end()
   }
   if (p.startsWith('/files/dl/') && req.method === 'GET') {
     const f = safe(p.slice('/files/dl/'.length)); if (!existsSync(f) || statSync(f).isDirectory()) { res.writeHead(404); return res.end('Not found') }

@@ -20,7 +20,7 @@ const fail = (e) => ({ content: [{ type: 'text', text: `Error: ${e.message ?? e}
 const slug = s => String(s ?? 'file').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'file'
 const outDir = () => { const d = join(WORK, 'deliverables', new Date().toISOString().slice(0, 10)); mkdirSync(d, { recursive: true }); return d }
 const ORIGIN = (process.env.DESK_PUBLIC_ORIGIN ?? '').replace(/\/$/, '')  // e.g. https://demo.webfacedesk.app — links must be absolute to render as links in the chat
-const link = p => { const rel = p.startsWith(WORK) ? p.slice(WORK.length + 1) : p; return { path: p, url: `${ORIGIN}/files/dl/${rel.split('/').map(encodeURIComponent).join('/')}`, name: rel.split('/').pop() } }
+const link = p => { const rel = p.startsWith(WORK) ? p.slice(WORK.length + 1) : p; return { path: p, url: `${ORIGIN}/files/view?p=${encodeURIComponent(rel)}`, name: rel.split('/').pop() } }
 const done = (files, note = '') => { const items = files.map(link); return text(`${note ? note + '\n' : ''}FILE READY. Your reply to the owner MUST include this line exactly, so they can open it from any device:\n${items.map(i => `📄 [${i.name}](${i.url})`).join('\n')}\n(The file is also under Files → deliverables. Do not paste the whole document into the chat — the file is the deliverable.)`) }
 const unique = (dir, base, ext) => { let p = join(dir, `${base}${ext}`); for (let n = 2; existsSync(p); n++) p = join(dir, `${base}-${n}${ext}`); return p }
 

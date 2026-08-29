@@ -128,12 +128,13 @@ export function ProducedFiles({
             // On a cloud Desk (deskd in front) the Host opener has no desktop to open on:
             // the file is served by deskd instead, in a new tab (PDFs and images preview there).
             onClick={() => {
-              if (/^(https?:\/\/[^/]+)?\/files\/dl\//.test(path)) window.open(`${path}${path.includes('?') ? '&' : '?'}inline=1`, '_blank', 'noopener')
-              else if (document.documentElement.hasAttribute('data-desk-cloud')) window.open(`/files/open?path=${encodeURIComponent(path)}`, '_blank', 'noopener')
+              // Same tab: the desktop app's WebView drops new-window requests, and the viewer page has its own way back.
+              if (/^(https?:\/\/[^/]+)?\/files\/(dl\/|view\?p=)/.test(path)) window.location.assign(path)
+              else if (document.documentElement.hasAttribute('data-desk-cloud')) window.location.assign(`/files/open?path=${encodeURIComponent(path)}`)
               else openFile(path)
             }}
           >
-            {basename(path).replace(/\?.*$/, '')}
+            {decodeURIComponent(basename(path).replace(/^.*p=/, '')).split('/').pop()}
           </button>
         ))}
         {hidden > 0 && <span className={css.more}>{moreLabel(t, hidden)}</span>}
@@ -152,7 +153,7 @@ export function ProducedFiles({
             tabIndex={-1}
             className={`${css.file} ${css.probe}`}
           >
-            {basename(path).replace(/\?.*$/, '')}
+            {decodeURIComponent(basename(path).replace(/^.*p=/, '')).split('/').pop()}
           </button>
         ))}
         <span ref={moreProbe} className={`${css.more} ${css.probe}`} />

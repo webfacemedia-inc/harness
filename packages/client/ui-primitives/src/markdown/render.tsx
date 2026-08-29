@@ -436,7 +436,9 @@ function renderTableRow(
 function renderSafeLink(href: string, children: ReactNode[], key: Key): ReactNode {
   const safeHref = sanitizeUrl(href)
   if (safeHref === '') return <Fragment key={key}>{children}</Fragment>
+  // Same-origin absolute links (a Desk's own files) stay in this tab: an embedded WebView drops new windows.
   const external = ['http:', 'https:'].includes(new URL(safeHref).protocol)
+    && (typeof location === 'undefined' || new URL(safeHref).origin !== location.origin)
   return (
     <a
       key={key}

@@ -128,7 +128,7 @@ export const deliverablesDefinition: ConversationNodeDefinition<DeliverablesStat
     // its result text; the link is the "path" the chip opens.
     const nested = (result as { content?: Array<{ text?: string }> }).content ?? []
     const text = [(result as { text?: string }).text ?? '', ...nested.map(c => c.text ?? '')].join('\n')
-    for (const m of text.matchAll(/\]\(((?:https?:\/\/[^/\s)]+)?\/files\/dl\/[^)\s]+)\)/g)) {
+    for (const m of text.matchAll(/\]\(((?:https?:\/\/[^/\s)]+)?\/files\/(?:dl\/|view\?p=)[^)\s]+)\)/g)) {
       const path = m[1]
       if (path !== undefined) additions.push({ seq: match.event.seq, path })
     }
