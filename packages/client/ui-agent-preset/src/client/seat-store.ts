@@ -61,6 +61,9 @@ export class AgentPresetSeatController {
 
   /** Set while a pick is waiting for a session; cleared once applied. */
   private staged: string | undefined
+  // True when the stage is for a session about to start (stageAndStart): the applier must
+  // wait for a blank session to appear rather than discard the pick against the old running one.
+  private forNewSession = false
 
   constructor(
     private readonly api: Pick<IApiClient, 'agentPresets'>,
@@ -132,6 +135,7 @@ export class AgentPresetSeatController {
    */
   stage(id: string, introduce = false): void {
     this.staged = id
+    this.forNewSession = introduce
     this.set({ current: id, error: null, introduce })
   }
 
@@ -152,12 +156,12 @@ export class AgentPresetSeatController {
     const staged = this.staged
     const session = this.currentSession()
     if (staged === undefined || session === undefined) return
-    // A started session's history was produced under its own composition; the
-    // host refuses the swap, so the stage is no longer meaningful.
-    if (!session.blank || session.agentPreset === staged) {
-      this.staged = undefined
-      return
-    }
+    // The current session already runs this preset: nothing to do.
+    if (session.agentPreset === staged) { this.staged = undefined; this.forNewSession = false; return }
+    // A started session's history was produced under its own composition; the host refuses the swap.
+    // For a direct pick the stage is meaningless now; but a stageAndStart pick is for a session that
+    // has not appeared yet, so keep waiting for a blank one instead of discarding it.
+    if (!session.blank) { if (!this.forNewSession) this.staged = undefined; return }
     this.set({ busy: true, error: null })
     try {
       const response = await this.api.agentPresets.select({ sessionId: session.id, agentPreset: staged })
@@ -167,10 +171,11 @@ export class AgentPresetSeatController {
         return
       }
       // Consumed: the next new session opens on the deployment default again.
+      this.forNewSession = false
       this.set({ busy: false, current: response.result.value.agentPreset })
       this.onApplied?.(session.id, response.result.value.agentPreset)
     } catch (error) {
-      this.staged = undefined
+      this.staged = undefined; this.forNewSession = false
       this.set({ busy: false, error: messageOf(error), current: this.fallback })
     }
   }
