@@ -319,14 +319,13 @@
   .split { display: none; }
 }
 
-/* Phones, collapsed: only the mark (opens the drawer) and New session remain. */
-@media (max-width: 1023.98px) {
-  .collapsed .footArea, .collapsed .regionArea { display: none; }
-}
+/* Collapsed, every width: the rail is a menu button, New session and Settings — the modes,
+   the session tree and the foot links only exist in the open sidebar. */
+.collapsed .regionArea, .collapsed .teamArea, .collapsed .split { display: none; }
+.collapsed .footArea .footerActions { display: none; }
 
-/* Phones, collapsed: the expand toggle reads as a menu button — three bars,
-   not the brand mark (the mark did not read as "open" on a phone). */
-@media (max-width: 1023.98px) {
+/* Collapsed: the expand toggle reads as a menu button — three bars, not the brand mark. */
+@media (min-width: 0px) {
   .collapsed .railFish { display: none; }
   .collapsed .toggle { position: relative; width: 36px; height: 36px; border-radius: 10px; }
   /* iOS keeps :hover after a tap; the panel glyph must not paint over the bars. */
