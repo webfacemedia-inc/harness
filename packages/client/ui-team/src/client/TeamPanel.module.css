@@ -1,5 +1,7 @@
 .root { display: flex; flex-direction: column; gap: 2px; padding: 4px 8px 8px; }
-.header { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px 4px; font-size: 12px; letter-spacing: 0.02em; color: var(--dsw-alias-text-tertiary, #8d939b); }
+/* The sidebar's accordion header carries the label now. */
+.header { display: none; }
+.headerLegacy { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px 4px; font-size: 12px; letter-spacing: 0.02em; color: var(--dsw-alias-text-tertiary, #8d939b); }
 .list { display: flex; flex-direction: column; gap: 2px; }
 .bot { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 8px; border: 0; border-radius: 8px; background: transparent; color: inherit; text-align: left; cursor: pointer; font: inherit; }
 .bot:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(52,153,204,0.10)); }

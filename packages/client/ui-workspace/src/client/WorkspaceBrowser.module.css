@@ -512,3 +512,6 @@
   .root, .listArea, .treeBody { flex: none; }
   .list { height: auto; min-height: 0; max-height: 55dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; overscroll-behavior: contain; }
 }
+
+/* webfaCe Desk: the sidebar's accordion header names this section; the inline label would duplicate it. */
+.sectionLabel.wide { display: none; }

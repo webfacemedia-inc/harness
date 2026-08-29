@@ -114,6 +114,19 @@ export function SidebarRoot({
     }
   }, [pointerInside])
 
+  // Three accordions (Modes / Recent / More): open state remembered per browser.
+  const [open, setOpen] = useState<Record<'modes' | 'recent' | 'more', boolean>>(() => {
+    try { const v = localStorage.getItem('desk.sidebar.open'); if (v) return { modes: true, recent: true, more: true, ...(JSON.parse(v) as Partial<Record<'modes' | 'recent' | 'more', boolean>>) } } catch { /* storage may be unavailable */ }
+    return { modes: true, recent: true, more: true }
+  })
+  const toggleSection = useCallback((k: 'modes' | 'recent' | 'more') => {
+    setOpen((prev) => { const next = { ...prev, [k]: !prev[k] }; try { localStorage.setItem('desk.sidebar.open', JSON.stringify(next)) } catch { /* storage may be unavailable */ } return next })
+  }, [])
+  const accordion = (k: 'modes' | 'recent' | 'more', label: string) => (
+    <button type="button" className={css.acc} aria-expanded={open[k]} onClick={() => { toggleSection(k) }}>
+      <span className={css.accChevron} aria-hidden="true" />{label}
+    </button>
+  )
   // Drag the modes/sessions divider: writes --desk-team-share on the sidebar column and remembers it.
   useEffect(() => {
     try { const v = localStorage.getItem('desk.teamShare'); if (v && column.current) { column.current.style.setProperty('--desk-team-basis', v); column.current.style.setProperty('--desk-team-grow', '0') } } catch { /* storage may be unavailable */ }
@@ -191,7 +204,8 @@ export function SidebarRoot({
       {/* The browsing region fills the column between the controls and the
           foot in both states; its rail icon column rides the same slot. */}
       {/* webfaCe Desk: teammates (agent presets) as a first-class list. */}
-      <div className={css.teamArea}>
+      {wide && accordion('modes', 'Modes')}
+      <div className={css.teamArea} data-open={open.modes || !wide}>
         {renderSlot('sidebar.team', {
           wide,
           expandSidebar: () => { if (collapsed) toggleSidebar() },
@@ -199,8 +213,9 @@ export function SidebarRoot({
       </div>
 
       {/* webfaCe Desk: the modes/sessions split is 1:3 by default and draggable; the share persists per browser. */}
-      <div className={css.split} role="separator" aria-orientation="horizontal" aria-label="Resize modes and sessions" onPointerDown={onSplitDown} />
-      <div className={css.regionArea}>
+      <div className={css.split} data-open={open.modes && open.recent} role="separator" aria-orientation="horizontal" aria-label="Resize modes and sessions" onPointerDown={onSplitDown} />
+      {wide && accordion('recent', 'Recent')}
+      <div className={css.regionArea} data-open={open.recent || !wide}>
         {renderSlot('sidebar.workspaces', {
           wide,
           expandSidebar: () => { if (collapsed) toggleSidebar() },
@@ -209,7 +224,8 @@ export function SidebarRoot({
 
       {/* Footer actions stack above Settings in both sidebar widths. */}
       <div className={css.footArea}>
-        <div className={css.footerActions}>
+        {wide && accordion('more', 'More')}
+        <div className={css.footerActions} data-open={open.more || !wide}>
           {renderSlot('sidebar.footer.action', { wide })}
         </div>
         <div className={css.settingsArea}>

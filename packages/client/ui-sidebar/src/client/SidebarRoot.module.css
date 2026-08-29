@@ -335,3 +335,17 @@
     background: currentColor; box-shadow: 0 6px 0 currentColor, 0 12px 0 currentColor;
   }
 }
+
+/* webfaCe Desk: accordion headers for Modes / Recent / More; a closed section gives its space to the others. */
+.acc {
+  flex: none;
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; margin: 6px 0 2px; padding: 6px 10px;
+  border: 0; background: transparent; color: var(--dsw-alias-text-tertiary, #8d939b);
+  font: inherit; font-size: 12px; letter-spacing: 0.02em; text-align: left; cursor: pointer; border-radius: 8px;
+}
+.acc:hover { background: var(--dsw-bg-hover, rgba(127, 127, 127, 0.12)); color: inherit; }
+.accChevron { width: 8px; height: 8px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); transition: transform .15s; margin: -3px 2px 0 2px; }
+.acc[aria-expanded="false"] .accChevron { transform: rotate(-45deg); margin-top: 0; }
+.teamArea[data-open="false"], .regionArea[data-open="false"], .footerActions[data-open="false"], .split[data-open="false"] { display: none; }
+.collapsed .acc { display: none; }
