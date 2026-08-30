@@ -2,7 +2,11 @@
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "extends": ["./.oxlintrc.json"],
   "options": {
-    "typeAware": false
+    "typeAware": false,
+    // This profile runs the type-aware rules off, so every suppression for one of them looks
+    // unused here and would warn on each commit. The full lint still reports genuinely unused
+    // directives, and that run is the authority.
+    "reportUnusedDisableDirectives": "allow"
   },
   "ignorePatterns": [
     "apps/desk-kit/vendor/**",
