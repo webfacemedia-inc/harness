@@ -9,15 +9,16 @@
 #   ssh root@<box> 'bash /srv/desk/harness/scripts/desk-deploy.sh --web --client'
 #
 # Flags: --install (pnpm install), --host, --client, --web, --site (copy apps/site → /srv/desk/site),
-#        --caddy (install Caddyfile + conf.d), --all (host+client+web), --no-pull.
+#        --caddy (install Caddyfile + conf.d), --api (restart deskapi; apex box only), --all
+#        (host+client+web), --no-pull.
 set -euo pipefail
 D=${DESK_ROOT:-/srv/desk}
 H=$D/harness
 KEEP_DAYS=${DESK_ASSET_KEEP_DAYS:-14}
-DO_PULL=1; INSTALL=0; HOST=0; CLIENT=0; WEB=0; SITE=0; CADDY=0
+DO_PULL=1; INSTALL=0; HOST=0; CLIENT=0; WEB=0; SITE=0; CADDY=0; API=0
 for a in "$@"; do case $a in
   --install) INSTALL=1;; --host) HOST=1;; --client) CLIENT=1;; --web) WEB=1;;
-  --site) SITE=1;; --caddy) CADDY=1;; --all) HOST=1; CLIENT=1; WEB=1;; --no-pull) DO_PULL=0;;
+  --site) SITE=1;; --caddy) CADDY=1;; --api) API=1;; --all) HOST=1; CLIENT=1; WEB=1;; --no-pull) DO_PULL=0;;
   *) echo "unknown flag: $a" >&2; exit 2;;
 esac; done
 run() { sudo -u desk -H "$@"; }
@@ -73,8 +74,19 @@ if [ "$CADDY" = 1 ]; then
   fi
 fi
 echo "==> restart"
+# Restart only what this deploy touched: a store-only deploy must not interrupt anyone's Desk.
+if [ "$API" = 1 ] && [ "$HOST$CLIENT$WEB$SITE$CADDY" = "00000" ]; then
+  systemctl restart deskapi
+  sleep 4
+  systemctl is-active deskapi
+  curl -fsS -m 5 http://127.0.0.1:8095/api/health || echo '(deskapi health unavailable)'
+  echo
+  echo "==> done. Store only; no Desk was interrupted."
+  exit 0
+fi
 systemctl restart deskd
-[ "$HOST" = 1 ] || [ "$CLIENT" = 1 ] || [ "$WEB" = 1 ] && systemctl restart desk-harness
+if [ "$HOST" = 1 ] || [ "$CLIENT" = 1 ] || [ "$WEB" = 1 ]; then systemctl restart desk-harness; fi
+if [ "$API" = 1 ]; then systemctl restart deskapi; fi
 sleep 8
 systemctl is-active deskd desk-harness | tr '\n' ' '; echo
 curl -fsS -m 5 http://127.0.0.1:8090/deskd/build 2>/dev/null || echo '(build stamp unavailable)'

@@ -36,7 +36,9 @@ Always through the script — never `build:web` by hand:
 ```
 ssh root@143.198.42.231 'bash /srv/desk/harness/scripts/desk-deploy.sh --client --web'
 ```
-Flags: `--install` (dependencies changed), `--host` (packages/webface), `--client` (packages/client), `--web` (the shell), `--site` (apps/site → /srv/desk/site), `--caddy` (Caddyfile + conf.d, validated before reload), `--all`, `--no-pull`.
+Flags: `--install` (dependencies changed), `--host` (packages/webface), `--client` (packages/client), `--web` (the shell), `--site` (apps/site → /srv/desk/site), `--caddy` (Caddyfile + conf.d, validated before reload), `--api` (the storefront store, apex box only), `--all`, `--no-pull`.
+
+`--api` on its own restarts `deskapi` and nothing else, so shipping a store change never interrupts a Desk. On boot the store picks up any order whose provisioning was cut short — it adopts the droplet that run already made (by saved id, then by the `order:<id>` tag) rather than building a second billed box, and gives up after three attempts. Failures are recorded on the order as `lastError` and shown in `/ops`, not just logged.
 
 **Why the script and not the commands.** The shell's chunks are content-hashed and `build:web` empties `apps/web/dist/assets`; a page that is already open then asks for chunks that no longer exist, and the SPA fallback answers those with `index.html` — HTTP 200 of HTML, which the browser tries to run as JavaScript. That is the white screen. The script keeps the previous build's files beside the new ones (pruned after 14 days untouched), so open pages keep working until they take the update. `apps/deskd` and `apps/deskapi` are plain Node — a restart is enough; MCP servers (`desk-kit`, `google-mcp`, `wordpress-mcp`) are spawned per session, so restart `desk-harness`.
 
