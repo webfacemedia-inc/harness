@@ -282,7 +282,10 @@ UNIT
 echo "==> logs: bounded journal, rotated bootstrap log, kernel updates applied at night"
 mkdir -p /etc/systemd/journald.conf.d; printf "[Journal]\nSystemMaxUse=300M\nMaxRetentionSec=30day\n" > /etc/systemd/journald.conf.d/desk.conf; systemctl restart systemd-journald
 printf "/var/log/desk-bootstrap.log {\n  weekly\n  rotate 4\n  compress\n  missingok\n  notifempty\n}\n" > /etc/logrotate.d/desk
-printf 'Unattended-Upgrade::Automatic-Reboot "true";\nUnattended-Upgrade::Automatic-Reboot-Time "04:30";\n' > /etc/apt/apt.conf.d/52desk-reboot
+# 04:10, not the half hour: the Insights probe sweeps every site at :30, so a box
+# that reboots for a kernel upgrade then reads as down for the next hour. Late enough
+# in the night for Toronto (00:10 local) that nobody is mid-sentence with their Desk.
+printf 'Unattended-Upgrade::Automatic-Reboot "true";\nUnattended-Upgrade::Automatic-Reboot-Time "04:10";\n' > /etc/apt/apt.conf.d/52desk-reboot
 
 echo "==> owner account"
 sudo -u desk -H env DESK_AUTH_FILE=$D/auth.json node $D/harness/apps/deskd/src/cli.js set "${DESK_OWNER_USER:-owner}" "${DESK_OWNER_EMAIL:-}" "$DESK_OWNER_PASSWORD" >/dev/null
