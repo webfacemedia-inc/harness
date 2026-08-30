@@ -11,9 +11,10 @@
 // STRIPE_PRICE_* (see PLANS), DIGITALOCEAN_TOKEN, OPENROUTER_API_KEY, optional CLOUDFLARE_API_TOKEN, BREVO_API_KEY.
 import { createServer } from 'node:http'
 import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, copyFileSync } from 'node:fs'
-import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
+import { createHmac, randomBytes } from 'node:crypto'
 import { join } from 'node:path'
 import { provision } from './provision.js'
+import { billingStateFor, cleanName, equalSecret, resumableOrders, verifyStripeSignature, IN_FLIGHT, MAX_ATTEMPTS } from './core.js'
 import * as ops from './ops.js'
 
 const PORT = Number(process.env.DESKAPI_PORT ?? 8095)
@@ -41,7 +42,7 @@ const slugify = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace
 // An upstream timeout must not take the store down with it.
 process.on('unhandledRejection', e => console.error('unhandled rejection:', e instanceof Error ? e.message : e))
 process.on('uncaughtException', e => console.error('uncaught exception:', e instanceof Error ? e.stack ?? e.message : e))
-const cleanName = v => String(v ?? '').replace(/[^\x20-\x7e]/g, '').trim().slice(0, 80)
+
 const json = (res, code, obj) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify(obj)) }
 const html = (res, code, body) => { res.writeHead(code, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' }); res.end(body) }
 async function body(req) { const c = []; for await (const x of req) c.push(x); return Buffer.concat(c) }
@@ -50,13 +51,7 @@ async function stripe(path, params) {
   const r = await fetch(`https://api.stripe.com/v1/${path}`, { method: 'POST', headers: { authorization: `Bearer ${STRIPE}`, 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(params) })
   const j = await r.json(); if (!r.ok) throw new Error(`stripe ${path}: ${j.error?.message ?? r.status}`); return j
 }
-function verifyStripe(payload, header, secret) {
-  const parts = Object.fromEntries((header ?? '').split(',').map(p => p.split('=')))
-  if (!parts.t || !parts.v1) return false
-  if (Math.abs(Date.now() / 1000 - Number(parts.t)) > 300) return false
-  const want = createHmac('sha256', secret).update(`${parts.t}.${payload}`).digest('hex')
-  return want.length === parts.v1.length && timingSafeEqual(Buffer.from(want), Buffer.from(parts.v1))
-}
+const verifyStripe = (payload, header, secret) => verifyStripeSignature(payload, header, secret)
 
 const shell = (title, inner) => `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta name="color-scheme" content="light"><title>${esc(title)} · webfaCe Desk</title><script src="https://insights.webfacemedia.com/api/script.js" data-site="webface" defer></script>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
@@ -91,19 +86,64 @@ function welcomePage(o) {
   return shell('Your Desk', inner)
 }
 
+/**
+ * Record a failure on the order (and in the log) instead of dropping it: every one of
+ * these used to be a console line nobody would ever read.
+ * @param o - the order it happened to, or null for a store-wide job.
+ * @param step - what was being attempted.
+ * @param err - the failure.
+ */
+function note(o, step, err) {
+  const message = err instanceof Error ? err.message : String(err)
+  console.error(`[${o?.slug ?? 'store'}] ${step}: ${message}`)
+  if (!o) return
+  o.lastError = { step, message, at: new Date().toISOString() }
+  save()
+}
+
+const running = new Set()
 async function fulfil(o) {
+  if (running.has(o.id)) return
+  running.add(o.id)
   const log = (status, detail) => { o.status = status === 'dns-failed' ? o.status : status; o.detail = detail; o.updatedAt = new Date().toISOString(); save() }
+  // Each fact is saved the moment it is known, so a store that dies mid-run can pick the
+  // same box back up rather than stranding the order or building a second droplet.
+  const update = (patch) => { Object.assign(o, patch); o.updatedAt = new Date().toISOString(); save() }
   try {
-    o.boxToken = randomBytes(16).toString('hex'); save()
-    const box = await provision(o, log)
-    Object.assign(o, box, { status: 'ready', detail: '', readyAt: new Date().toISOString() }); save()
-    await email(o).catch(e => console.error('email failed:', e.message))
-  } catch (e) { console.error('provision failed for', o.id, e); o.status = 'failed'; o.detail = e.message; save() }
+    o.attempts = (o.attempts ?? 0) + 1
+    o.boxToken = o.boxToken ?? randomBytes(16).toString('hex'); save()
+    const box = await provision(o, log, update)
+    Object.assign(o, box, { status: 'ready', detail: '', lastError: undefined, readyAt: new Date().toISOString() }); save()
+    await email(o).catch(e => note(o, 'welcome-email', e))
+  } catch (e) {
+    note(o, 'provision', e)
+    o.status = 'failed'; o.detail = e.message; save()
+  } finally { running.delete(o.id) }
+}
+
+/**
+ * Pick up orders whose provisioning was cut short by a restart. Without this they sit in
+ * `creating` or `installing` for ever, because the only thing driving them was a promise
+ * in a process that no longer exists.
+ */
+function resumeInterrupted() {
+  // An alert that was mid-send when the process died left this set; a restart is proof it is over.
+  for (const o of Object.values(orders)) if (o.usageAlerting) delete o.usageAlerting
+  const pending = resumableOrders(orders)
+  if (pending.length === 0) return
+  console.log(`resuming ${pending.length} interrupted order(s):`, pending.map(o => o.slug).join(', '))
+  for (const o of pending) fulfil(o)
+  for (const o of Object.values(orders)) {
+    if (!o.static && IN_FLIGHT.includes(o.status) && (o.attempts ?? 0) >= MAX_ATTEMPTS && !running.has(o.id)) {
+      note(o, 'provision', new Error(`gave up after ${o.attempts} attempts`))
+      o.status = 'failed'; o.detail = 'Setting up this Desk did not finish; we are on it.'; save()
+    }
+  }
 }
 async function tellBox(o, state) {
   if (!o.host || !o.boxToken) return
   let portalUrl = ''
-  if (state === 'past_due' && o.stripeCustomer) { try { portalUrl = (await stripe('billing_portal/sessions', { customer: o.stripeCustomer, return_url: `https://${o.host}/` })).url } catch (e) { console.error('portal session failed', e.message) } }
+  if (state === 'past_due' && o.stripeCustomer) { try { portalUrl = (await stripe('billing_portal/sessions', { customer: o.stripeCustomer, return_url: `https://${o.host}/` })).url } catch (e) { note(o, 'billing-portal', e) } }
   const r = await fetch(`https://${o.host}/deskd/billing`, { method: 'POST', headers: { authorization: `Bearer ${o.boxToken}`, 'content-type': 'application/json' }, body: JSON.stringify({ state, portalUrl }), signal: AbortSignal.timeout(15000) })
   if (!r.ok) throw new Error(`box said ${r.status}`)
   console.log('box', o.slug, 'billing →', state)
@@ -118,24 +158,27 @@ async function destroyBox(o) {
       const a = await (await fetch(`https://api.digitalocean.com/v2/droplets/${o.dropletId}/actions`, { method: 'POST', headers: h, body: JSON.stringify({ type: 'snapshot', name: `desk-${o.slug}-final-${new Date().toISOString().slice(0, 10)}` }) })).json()
       for (let i = 0; i < 120 && a.action?.status === 'in-progress'; i++) { await new Promise(r => setTimeout(r, 10000)); const st = await (await fetch(`https://api.digitalocean.com/v2/actions/${a.action.id}`, { headers: h })).json(); a.action = st.action }
       o.finalSnapshot = a.action?.status === 'completed' ? a.action.resource_id : undefined
-    } catch (e) { console.error('final snapshot failed', o.slug, e.message) }
+    } catch (e) { note(o, 'final-snapshot', e) }
   }
-  if (o.dropletId && tok) await fetch(`https://api.digitalocean.com/v2/droplets/${o.dropletId}`, { method: 'DELETE', headers: { authorization: `Bearer ${tok}` } }).catch(e => console.error('droplet delete failed', e.message))
+  if (o.dropletId && tok) await fetch(`https://api.digitalocean.com/v2/droplets/${o.dropletId}`, { method: 'DELETE', headers: { authorization: `Bearer ${tok}` } }).catch(e => note(o, 'droplet-delete', e))
   const cf = process.env.CLOUDFLARE_API_TOKEN; const zone = process.env.CLOUDFLARE_ZONE_ID ?? 'd3fc4cb5dfad60b2064472906607a170'
   if (cf && o.host?.endsWith('.webfacedesk.app')) {
     const h = { authorization: `Bearer ${cf}` }
     const q = await (await fetch(`https://api.cloudflare.com/client/v4/zones/${zone}/dns_records?name=${o.host}`, { headers: h })).json().catch(() => ({}))
-    for (const r of q.result ?? []) await fetch(`https://api.cloudflare.com/client/v4/zones/${zone}/dns_records/${r.id}`, { method: 'DELETE', headers: h }).catch(() => {})
+    for (const r of q.result ?? []) await fetch(`https://api.cloudflare.com/client/v4/zones/${zone}/dns_records/${r.id}`, { method: 'DELETE', headers: h }).catch(e => note(o, 'dns-delete', e))
   }
   o.status = 'destroyed'; o.destroyedAt = new Date().toISOString(); save()
 }
 /** Usage watch: one alert per month to the operator when a Desk crosses the plan's token allowance (DESKAPI_MONTHLY_TOKEN_CAP, default 20M). */
 function usageWatch(o) {
   const cap = Number(process.env.DESKAPI_MONTHLY_TOKEN_CAP ?? 20_000_000); const month = new Date().toISOString().slice(0, 7)
-  if (!cap || !o.usage?.monthTokens || o.usage.monthTokens < cap || o.usageAlerted === month) return
-  o.usageAlerted = month
+  if (!cap || !o.usage?.monthTokens || o.usage.monthTokens < cap || o.usageAlerted === month || o.usageAlerting) return
+  // Marked only after the send succeeds, so a failed alert is retried next heartbeat
+  // instead of being silently marked as delivered for the rest of the month.
+  o.usageAlerting = true
   const to = process.env.DESKAPI_ALERT_EMAIL ?? 'tommy@webfacemedia.com'
-  fetch('https://api.brevo.com/v3/smtp/email', { method: 'POST', headers: { 'api-key': process.env.BREVO_API_KEY ?? '', 'content-type': 'application/json' }, body: JSON.stringify({ sender: { name: 'webfaCe Desk', email: 'desk@webfacedesk.app' }, to: [{ email: to }], subject: `Desk ${o.slug} passed ${Math.round(cap / 1e6)}M tokens this month`, htmlContent: `<p>${esc(o.business ?? o.slug)} (${esc(o.slug)}) has used ${Math.round(o.usage.monthTokens / 1e6)}M tokens in ${month}. Plan: ${esc(o.plan ?? '')}.</p>` }) }).catch(e => console.error('usage alert failed', e.message))
+  fetch('https://api.brevo.com/v3/smtp/email', { method: 'POST', headers: { 'api-key': process.env.BREVO_API_KEY ?? '', 'content-type': 'application/json' }, body: JSON.stringify({ sender: { name: 'webfaCe Desk', email: 'desk@webfacedesk.app' }, to: [{ email: to }], subject: `Desk ${o.slug} passed ${Math.round(cap / 1e6)}M tokens this month`, htmlContent: `<p>${esc(o.business ?? o.slug)} (${esc(o.slug)}) has used ${Math.round(o.usage.monthTokens / 1e6)}M tokens in ${month}. Plan: ${esc(o.plan ?? '')}.</p>` }) }).then(r => { o.usageAlerting = false; if (!r.ok) throw new Error(`brevo ${r.status}`); o.usageAlerted = month; save() })
+    .catch(e => { o.usageAlerting = false; note(o, 'usage-alert', e) })
 }
 /** Terms: 14 days read-only after a failed payment, then the Desk stops; a closed Desk's snapshot goes after 90 days. */
 async function sweep() {
@@ -143,7 +186,7 @@ async function sweep() {
   for (const o of Object.values(orders)) {
     if (o.billing === 'past_due' && o.pastDueSince && now - Date.parse(o.pastDueSince) > 14 * 86400000 && o.status === 'ready') {
       o.billing = 'cancelled'; o.billingAt = new Date().toISOString(); save()
-      await tellBox(o, 'cancelled').catch(e => console.error('stop after 14 days failed', o.slug, e.message))
+      await tellBox(o, 'cancelled').catch(e => note(o, 'stop-after-14-days', e))
     }
     if (o.status === 'destroyed' && o.finalSnapshot && o.destroyedAt && now - Date.parse(o.destroyedAt) > 90 * 86400000 && process.env.DIGITALOCEAN_TOKEN) {
       await fetch(`https://api.digitalocean.com/v2/snapshots/${o.finalSnapshot}`, { method: 'DELETE', headers: { authorization: `Bearer ${process.env.DIGITALOCEAN_TOKEN}` } }).catch(() => {})
@@ -153,7 +196,7 @@ async function sweep() {
 }
 /** Nightly DigitalOcean snapshot per live box, kept 30 days. */
 async function snapshots() {
-  await sweep().catch(e => console.error('sweep failed', e.message))
+  await sweep().catch(e => note(null, 'sweep', e))
   const tok = process.env.DIGITALOCEAN_TOKEN; if (!tok) return
   const h = { authorization: `Bearer ${tok}`, 'content-type': 'application/json' }
   // Static boxes (the demo/apex box itself) join the nightly snapshot loop: DESKAPI_STATIC_BOXES=slug:dropletId,…
@@ -167,7 +210,7 @@ async function snapshots() {
       const cutoff = Date.now() - 30 * 86400000
       for (const s of snaps.filter(x => !x.name.includes('-final-') && Date.parse(x.created_at) < cutoff)) await fetch(`https://api.digitalocean.com/v2/snapshots/${s.id}`, { method: 'DELETE', headers: h })
       o.lastSnapshot = new Date().toISOString(); if (!o.static) save(); console.log('snapshot ok', o.slug, snaps.length)
-    } catch (e) { console.error('snapshot failed', o.slug, e.message) }
+    } catch (e) { note(o, 'snapshot', e) }
   }
 }
 const msToNextSnapshot = () => { const d = new Date(); d.setUTCHours(7, 30, 0, 0); if (d <= new Date()) d.setUTCDate(d.getUTCDate() + 1); return d - new Date() }
@@ -213,18 +256,18 @@ const server = createServer(async (req, res) => {
       const ev = JSON.parse(raw); const obj = ev.data?.object ?? {}
       if (ev.type === 'checkout.session.completed') {
         const o = orders[obj.client_reference_id ?? obj.metadata?.order]
-        if (!o) { console.error('webhook for unknown order', obj.id); return json(res, 200, { ok: true, unknown: true }) }
+        if (!o) { note(null, 'webhook-unmatched', new Error(`${ev.type} for ${obj.subscription ?? obj.id} matches no order`)); return json(res, 200, { ok: true, unknown: true }) }
         if (o.status === 'created') { o.status = 'paid'; o.stripeCustomer = obj.customer; o.stripeSubscription = obj.subscription; o.paidAt = new Date().toISOString(); save(); fulfil(o) }
         return json(res, 200, { ok: true })
       }
       if (ev.type === 'invoice.payment_failed' || ev.type === 'customer.subscription.deleted' || ev.type === 'invoice.paid') {
         const o = Object.values(orders).find(x => x.stripeSubscription === (obj.subscription ?? obj.id))
         if (o) {
-          const state = ev.type === 'invoice.paid' ? 'ok' : ev.type === 'invoice.payment_failed' ? 'past_due' : 'cancelled'
+          const state = billingStateFor(ev.type)
           if (state === 'past_due' && o.billing !== 'past_due') o.pastDueSince = new Date().toISOString()
           if (state !== 'past_due') delete o.pastDueSince
-          if (!(state === 'ok' && (o.billing ?? 'ok') === 'ok')) { o.billing = state; o.billingAt = new Date().toISOString(); save(); tellBox(o, state).catch(e => console.error('box billing notify failed', o.slug, e.message)) }
-        }
+          if (!(state === 'ok' && (o.billing ?? 'ok') === 'ok')) { o.billing = state; o.billingAt = new Date().toISOString(); save(); tellBox(o, state).catch(e => note(o, 'billing-notify', e)) }
+        } else note(null, 'billing-unmatched', new Error(`${ev.type} for subscription ${obj.subscription ?? obj.id} matches no order`))
       }
       return json(res, 200, { ok: true })
     }
@@ -260,8 +303,8 @@ const server = createServer(async (req, res) => {
       const slug = hb[1]; const tok = (req.headers.authorization ?? '').replace(/^Bearer /, '')
       const staticTok = (process.env.DESKAPI_STATIC_BOX_TOKENS ?? '').split(',').map(x => x.split(':')).find(([s]) => s === slug)?.[1]
       let o = Object.values(orders).find(x => x.slug === slug)
-      if (!o && staticTok && tok.length === staticTok.length && timingSafeEqual(Buffer.from(tok), Buffer.from(staticTok))) { o = orders[`static_${slug}`] ??= { id: `static_${slug}`, slug, host: `${slug}.${new URL(PUBLIC).hostname}`, status: 'ready', static: true, created: new Date().toISOString() } }
-      if (!o || !(o.boxToken ? tok.length === o.boxToken.length && timingSafeEqual(Buffer.from(tok), Buffer.from(o.boxToken)) : o.static)) return json(res, 401, { error: 'no' })
+      if (!o && staticTok && equalSecret(tok, staticTok)) { o = orders[`static_${slug}`] ??= { id: `static_${slug}`, slug, host: `${slug}.${new URL(PUBLIC).hostname}`, status: 'ready', static: true, created: new Date().toISOString() } }
+      if (!o || !(o.boxToken ? equalSecret(tok, o.boxToken) : o.static)) return json(res, 401, { error: 'no' })
       o.lastHeartbeat = new Date().toISOString(); const beat = JSON.parse((await body(req)).toString() || '{}'); o.heartbeat = { ready: beat.ready, harness: beat.harness, google: beat.google?.accounts?.length ?? 0, push: beat.push?.devices ?? 0 }; if (beat.usage) o.usage = { monthTokens: beat.usage.monthTokens, totalTokens: beat.usage.totalTokens, sessions: beat.usage.sessions, turns: beat.usage.turns }; usageWatch(o); save(); return json(res, 200, { ok: true })
     }
     // The Desk's Billing link: a fresh Stripe customer-portal session for this box's owner.
@@ -269,7 +312,7 @@ const server = createServer(async (req, res) => {
     if (pm && req.method === 'POST') {
       const o = Object.values(orders).find(x => x.slug === pm[1]); const tok = (req.headers.authorization ?? '').replace(/^Bearer /, '')
       const staticTok = (process.env.DESKAPI_STATIC_BOX_TOKENS ?? '').split(',').map(x => x.split(':')).find(([s]) => s === pm[1])?.[1]
-      const okTok = (want) => Boolean(want) && tok.length === want.length && timingSafeEqual(Buffer.from(tok), Buffer.from(want))
+      const okTok = (want) => equalSecret(tok, want)
       if (!(okTok(o?.boxToken) || okTok(staticTok))) return json(res, 401, { error: 'no' })
       if (!o.stripeCustomer || !STRIPE) return json(res, 404, { error: 'no_billing', message: 'This Desk is not billed through the store.' })
       try { const p = await stripe('billing_portal/sessions', { customer: o.stripeCustomer, return_url: `https://${o.host}/` }); return json(res, 200, { url: p.url }) } catch (e) { return json(res, 502, { error: 'stripe', message: e.message }) }
@@ -297,7 +340,7 @@ const server = createServer(async (req, res) => {
       let st = null; try { st = JSON.parse(Buffer.from(state ?? '', 'base64url').toString()) } catch { st = null }
       if (!st || !boxHostOk(String(st.box ?? ''))) return html(res, 400, 'Unknown Desk.')
       const tok = boxTokenFor(st.box.split('.')[0]); const want = createHmac('sha256', tok).update(state).digest('hex')
-      if (!sig || sig.length !== want.length || !timingSafeEqual(Buffer.from(sig), Buffer.from(want))) return html(res, 400, 'Bad sign-in state.')
+      if (!equalSecret(sig, want)) return html(res, 400, 'Bad sign-in state.')
       const fail = m => { res.writeHead(302, { location: `https://${st.box}/login?gerr=${encodeURIComponent(m)}` }); res.end() }
       const code = u.searchParams.get('code'); if (!code) return fail('Google did not sign you in.')
       const tr = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ code, client_id: process.env.DESK_SIGNIN_CLIENT_ID, client_secret: process.env.DESK_SIGNIN_CLIENT_SECRET ?? '', redirect_uri: `${PUBLIC}/auth/google/callback`, grant_type: 'authorization_code' }) })
@@ -311,4 +354,7 @@ const server = createServer(async (req, res) => {
     res.writeHead(404); res.end('not found')
   } catch (e) { console.error(e); if (res.headersSent) return res.end(); json(res, 500, { error: e.message }) }
 })
-server.listen(PORT, '127.0.0.1', () => console.log(`deskapi on 127.0.0.1:${PORT} → ${PUBLIC}`))
+server.listen(PORT, '127.0.0.1', () => {
+  console.log(`deskapi on 127.0.0.1:${PORT} → ${PUBLIC}`)
+  resumeInterrupted()
+})
