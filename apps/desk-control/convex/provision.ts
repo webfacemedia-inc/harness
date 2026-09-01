@@ -238,6 +238,8 @@ export const destroyBox = workflow.define({
   handler: async (step, { orderId }): Promise<void> => {
     const order = await step.runQuery(internal.orders.byOrderId, { orderId })
     if (!order || order.status === 'destroyed') return
+    // The console should say what is happening during the minutes the snapshot takes.
+    await step.runMutation(internal.orders.patch, { orderId, detail: 'closing — final snapshot first' })
 
     if (order.dropletId) {
       // The final snapshot is the customer's 30-day safety net; a failure is
