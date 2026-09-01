@@ -40,7 +40,7 @@ export function App() {
     </Unauthenticated>
     <Authenticated>
       <div className="top">
-        <span className="wm">webfaCe<em>Desk Control</em></span>
+        <span className="wm"><span className="wf">webfaCe</span><em>Desk Control</em></span>
         <nav>
           {(['fleet', 'demos', 'templates', 'audit'] as const).map(p =>
             <button key={p} className={view.page === p || (p === 'fleet' && view.page === 'box') ? 'on' : ''} onClick={() => setView({ page: p })}>
@@ -73,15 +73,15 @@ function Fleet({ open }: { open: (orderId: string) => void }) {
     <section>
       <h2>Boxes <span style={{ marginLeft: 'auto' }}><button className="btn" onClick={() => setCreating(true)}>New Desk</button></span></h2>
       <div style={{ overflowX: 'auto' }}>
-        <table>
+        <table className="stack">
           <thead><tr><th>Business</th><th>Address</th><th>Status</th><th>Heartbeat</th><th>This month</th></tr></thead>
           <tbody>
             {live.map(o => <tr key={o.orderId} className="click" onClick={() => open(o.orderId)}>
-              <td><strong>{o.business}</strong><br /><small style={{ color: 'var(--mute)' }}>{o.plan} · {o.kind}{o.demo ? ` · demo, ${untilDays(o.demo.expiresAt).toFixed(1)}d left` : ''}</small></td>
-              <td>{o.host ?? o.slug}</td>
-              <td><StatusPill status={o.status} billing={o.billing} />{o.lastError ? <><br /><small style={{ color: 'var(--err)' }}>{o.lastError.step}: {o.lastError.message.slice(0, 60)}</small></> : null}</td>
-              <td>{ago(o.heartbeat?.at)}{o.heartbeat && !o.heartbeat.harness ? <><br /><small style={{ color: 'var(--err)' }}>harness down</small></> : null}</td>
-              <td>{k(o.heartbeat?.usage?.monthTokens)} tokens<br /><small style={{ color: 'var(--mute)' }}>{o.heartbeat?.usage?.sessions ?? 0} conversations</small></td>
+              <td data-label="Business"><strong>{o.business}</strong><br /><small style={{ color: 'var(--mute)' }}>{o.demo ? `${o.plan} · demo, ${untilDays(o.demo.expiresAt).toFixed(1)}d left` : o.plan === o.kind ? o.plan : `${o.plan} · ${o.kind}`}</small></td>
+              <td data-label="Address">{o.host ?? o.slug}</td>
+              <td data-label="Status"><StatusPill status={o.status} billing={o.billing} />{o.lastError ? <><br /><small style={{ color: 'var(--err)' }}>{o.lastError.step}: {o.lastError.message.slice(0, 60)}</small></> : null}</td>
+              <td data-label="Heartbeat">{ago(o.heartbeat?.at)}{o.heartbeat && !o.heartbeat.harness ? <><br /><small style={{ color: 'var(--err)' }}>harness down</small></> : null}</td>
+              <td data-label="This month">{k(o.heartbeat?.usage?.monthTokens)} tokens<br /><small style={{ color: 'var(--mute)' }}>{o.heartbeat?.usage?.sessions ?? 0} conversations</small></td>
             </tr>)}
           </tbody>
         </table>
@@ -165,6 +165,7 @@ function BoxDetail({ orderId, back }: { orderId: string; back: () => void }) {
     </section>
 
     {box.demo && <DemoCard orderId={orderId} demo={box.demo} usageDaily={box.usageDaily} />}
+    {box.status === 'ready' && <TemplateTools orderId={orderId} business={box.business} />}
     <ConfigEditor orderId={orderId} />
     {box.status === 'ready' && <Recorder orderId={orderId} />}
   </>
@@ -187,6 +188,40 @@ function DemoCard({ orderId, demo, usageDaily }: { orderId: string; demo: DemoIn
       <button className="ghost" onClick={() => { void extend({ orderId, days: 7 }).then(() => setMsg('')).catch(e => setMsg(String(e))) }}>Extend 7 days</button>
       <button className="btn" onClick={() => { void convert({ orderId }).then(url => setMsg(url)).catch(e => setMsg(String(e))) }}>Convert to paid — get the checkout link</button>
     </div>}
+  </section>
+}
+
+function TemplateTools({ orderId, business }: { orderId: string; business: string }) {
+  const templates = useQuery(api.demos.listTemplates)
+  const capture = useAction(api.push.captureTemplate)
+  const reset = useAction(api.push.resetBox)
+  const [msg, setMsg] = useState('')
+  const [resetId, setResetId] = useState('')
+  return <section>
+    <h2>Templates</h2>
+    <p className="sub" style={{ marginBottom: 6 }}>Capture this Desk's setup as the rehearsed default, or put the Desk back to one.</p>
+    {msg && <div className={`msg ${/saved|reset/i.test(msg) ? 'ok' : 'err'}`}>{msg}</div>}
+    <div className="acts">
+      <button className="ghost" onClick={() => {
+        const name = prompt('Template name', `${business} default`)
+        if (!name) return
+        setMsg('')
+        void capture({ orderId, name }).then(() => setMsg(`Saved "${name}" — profile, brand, price list and memory captured from this Desk.`))
+          .catch(e => setMsg(e instanceof Error ? e.message : String(e)))
+      }}>Save as template…</button>
+      <select style={{ width: 'auto', minWidth: 160 }} value={resetId} onChange={e => setResetId(e.target.value)}>
+        <option value="">Reset to…</option>
+        {templates?.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
+      </select>
+      <button className="quiet" disabled={!resetId} onClick={() => {
+        const t = templates?.find(x => x._id === resetId)
+        if (!t) return
+        if (!confirm(`Reset this Desk to "${t.name}"? Its profile, brand and price list are overwritten, and everything Desk has remembered since is REPLACED by the template's seeds.`)) return
+        setMsg('')
+        void reset({ orderId, templateId: resetId as Id<'demoTemplates'> }).then(() => setMsg(`Reset to "${t.name}".`))
+          .catch(e => setMsg(e instanceof Error ? e.message : String(e)))
+      }}>Reset</button>
+    </div>
   </section>
 }
 

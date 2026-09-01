@@ -142,6 +142,59 @@ describe('demo seeding', () => {
   })
 })
 
+describe('capture and reset', () => {
+  it('reads back the setup a template captures: profile, brand, price list, memory', async () => {
+    const dir = scratch()
+    const control = await load(dir)
+    const cfg = fakeReq('POST', '/deskd/config', { token: 'tok_test', body: {
+      profile: { business: 'Maple & Main', phone: '416-555-0100' },
+      brand: { primary: '3499cc', tagline: 'Fast, tidy.' },
+    } })
+    await control.handle(cfg.req, cfg.res, cfg.u, { readBody, host: 'box.example' })
+    const seed = fakeReq('POST', '/deskd/seed', { token: 'tok_test', body: {
+      files: [{ path: 'price-list.md', content: '# Prices' }],
+      memory: [{ kind: 'decision', text: 'No Sundays', pinned: true }],
+    } })
+    await control.handle(seed.req, seed.res, seed.u, { readBody, host: 'box.example' })
+
+    const read = fakeReq('POST', '/deskd/config', { token: 'tok_test', body: { read: true } })
+    await control.handle(read.req, read.res, read.u, { readBody, host: 'box.example' })
+    expect(read.res.status).toBe(200)
+    expect(read.res.json.profile.business).toBe('Maple & Main')
+    expect(read.res.json.brand.tagline).toBe('Fast, tidy.')
+    expect(read.res.json.brand.logo).toBeUndefined() // paths are box-local; the logo travels separately
+    expect(read.res.json.priceListMd).toBe('# Prices')
+    expect(read.res.json.memory).toEqual([{ kind: 'decision', about: 'business', text: 'No Sundays', pinned: true }])
+  })
+
+  it('resetMemory replaces the ledger with the seeds — what a prospect typed is gone', async () => {
+    const dir = scratch()
+    const control = await load(dir)
+    const first = fakeReq('POST', '/deskd/seed', { token: 'tok_test', body: {
+      memory: [{ kind: 'fact', text: 'from the prospect', pinned: false }],
+    } })
+    await control.handle(first.req, first.res, first.u, { readBody, host: 'box.example' })
+    const reset = fakeReq('POST', '/deskd/seed', { token: 'tok_test', body: {
+      resetMemory: true,
+      memory: [{ kind: 'decision', text: 'the rehearsed default', pinned: true }],
+    } })
+    await control.handle(reset.req, reset.res, reset.u, { readBody, host: 'box.example' })
+    const block = readFileSync(join(dir, 'AGENTS-home.md'), 'utf8')
+    expect(block).toContain('the rehearsed default')
+    expect(block).not.toContain('from the prospect')
+  })
+
+  it('resetMemory with no seeds leaves an honestly empty memory', async () => {
+    const dir = scratch()
+    const control = await load(dir)
+    const first = fakeReq('POST', '/deskd/seed', { token: 'tok_test', body: { memory: [{ kind: 'fact', text: 'stale note' }] } })
+    await control.handle(first.req, first.res, first.u, { readBody, host: 'box.example' })
+    const reset = fakeReq('POST', '/deskd/seed', { token: 'tok_test', body: { resetMemory: true } })
+    await control.handle(reset.req, reset.res, reset.u, { readBody, host: 'box.example' })
+    expect(readFileSync(join(dir, 'AGENTS-home.md'), 'utf8')).toContain('Nothing recorded yet.')
+  })
+})
+
 describe('recordings', () => {
   it('signs download links that expire and refuse tampering', async () => {
     const dir = scratch()

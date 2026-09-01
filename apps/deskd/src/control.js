@@ -136,6 +136,18 @@ export async function handle(req, res, u, { readBody, host }) {
   if (u.pathname === '/deskd/config' && req.method === 'POST') {
     let b = {}
     try { b = JSON.parse((await readBody(req)).toString() || '{}') } catch { res.writeHead(400); return res.end('json?') }
+    if (b.read === true) {
+      const cur = readProfile() ?? {}
+      const { brand = {}, ...profile } = cur
+      let priceListMd
+      try { priceListMd = readFileSync(join(WORK, 'price-list.md'), 'utf8').slice(0, 200_000) } catch { priceListMd = undefined }
+      const { read: readLedger } = await import('../../desk-memory/src/ledger.js')
+      const memory = readLedger(process.env.DESK_MEMORY_FILE ?? '/srv/desk/memory.jsonl')
+        .slice(0, 50)
+        .map(n => ({ kind: n.kind ?? 'fact', about: n.about, text: n.text, pinned: Boolean(n.pinned) }))
+      res.writeHead(200, { 'content-type': 'application/json' })
+      return res.end(JSON.stringify({ profile, brand: { ...brand, logo: undefined }, priceListMd, memory }))
+    }
     if (b.profile || b.brand) applyConfig(b)
     if (b.restart === true) execFile('sudo', ['-n', 'systemctl', 'restart', 'desk-harness'], () => {})
     res.writeHead(200, { 'content-type': 'application/json' })
@@ -174,12 +186,17 @@ export async function handle(req, res, u, { readBody, host }) {
       written.push(rel)
     }
     let seeded = 0
-    if (Array.isArray(b.memory) && b.memory.length) {
+    if (b.resetMemory === true || (Array.isArray(b.memory) && b.memory.length)) {
       // The memory ledger is desk-memory's module — one definition of what is remembered.
       const { append, read, writeBlock, newId, cleanAbout, clean: cleanNote } = await import('../../desk-memory/src/ledger.js')
       const ledger = process.env.DESK_MEMORY_FILE ?? '/srv/desk/memory.jsonl'
       const block = process.env.DESK_MEMORY_BLOCK ?? join(process.env.DSH_HOME ?? '/srv/desk/home', 'AGENTS.md')
-      for (const m of b.memory.slice(0, 50)) {
+      if (b.resetMemory === true) {
+        // A reset starts the story over: everything recorded since the seed goes.
+        mkdirSync(dirname(ledger), { recursive: true })
+        writeFileSync(ledger, '', { mode: 0o600 })
+      }
+      for (const m of (Array.isArray(b.memory) ? b.memory : []).slice(0, 50)) {
         const text = cleanNote(m.text)
         if (!text) continue
         append(ledger, {

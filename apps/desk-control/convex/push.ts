@@ -2,7 +2,7 @@
 // box-token channel, demo seeding, and screen recording control. Every push
 // is audited; every one throws on failure so the retrier gets its chance.
 import { v } from 'convex/values'
-import { internalAction, mutation, action } from './_generated/server'
+import { internalAction, internalMutation, mutation, action } from './_generated/server'
 import { internal } from './_generated/api'
 import { retrier, boxCall, requireOperator, requireOperatorAction } from './lib'
 
@@ -135,5 +135,75 @@ export const recordingUrl = action({
     if (!order?.host || !token) return null
     const out = await boxCall(order.host, '/deskd/record', token, { op: 'link', file })
     return typeof out.url === 'string' ? out.url : null
+  },
+})
+
+/**
+ * "Save as template": read a box's live setup — profile, brand, price list,
+ * memory — into a demo template, so the rehearsed default is captured from a
+ * real, tuned Desk instead of typed into a form.
+ */
+export const captureTemplate = action({
+  args: { orderId: v.string(), name: v.string(), templateId: v.optional(v.id('demoTemplates')) },
+  handler: async (ctx, { orderId, name, templateId }): Promise<string> => {
+    const email = await requireOperatorAction(ctx)
+    const order = await ctx.runQuery(internal.orders.byOrderId, { orderId })
+    const token = await ctx.runQuery(internal.secrets.boxTokenFor, { orderId })
+    if (!order?.host || !token) throw new Error(`box for ${orderId} is not reachable`)
+    const current = await boxCall(order.host, '/deskd/config', token, { read: true })
+    const profile = (current.profile ?? {}) as Record<string, string>
+    const id: string = await ctx.runMutation(internal.push.saveCapturedTemplate, {
+      templateId,
+      name,
+      profile: { ...profile, business: profile.business ?? order.business },
+      brand: current.brand ?? {},
+      priceListMd: typeof current.priceListMd === 'string' ? current.priceListMd : undefined,
+      memorySeeds: Array.isArray(current.memory) ? current.memory : [],
+    })
+    await ctx.runMutation(internal.orders.log, { actor: 'ops', action: 'template-captured', orderId, detail: `${email}: ${name}` })
+    return id
+  },
+})
+
+export const saveCapturedTemplate = internalMutation({
+  args: {
+    templateId: v.optional(v.id('demoTemplates')),
+    name: v.string(),
+    profile: v.any(),
+    brand: v.any(),
+    priceListMd: v.optional(v.string()),
+    memorySeeds: v.any(),
+  },
+  handler: async (ctx, { templateId, ...fields }): Promise<string> => {
+    const at = new Date().toISOString()
+    if (templateId) { await ctx.db.patch(templateId, { ...fields, updatedAt: at }); return templateId }
+    return await ctx.db.insert('demoTemplates', { ...fields, updatedAt: at })
+  },
+})
+
+/**
+ * "Reset to template": put a box back to its rehearsed default — profile and
+ * brand pushed, seed files rewritten, and the memory ledger REPLACED by the
+ * template's seeds (what a prospect typed into the demo is gone).
+ */
+export const resetBox = action({
+  args: { orderId: v.string(), templateId: v.id('demoTemplates') },
+  handler: async (ctx, { orderId, templateId }) => {
+    const email = await requireOperatorAction(ctx)
+    const order = await ctx.runQuery(internal.orders.byOrderId, { orderId })
+    const token = await ctx.runQuery(internal.secrets.boxTokenFor, { orderId })
+    if (!order?.host || !token) throw new Error(`box for ${orderId} is not reachable`)
+    const template = await ctx.runQuery(internal.demos.template, { id: templateId })
+    if (!template) throw new Error('that template is gone')
+    await boxCall(order.host, '/deskd/config', token, { profile: template.profile, brand: template.brand ?? {} })
+    await boxCall(order.host, '/deskd/seed', token, {
+      resetMemory: true,
+      files: [
+        ...(template.priceListMd ? [{ path: 'price-list.md', content: template.priceListMd }] : []),
+        ...(template.seedFiles ?? []),
+      ],
+      memory: template.memorySeeds ?? [],
+    })
+    await ctx.runMutation(internal.orders.log, { actor: 'ops', action: 'box-reset', orderId, detail: `${email}: ${template.name}` })
   },
 })

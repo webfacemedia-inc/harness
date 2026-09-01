@@ -53,3 +53,27 @@ textarea{min-height:90px;font-family:ui-monospace,Menlo,monospace;font-size:13px
 .swatch{display:inline-block;width:18px;height:18px;border-radius:5px;border:1px solid var(--line);vertical-align:-4px;margin-right:6px}
 .spark{display:flex;align-items:flex-end;gap:2px;height:36px}
 .spark i{display:block;width:8px;background:var(--blue);border-radius:2px 2px 0 0;min-height:2px}
+
+/* Phones: the fleet table stacks into cards, the chrome tightens, taps get room. */
+@media(max-width:700px){
+  .top{padding:8px 12px;gap:8px;flex-wrap:wrap}
+  .top .who{display:none}
+  .top .wm{white-space:nowrap}
+  .top .wm .wf{display:none}
+  .top .wm em{margin-left:0}
+  .top nav{order:3;width:100%;margin-left:0;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  .top nav button{white-space:nowrap}
+  main{padding:16px 12px 48px}
+  h1{font-size:24px}
+  section{padding:14px}
+  table.stack thead{display:none}
+  table.stack, table.stack tbody{display:block}
+  table.stack tr{display:block;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:0 0 10px}
+  table.stack tr:last-child{margin-bottom:0}
+  table.stack td{display:flex;justify-content:space-between;gap:10px;border-bottom:0;padding:4px 0;text-align:right}
+  table.stack td:first-child{text-align:left}
+  table.stack td::before{content:attr(data-label);color:var(--mute);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;text-align:left;flex:none;align-self:center}
+  table.stack td[data-label="Business"]::before{content:none}
+  tr.click:hover td{background:none}
+  .acts button, .acts select, .acts label{flex:1 1 auto;text-align:center;justify-content:center}
+}
