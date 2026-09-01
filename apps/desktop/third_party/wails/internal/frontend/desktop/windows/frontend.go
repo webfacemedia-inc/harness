@@ -547,6 +547,8 @@ func (f *Frontend) setupChromium() {
 	}
 
 	chromium.Embed(f.mainWindow.Handle())
+	// webfaCe Desk patch: target=_blank goes to the system browser, never a bare popup.
+	f.openExternalLinksInBrowser()
 
 	if chromium.HasCapability(edge.SwipeNavigation) {
 		swipeGesturesEnabled := f.frontendOptions.Windows != nil && f.frontendOptions.Windows.EnableSwipeGestures

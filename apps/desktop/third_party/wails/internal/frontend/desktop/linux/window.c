@@ -317,6 +317,20 @@ void DisableContextMenu(void *webview)
     g_signal_connect(WEBKIT_WEB_VIEW(webview), "context-menu", G_CALLBACK(disableContextMenu), NULL);
 }
 
+// External links (webfaCe Desk patch): a target=_blank click asks for a new web view;
+// with the "create" signal unhandled it silently does nothing. One window on purpose —
+// a new window belongs in the user's own browser.
+static GtkWidget *webviewCreate(WebKitWebView *web_view, WebKitNavigationAction *navigation_action, gpointer user_data)
+{
+    WebKitURIRequest *request = webkit_navigation_action_get_request(navigation_action);
+    const gchar *uri = webkit_uri_request_get_uri(request);
+    if (uri != NULL)
+    {
+        gtk_show_uri_on_window(NULL, uri, GDK_CURRENT_TIME, NULL);
+    }
+    return NULL;
+}
+
 static gboolean buttonPress(GtkWidget *widget, GdkEventButton *event, void *dummy)
 {
     if (event == NULL)
@@ -565,6 +579,7 @@ GtkWidget *SetupWebview(void *contentManager, GtkWindow *window, int hideWindowO
     WebKitWebContext *context = webkit_web_context_get_default();
     webkit_web_context_register_uri_scheme(context, "wails", (WebKitURISchemeRequestCallback)processURLRequest, NULL, NULL);
     g_signal_connect(G_OBJECT(webview), "load-changed", G_CALLBACK(webviewLoadChanged), NULL);
+    g_signal_connect(G_OBJECT(webview), "create", G_CALLBACK(webviewCreate), NULL);
 
     if(disableWebViewDragAndDrop)
     {

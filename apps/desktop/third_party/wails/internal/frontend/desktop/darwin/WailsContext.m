@@ -487,6 +487,20 @@ extern void didReceiveNotificationResponse(const char *jsonPayload, const char* 
     }
 }
 
+/***** External links (webfaCe Desk patch) ******/
+// A link with target=_blank asks WebKit for a new web view; with no UI-delegate answer
+// the click silently does nothing — the app looked broken whenever the Desk handed the
+// owner an external link (a social post, a Google page). The Desk is one window on
+// purpose, so anything that wants a new window belongs in the user's own browser,
+// where their sessions and passwords already live.
+- (WKWebView *)webView:(WKWebView *)webView createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration forNavigationAction:(WKNavigationAction *)navigationAction windowFeatures:(WKWindowFeatures *)windowFeatures {
+    NSURL *url = navigationAction.request.URL;
+    if (url != nil) {
+        [[NSWorkspace sharedWorkspace] openURL:url];
+    }
+    return nil;
+}
+
 /***** Downloads (webfaCe Desk patch) ******/
 // A WebView has no download behaviour of its own. Attachment responses, responses it cannot
 // display, and <a download> links become WKDownloads that ask where to save with the native panel.
