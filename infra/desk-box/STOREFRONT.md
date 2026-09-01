@@ -37,5 +37,5 @@ Cut-over (quiet evening; boxes untouched):
 2. Apex Caddy (`/etc/caddy/conf.d/webfacedesk.caddy`): proxy `/api/* /checkout /welcome /auth/*` to `dynamic-stork-829.convex.site` instead of `127.0.0.1:8095`; `handle /ops* { redir https://desk.webfacemedia.com }`. `caddy validate` with env, then reload.
 3. `systemctl stop deskapi` (leave installed — rollback is `systemctl start deskapi` + Caddy revert).
 4. Demo box heartbeat appears in the console within 60 s; `curl https://webfacedesk.app/api/health` still answers.
-5. Import history: run `scripts/import-orders.mjs` ON THE BOX (orders.json holds passwords/tokens — it never leaves the box); keep orders.json read-only 30 d.
+5. Import history (already done 2026-09-01, idempotent — rerun refreshes nothing that exists): ON THE BOX, `K=$(grep -m1 ^DESKAPI_ADMIN_TOKEN= /srv/deskapi/deskapi.env | cut -d= -f2-); curl -X POST https://dynamic-stork-829.convex.site/api/admin/import-orders -H "authorization: Bearer $K" --data-binary @/srv/deskapi/orders.json`. Keep orders.json read-only 30 d.
 6. Live E2E on a checkout-test order per the control-plane spec, then destroy it.
