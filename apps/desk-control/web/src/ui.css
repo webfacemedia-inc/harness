@@ -34,6 +34,7 @@ button:disabled{opacity:.5;cursor:default}
 label{display:block;font-weight:600;font-size:13px;margin:10px 0 4px}
 input,select,textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:inherit;font:inherit}
 textarea{min-height:90px;font-family:ui-monospace,Menlo,monospace;font-size:13px}
+input.colour{padding:3px;height:42px;cursor:pointer}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
 @media(max-width:640px){.grid2{grid-template-columns:1fr}}
 .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
@@ -50,7 +51,6 @@ textarea{min-height:90px;font-family:ui-monospace,Menlo,monospace;font-size:13px
 .mono{font-family:ui-monospace,Menlo,monospace;font-size:12px}
 .gate{min-height:100vh;display:grid;place-items:center;padding:24px}
 .gate .card{max-width:380px;text-align:center;padding:32px}
-.swatch{display:inline-block;width:18px;height:18px;border-radius:5px;border:1px solid var(--line);vertical-align:-4px;margin-right:6px}
 .spark{display:flex;align-items:flex-end;gap:2px;height:36px}
 .spark i{display:block;width:8px;background:var(--blue);border-radius:2px 2px 0 0;min-height:2px}
 
@@ -76,4 +76,6 @@ textarea{min-height:90px;font-family:ui-monospace,Menlo,monospace;font-size:13px
   table.stack td[data-label="Business"]::before{content:none}
   tr.click:hover td{background:none}
   .acts button, .acts select, .acts label{flex:1 1 auto;text-align:center;justify-content:center}
+  /* iOS zooms any focused input under 16px — keep form text at 16 on phones. */
+  input,select,textarea{font-size:16px}
 }

@@ -64,7 +64,20 @@ export function useQuery(ref: unknown, _args?: unknown): unknown {
   return ORDERS
 }
 export const useMutation = () => async () => ({ orderId: 'ord_new', slug: 'new-box', welcome: 'https://webfacedesk.app/welcome?order=x' })
-export const useAction = () => async () => ({ recording: false, recordings: [{ file: '2026-09-01T22-22-45-613Z.mp4', bytes: 14334, at: iso(600000) }] })
+export const useAction = (ref: unknown) => async () => {
+  let name = ''
+  try { name = getFunctionName(ref as never) } catch { name = '' }
+  if (name.includes('readBoxConfig')) return {
+    profile: { business: 'Maple & Main Plumbing', does: 'Plumbing across the GTA', phone: '416-555-0100', email: 'hello@maplemain.ca' },
+    brand: { primary: '#1f6f99', accent: '#3499cc', font: 'classic', tagline: 'Fast, tidy, guaranteed.' },
+    priceListMd: '# Prices\n\n| Item | Price |\n|---|---|\n| Growth site | $6,900 |\n| Care plan | $149/mo |',
+    memory: [
+      { kind: 'commitment', about: 'Dana Okafor', text: 'Quoted $2,400 for the website rebuild', pinned: false },
+      { kind: 'decision', text: 'No jobs outside the GTA', pinned: true },
+    ],
+  }
+  return { recording: false, recordings: [{ file: '2026-09-01T22-22-45-613Z.mp4', bytes: 14334, at: iso(600000) }] }
+}
 export const Authenticated = ({ children }: { children: ReactNode }) => <>{children}</>
 export const Unauthenticated = () => null
 export class ConvexReactClient { constructor(_u: string) {} }

@@ -1,6 +1,6 @@
 // The console: fleet, one box, demos, templates, audit — all on live queries.
 // Every action is a Convex mutation that starts a workflow or a retried push.
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { SignInButton, UserButton, useUser } from '@clerk/clerk-react'
 import { Authenticated, Unauthenticated, useAction, useMutation, useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
@@ -173,13 +173,16 @@ function BoxDetail({ orderId, back }: { orderId: string; back: () => void }) {
 
 type DemoInfo = { prospect: string; expiresAt: string; extendedCount: number; convertedAt?: string }
 type DailyUse = Array<{ day: string; sessions: number; turns: number }>
-function DemoCard({ orderId, demo, usageDaily }: { orderId: string; demo: DemoInfo; usageDaily: DailyUse }) {
+function DemoCard({ orderId, demo, usageDaily }: { orderId: string; demo: DemoInfo & { templateId?: string }; usageDaily: DailyUse }) {
   const extend = useMutation(api.demos.extendDemo)
   const convert = useAction(api.demos.convertLink)
+  const templates = useQuery(api.demos.listTemplates)
+  const seededFrom = demo.templateId ? templates?.find(t => t._id === demo.templateId)?.name : undefined
   const [msg, setMsg] = useState('')
   const max = Math.max(...usageDaily.map(d => d.turns), 1)
   return <section>
     <h2>Demo for {demo.prospect}</h2>
+    {seededFrom && <div className="row"><span>Seeded from</span><span>{seededFrom} — shown under "On this Desk" below</span></div>}
     <div className="row"><span>Expires</span><span>{demo.convertedAt ? 'converted to paid' : `${untilDays(demo.expiresAt).toFixed(1)} days (${new Date(demo.expiresAt).toLocaleString('en-CA', { timeZone: 'America/Toronto', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })})`}{demo.extendedCount > 0 ? ` · extended ×${demo.extendedCount}` : ''}</span></div>
     <div className="row"><span>Activity<br /><small>turns per day — counters only, never content</small></span>
       <span className="spark">{usageDaily.slice(-14).map(d => <i key={d.day} title={`${d.day}: ${d.sessions} conversations, ${d.turns} turns`} style={{ height: `${Math.max(6, (d.turns / max) * 36)}px` }} />)}</span></div>
@@ -225,62 +228,97 @@ function TemplateTools({ orderId, business }: { orderId: string; business: strin
   </section>
 }
 
+type BoxConfig = {
+  profile?: Record<string, string>
+  brand?: { primary?: string; accent?: string; font?: string; tagline?: string }
+  priceListMd?: string
+  memory?: Array<{ kind: string; about?: string; text: string; pinned?: boolean }>
+}
+
 function ConfigEditor({ orderId }: { orderId: string }) {
   const pushConfig = useMutation(api.push.pushConfig)
   const logoUploadUrl = useMutation(api.push.logoUploadUrl)
   const pushLogo = useAction(api.push.pushLogo)
+  const readBoxConfig = useAction(api.push.readBoxConfig)
   const [msg, setMsg] = useState('')
-  const [primary, setPrimary] = useState('')
   const [tagline, setTagline] = useState('')
-  return <section>
-    <h2>Configure &amp; brand</h2>
-    <p className="sub" style={{ marginBottom: 6 }}>Pushed straight to the box: the profile regenerates its AGENTS.md, the brand dresses every document it makes.</p>
-    <form onSubmit={async (e) => {
-      e.preventDefault(); setMsg('')
-      const f = new FormData(e.currentTarget)
-      const val = (n: string) => { const s = String(f.get(n) ?? '').trim(); return s || undefined }
-      try {
-        await pushConfig({
-          orderId,
-          profile: { business: val('business'), does: val('does'), phone: val('phone'), email: val('email'), website: val('website'), hours: val('hours') },
-          brand: { primary: val('primary'), accent: val('accent'), font: val('font') as 'editorial' | 'classic' | 'plain' | undefined, tagline: val('tagline') },
-        })
-        setMsg('Pushed — the box applies it within seconds (retried if it is asleep).')
-      } catch (err) { setMsg(err instanceof Error ? err.message : String(err)) }
-    }}>
-      <div className="grid2">
-        <div><label>Business name</label><input name="business" /></div>
-        <div><label>What they do</label><input name="does" /></div>
-        <div><label>Phone</label><input name="phone" /></div>
-        <div><label>Email</label><input name="email" /></div>
-        <div><label>Website</label><input name="website" /></div>
-        <div><label>Hours</label><input name="hours" /></div>
-        <div><label>Primary colour {primary && /^#?[0-9a-fA-F]{6}$/.test(primary) && <span className="swatch" style={{ background: `#${primary.replace('#', '')}` }} />}</label><input name="primary" placeholder="3499cc" value={primary} onChange={e => setPrimary(e.target.value)} /></div>
-        <div><label>Accent colour</label><input name="accent" placeholder="1f6f99" /></div>
-        <div><label>Font</label><select name="font" defaultValue=""><option value="">(keep)</option><option value="editorial">Editorial</option><option value="classic">Classic</option><option value="plain">Plain</option></select></div>
-        <div><label>Tagline</label><input name="tagline" value={tagline} onChange={e => setTagline(e.target.value)} placeholder="Fast, tidy, guaranteed." /></div>
-      </div>
-      {msg && <div className={`msg ${/Pushed|Logo/.test(msg) ? 'ok' : 'err'}`}>{msg}</div>}
-      <div className="acts">
-        <button className="btn" type="submit">Push to the box</button>
-        <label className="ghost" style={{ margin: 0, display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
+  const [current, setCurrent] = useState<BoxConfig | null | 'unreachable'>(null)
+  useEffect(() => {
+    let live = true
+    readBoxConfig({ orderId })
+      .then((c) => { if (!live) return; setCurrent(c as BoxConfig); setTagline((c as BoxConfig).brand?.tagline ?? '') })
+      .catch(() => { if (live) setCurrent('unreachable') })
+    return () => { live = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one read per box; the action ref is not stable in tests
+  }, [orderId])
+  const cur = current !== null && current !== 'unreachable' ? current : undefined
+  return <>
+    {cur && ((cur.memory?.length ?? 0) > 0 || cur.priceListMd) && <section>
+      <h2>On this Desk</h2>
+      <p className="sub" style={{ marginBottom: 6 }}>What it holds right now — the seed it was born with plus everything since.</p>
+      {(cur.memory?.length ?? 0) > 0 && <>
+        <label style={{ margin: '4px 0 6px' }}>Memory ({cur.memory!.length} note{cur.memory!.length === 1 ? '' : 's'})</label>
+        {cur.memory!.map((m, i) => <div className="row" key={i}>
+          <span><strong>{m.text}</strong><small>{m.about && m.about !== 'business' ? `${m.about} · ` : ''}{m.kind}{m.pinned ? ' · always kept' : ''}</small></span>
+        </div>)}
+      </>}
+      {cur.priceListMd && <>
+        <label style={{ margin: '10px 0 6px' }}>Price list ({cur.priceListMd.length} chars)</label>
+        <pre style={{ maxHeight: 180, overflow: 'auto', background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 8, padding: 10, fontSize: 12, whiteSpace: 'pre-wrap' }}>{cur.priceListMd.slice(0, 2000)}</pre>
+      </>}
+    </section>}
+    <section>
+      <h2>Configure &amp; brand</h2>
+      <p className="sub" style={{ marginBottom: 6 }}>
+        {current === null ? 'Reading what the box holds…' : current === 'unreachable' ? 'The box did not answer — fields start blank; a push still lands when it wakes.' : 'Loaded from the box. Change what you like and push.'}
+      </p>
+      <form onSubmit={async (e) => {
+        e.preventDefault(); setMsg('')
+        const f = new FormData(e.currentTarget)
+        const val = (n: string) => { const s = String(f.get(n) ?? '').trim(); return s || undefined }
+        try {
+          await pushConfig({
+            orderId,
+            profile: { business: val('business'), does: val('does'), phone: val('phone'), email: val('email'), website: val('website'), hours: val('hours') },
+            brand: { primary: val('primary'), accent: val('accent'), font: val('font') as 'editorial' | 'classic' | 'plain' | undefined, tagline: val('tagline') },
+          })
+          setMsg('Pushed — the box applies it within seconds (retried if it is asleep).')
+        } catch (err) { setMsg(err instanceof Error ? err.message : String(err)) }
+      }}>
+        <div className="grid2">
+          <div><label>Business name</label><input name="business" key={`b${cur?.profile?.business ?? ''}`} defaultValue={cur?.profile?.business ?? ''} /></div>
+          <div><label>What they do</label><input name="does" key={`d${cur?.profile?.does ?? ''}`} defaultValue={cur?.profile?.does ?? ''} /></div>
+          <div><label>Phone</label><input name="phone" key={`p${cur?.profile?.phone ?? ''}`} defaultValue={cur?.profile?.phone ?? ''} /></div>
+          <div><label>Email</label><input name="email" key={`e${cur?.profile?.email ?? ''}`} defaultValue={cur?.profile?.email ?? ''} /></div>
+          <div><label>Website</label><input name="website" key={`w${cur?.profile?.website ?? ''}`} defaultValue={cur?.profile?.website ?? ''} /></div>
+          <div><label>Hours</label><input name="hours" key={`h${cur?.profile?.hours ?? ''}`} defaultValue={cur?.profile?.hours ?? ''} /></div>
+          <div><label>Primary colour</label><input type="color" className="colour" name="primary" key={`p${cur?.brand?.primary ?? ''}`} defaultValue={cur?.brand?.primary ?? '#3499cc'} /></div>
+          <div><label>Accent colour</label><input type="color" className="colour" name="accent" key={`a${cur?.brand?.accent ?? ''}`} defaultValue={cur?.brand?.accent ?? '#1f6f99'} /></div>
+          <div><label>Font</label><select name="font" key={`f${cur?.brand?.font ?? ''}`} defaultValue={cur?.brand?.font ?? ''}><option value="">(keep)</option><option value="editorial">Editorial</option><option value="classic">Classic</option><option value="plain">Plain</option></select></div>
+          <div><label>Tagline</label><input name="tagline" value={tagline} onChange={e => setTagline(e.target.value)} placeholder="Fast, tidy, guaranteed." /></div>
+        </div>
+        {msg && <div className={`msg ${/Pushed|Logo/.test(msg) ? 'ok' : 'err'}`}>{msg}</div>}
+        <div className="acts">
+          <button className="btn" type="submit">Push to the box</button>
+          <label className="ghost" style={{ margin: 0, display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
           Upload logo…
-          <input type="file" accept=".png,.jpg,.jpeg,.svg,.webp" style={{ display: 'none' }} onChange={async (e) => {
-            const file = e.target.files?.[0]
-            if (!file) return
-            setMsg('')
-            try {
-              const url = await logoUploadUrl()
-              const up = await fetch(url, { method: 'POST', headers: { 'content-type': file.type || 'application/octet-stream' }, body: file })
-              const { storageId } = await up.json() as { storageId: Id<'_storage'> }
-              await pushLogo({ orderId, storageId, filename: file.name })
-              setMsg('Logo pushed — every new document wears it.')
-            } catch (err) { setMsg(err instanceof Error ? err.message : String(err)) }
-          }} />
-        </label>
-      </div>
-    </form>
-  </section>
+            <input type="file" accept=".png,.jpg,.jpeg,.svg,.webp" style={{ display: 'none' }} onChange={async (e) => {
+              const file = e.target.files?.[0]
+              if (!file) return
+              setMsg('')
+              try {
+                const url = await logoUploadUrl()
+                const up = await fetch(url, { method: 'POST', headers: { 'content-type': file.type || 'application/octet-stream' }, body: file })
+                const { storageId } = await up.json() as { storageId: Id<'_storage'> }
+                await pushLogo({ orderId, storageId, filename: file.name })
+                setMsg('Logo pushed — every new document wears it.')
+              } catch (err) { setMsg(err instanceof Error ? err.message : String(err)) }
+            }} />
+          </label>
+        </div>
+      </form>
+    </section>
+  </>
 }
 
 function Recorder({ orderId }: { orderId: string }) {
@@ -291,9 +329,10 @@ function Recorder({ orderId }: { orderId: string }) {
   const refresh = async () => {
     try { setState(await record({ orderId, op: 'list' }) as never) } catch (e) { setMsg(e instanceof Error ? e.message : String(e)) }
   }
+  useEffect(() => { void refresh() }, [orderId])  // eslint-disable-line react-hooks/exhaustive-deps -- one load per box
   return <section>
     <h2>Screen recording</h2>
-    <p className="sub" style={{ marginBottom: 6 }}>Records the Desk's own screen (its browser) — for a chat walkthrough, open the Desk in it first.</p>
+    <p className="sub" style={{ marginBottom: 6 }}>Records the Desk's own screen (its browser) — for a chat walkthrough, open the Desk in it first. Files stay on the box 30 days; Download fetches the mp4 here.</p>
     {msg && <div className="msg err">{msg}</div>}
     <div className="acts">
       <button className="ghost" onClick={() => { void record({ orderId, op: 'open-desk' }).then(refresh).catch(e => setMsg(String(e))) }}>Open the Desk on its screen</button>
@@ -302,9 +341,10 @@ function Recorder({ orderId }: { orderId: string }) {
         : <button className="btn" onClick={() => { void record({ orderId, op: 'start' }).then(refresh).catch(e => setMsg(String(e))) }}>● Record</button>}
       <button className="ghost" onClick={() => void refresh()}>Refresh list</button>
     </div>
+    {state && state.recordings.length === 0 && <p className="sub" style={{ margin: '10px 0 0' }}>No recordings on this box yet.</p>}
     {state && state.recordings.length > 0 && <div style={{ marginTop: 10 }}>
       {state.recordings.map(r => <div className="row" key={r.file}>
-        <span className="mono">{r.file}<small>{(r.bytes / 1048576).toFixed(1)} MB · {ago(r.at)}</small></span>
+        <span className="mono">{r.file}<small>{r.bytes >= 1048576 ? `${(r.bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(r.bytes / 1024))} KB`} · {ago(r.at)}</small></span>
         <button className="ghost" onClick={() => {
           void recordingUrl({ orderId, file: r.file }).then((url) => { if (url) window.open(url, '_blank'); else setMsg('The link could not be made — is the box up?') }).catch(e => setMsg(String(e)))
         }}>Download</button>

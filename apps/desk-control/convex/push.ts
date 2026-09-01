@@ -207,3 +207,15 @@ export const resetBox = action({
     await ctx.runMutation(internal.orders.log, { actor: 'ops', action: 'box-reset', orderId, detail: `${email}: ${template.name}` })
   },
 })
+
+/** What the box holds right now: profile, brand, price list, memory — the console shows it and prefills the editor. */
+export const readBoxConfig = action({
+  args: { orderId: v.string() },
+  handler: async (ctx, { orderId }): Promise<Record<string, unknown>> => {
+    await requireOperatorAction(ctx)
+    const order = await ctx.runQuery(internal.orders.byOrderId, { orderId })
+    const token = await ctx.runQuery(internal.secrets.boxTokenFor, { orderId })
+    if (!order?.host || !token) throw new Error(`box for ${orderId} is not reachable`)
+    return await boxCall(order.host, '/deskd/config', token, { read: true })
+  },
+})
