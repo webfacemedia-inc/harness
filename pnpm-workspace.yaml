@@ -55,7 +55,8 @@ allowBuilds:
   # The Python runtime deploy includes the reviewed workspace postinstall that
   # restores the executable bit on node-pty's macOS spawn helper.
   '@deepseek-ai/dsh-subprocess-local@file:packages/subprocess/subprocess-local': true
-  '@clerk/shared': set this to true or false
+  # Clerk's telemetry postinstall; the SDK works without it.
+  '@clerk/shared': false
 
 minimumReleaseAgeExclude:
   # Fresh pi-ai releases carry the model catalog updates that are the whole
@@ -73,7 +74,3 @@ minimumReleaseAgeExclude:
 
 patchedDependencies:
   node-pty@1.2.0-beta.15: patches/node-pty@1.2.0-beta.15.patch
-
-# Build scripts we deliberately do not run (telemetry/postinstall notices only).
-ignoredBuiltDependencies:
-  - '@clerk/shared'
