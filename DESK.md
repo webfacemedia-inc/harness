@@ -27,6 +27,14 @@ The business identity the model sees is `/srv/desk/work/AGENTS.md`, rendered by 
 
 **Activity** — `packages/webface/desk-activity` follows the approval audit pair the harness already writes (`approval/asked` + `approval/decided` from `packages/interaction/user-approval`) into `/srv/desk/activity.json`, which deskd renders at `/activity` in owner language. Read-only: the page can never change a decision.
 
+## Control plane (`apps/desk-control`)
+
+The operator side is moving from `apps/deskapi` (plain Node on the apex box) to **Convex project `desk-control`** (team webfacemedia): durable `provisionBox`/`destroyBox` workflows (a redeploy resumes them; droplet adoption by `order:<id>` tag), the same HTTP surface boxes already call (nothing on boxes changes at cut-over), timed **demo Desks** (seeded from `demoTemplates`, warned at T-24h, torn down at expiry with the final snapshot kept, convert-to-paid keeps the same box), config/brand **pushes to boxes** over the box-token channel (`POST /deskd/config`, `PUT /deskd/config/logo`, `POST /deskd/seed`, `POST /deskd/record` in `apps/deskd/src/control.js`), and screen recordings (ffmpeg on `DISPLAY :1`, box-signed expiring download links).
+
+The console is `apps/desk-control/web` (Vite + React + Clerk on Vercel, project `desk-control`) at **desk.webfacemedia.com** — sign in with a Google account listed in the deployment's `OPERATOR_EMAILS`. Deploy recipe and the cut-over checklist: [infra/desk-box/STOREFRONT.md](infra/desk-box/STOREFRONT.md). Until cut-over, deskapi still serves webfacedesk.app; the Convex deployment runs in parallel (prod `dynamic-stork-829`).
+
+Traps: Convex **workflow handlers are deterministic** — no `process.env`, no `Date` in the handler body; read env in the `begin` mutation and stamp times inside mutations (`readyNow`/`destroyedNow` on `orders.patch`). The box bootstrap script lives in the `config` table (no disk on Convex) — `scripts/push-bootstrap.mjs [--prod]` after every deploy that touches `infra/desk-box/bootstrap.sh`. The Vercel build is `vercel build` + `deploy --prebuilt` from `apps/desk-control/web` (the remote build cannot see `../convex`).
+
 ## Box layout (`/srv/desk`)
 
 `desk.env` (all env; 0600 — includes `DESK_MEMORY_FILE`, `DESK_MEMORY_BLOCK`, `DESK_ACTIVITY_FILE`, without which the server and the pages would disagree about where memory lives) · `auth.json` (owner accounts, scrypt) · `session.secret` · `profile.json` · `brand/logo.*` · `work/` (the Desk folder: AGENTS.md, price-list.md, uploads, `deliverables/<date>/`) · `home/` (DSH_HOME: sessions, storages, profiles/desk/cordis.patch.yml = the managed connections block) · `google/` (Google client JSON + tokens) · `push.json`, `routines.json`, `routines-actions.json`, `memory.jsonl` (what Desk remembers; the budgeted view of it is `home/AGENTS.md`), `activity.json`, `billing.json`, `webface-oauth.json` · `harness/` (this repo, branch `desk`) · `READY`.

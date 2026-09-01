@@ -35,6 +35,7 @@ External packages that a workspace package resolves at runtime. The tier covers 
 | [`@anthropic-ai/claude-agent-sdk`](https://github.com/anthropics/claude-agent-sdk-typescript) | SEE LICENSE IN README.md |
 | [`@anthropic-ai/sdk`](https://github.com/anthropics/anthropic-sdk-typescript) | MIT |
 | [`@babel/code-frame`](https://github.com/babel/babel) | MIT |
+| [`@clerk/clerk-react`](https://github.com/clerk/javascript) | MIT |
 | [`@convex-dev/action-retrier`](https://github.com/get-convex/action-retrier) | Apache-2.0 |
 | [`@convex-dev/crons`](https://github.com/get-convex/crons) | Apache-2.0 |
 | [`@convex-dev/rate-limiter`](https://github.com/get-convex/rate-limiter) | Apache-2.0 |

@@ -27,6 +27,10 @@ export const begin = internalMutation({
     })
     return {
       secrets,
+      // The workflow handler runs deterministically, with no process.env of its
+      // own — everything environmental is decided here and journalled.
+      dnsAble: Boolean(process.env.CLOUDFLARE_API_TOKEN),
+      domain: process.env.DESK_DOMAIN ?? 'webfacedesk.app',
       order: {
         slug: order.slug, business: order.business, plan: order.plan, size: order.size,
         sandbox: order.sandbox, dropletId: order.dropletId, kind: order.kind,
@@ -135,8 +139,7 @@ const RETRY = { maxAttempts: 3, initialBackoffMs: 2000, base: 2 }
 export const provisionBox = workflow.define({
   args: { orderId: v.string() },
   handler: async (step, { orderId }): Promise<void> => {
-    const dnsAble = Boolean(process.env.CLOUDFLARE_API_TOKEN)
-    const { secrets, order } = await step.runMutation(internal.provision.begin, { orderId, workflowId: step.workflowId })
+    const { secrets, order, dnsAble, domain } = await step.runMutation(internal.provision.begin, { orderId, workflowId: step.workflowId })
 
     let dropletId: number | undefined
     try {
@@ -162,7 +165,7 @@ export const provisionBox = workflow.define({
         try { dns = await step.runAction(internal.provision.dnsUpsert, { slug: order.slug, ip }, { retry: RETRY }) }
         catch (e) { await step.runMutation(internal.orders.noteError, { orderId, step: 'dns', message: e instanceof Error ? e.message : String(e) }) }
       }
-      const host = dns ? `${order.slug}.${DOMAIN()}` : `${ip}.sslip.io`
+      const host = dns ? `${order.slug}.${domain}` : `${ip}.sslip.io`
       await step.runMutation(internal.orders.patch, { orderId, host, dns, status: 'installing', detail: 'setting up your Desk' })
 
       // First boot installs everything; up to 30 minutes before we call it dead.
@@ -173,7 +176,7 @@ export const provisionBox = workflow.define({
       }
       if (!up) throw new Error('box did not come up in 30 minutes')
 
-      await step.runMutation(internal.orders.patch, { orderId, status: 'ready', detail: '', readyAt: nowIso(), clearLastError: true })
+      await step.runMutation(internal.orders.patch, { orderId, status: 'ready', detail: '', readyNow: true, clearLastError: true })
       await step.runMutation(internal.orders.log, { actor: 'system', action: 'box-ready', orderId, detail: host })
 
       // A demo box is born dressed: profile, brand and the rehearsed seed.
@@ -209,10 +212,10 @@ export const provisionBox = workflow.define({
 })
 
 /** Final snapshot, then the droplet and its DNS are gone. */
-export const takeSnapshot = internalAction({
-  args: { dropletId: v.number(), name: v.string() },
-  handler: async (_ctx, { dropletId, name }) => {
-    const a = await doApi('POST', `/droplets/${dropletId}/actions`, { type: 'snapshot', name })
+export const takeFinalSnapshot = internalAction({
+  args: { dropletId: v.number(), slug: v.string() },
+  handler: async (_ctx, { dropletId, slug }) => {
+    const a = await doApi('POST', `/droplets/${dropletId}/actions`, { type: 'snapshot', name: `desk-${slug}-final-${nowIso().slice(0, 10)}` })
     return a.action?.id as number | undefined
   },
 })
@@ -240,8 +243,8 @@ export const destroyBox = workflow.define({
       // The final snapshot is the customer's 30-day safety net; a failure is
       // recorded, but a box we cannot snapshot is still a box we must stop billing.
       try {
-        const actionId = await step.runAction(internal.provision.takeSnapshot, {
-          dropletId: order.dropletId, name: `desk-${order.slug}-final-${nowIso().slice(0, 10)}`,
+        const actionId = await step.runAction(internal.provision.takeFinalSnapshot, {
+          dropletId: order.dropletId, slug: order.slug,
         }, { retry: RETRY })
         if (actionId) {
           for (let i = 0; i < 120; i++) {
@@ -264,7 +267,7 @@ export const destroyBox = workflow.define({
       try { await step.runAction(internal.provision.deleteDns, { host: order.host }, { retry: RETRY }) }
       catch (e) { await step.runMutation(internal.orders.noteError, { orderId, step: 'dns-delete', message: e instanceof Error ? e.message : String(e) }) }
     }
-    await step.runMutation(internal.orders.patch, { orderId, status: 'destroyed', destroyedAt: nowIso() })
+    await step.runMutation(internal.orders.patch, { orderId, status: 'destroyed', destroyedNow: true })
     await step.runMutation(internal.secrets.clearPassword, { orderId })
     await step.runMutation(internal.orders.log, { actor: 'system', action: 'box-destroyed', orderId })
   },

@@ -124,6 +124,10 @@ export const patch = internalMutation({
     paidAt: v.optional(v.string()),
     readyAt: v.optional(v.string()),
     destroyedAt: v.optional(v.string()),
+    // Workflow handlers are deterministic and must not read the clock; these
+    // stamp inside the transaction instead.
+    readyNow: v.optional(v.boolean()),
+    destroyedNow: v.optional(v.boolean()),
     billing: v.optional(billingState),
     billingAt: v.optional(v.string()),
     pastDueSince: v.optional(v.string()),
@@ -139,12 +143,14 @@ export const patch = internalMutation({
     kind: v.optional(orderKind),
     demo: v.optional(v.any()),
   },
-  handler: async (ctx, { orderId, clearLastError, clearPastDueSince, ...patch }) => {
+  handler: async (ctx, { orderId, clearLastError, clearPastDueSince, readyNow, destroyedNow, ...patch }) => {
     const order = await ctx.db.query('orders').withIndex('by_orderId', q => q.eq('orderId', orderId)).unique()
     if (!order) throw new Error(`no order ${orderId}`)
     const clean = Object.fromEntries(Object.entries(patch).filter(([, val]) => val !== undefined))
     await ctx.db.patch(order._id, {
       ...clean,
+      ...(readyNow ? { readyAt: nowIso() } : {}),
+      ...(destroyedNow ? { destroyedAt: nowIso() } : {}),
       ...(clearLastError ? { lastError: undefined } : {}),
       ...(clearPastDueSince ? { pastDueSince: undefined } : {}),
       updatedAt: nowIso(),
