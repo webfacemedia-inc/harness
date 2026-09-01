@@ -55,6 +55,12 @@
         file: !!js 'process.env.DESK_ROUTINES_FILE ?? "/srv/desk/routines.json"'
         actionsFile: !!js 'process.env.DESK_ROUTINES_ACTIONS ?? "/srv/desk/routines-actions.json"'
 
+    # Approval record for the Activity page: what Desk asked, what the owner answered.
+    - id: desk-activity
+      name: '@webface/dsh-desk-activity'
+      config:
+        file: !!js 'process.env.DESK_ACTIVITY_FILE ?? "/srv/desk/activity.json"'
+
     # Google connector over the customer's own OAuth client. The profile
     # supplies DESK_HARNESS_DIR / DESK_GOOGLE_HOME via env (see README).
     - id: mcp-google
@@ -86,6 +92,23 @@
           FAL_KEY: !!js 'process.env.FAL_KEY ?? ""'
           DESK_PUBLIC_ORIGIN: !!js 'process.env.DESK_HOST ? `https://${process.env.DESK_HOST}` : ""'
         toolCallTimeoutMs: 120000
+
+    # Memory: what the business has decided, promised and quoted. Writes the budgeted
+    # view to $DSH_HOME/AGENTS.md, which the instruction loader already reads at the
+    # start of every session — that is how a new conversation opens already knowing.
+    - id: mcp-memory
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: memory
+        transport: stdio
+        command: !!js process.execPath
+        args: !!js '["--import", "tsx/esm", `${process.env.DESK_HARNESS_DIR ?? process.cwd()}/apps/desk-memory/src/index.js`]'
+        cwd: !!js '`${process.env.DESK_HARNESS_DIR ?? process.cwd()}/apps/desk-memory`'
+        env:
+          DESK_MEMORY_FILE: !!js 'process.env.DESK_MEMORY_FILE ?? `${process.env.HOME}/.desk/memory.jsonl`'
+          DESK_MEMORY_BLOCK: !!js 'process.env.DESK_MEMORY_BLOCK ?? `${process.env.DSH_HOME ?? `${process.env.HOME}/.dsh`}/AGENTS.md`'
+          DESK_MEMORY_BUDGET: !!js 'process.env.DESK_MEMORY_BUDGET ?? "4000"'
+        toolCallTimeoutMs: 30000
 
     - id: mcp-browser
       # The Desk browser: a real Chrome with a persistent profile, headed so the

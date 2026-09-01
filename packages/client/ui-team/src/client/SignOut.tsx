@@ -40,6 +40,8 @@ const PLUG = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke=
 const BELL = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></svg>
 const CLOCK = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
 const BROWSER = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="M2 9h20M7 6.5h.01M10 6.5h.01" /></svg>
+const NOTES = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" /></svg>
+const SHIELD = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z" /><path d="m9 12 2 2 4-4" /></svg>
 const OUT = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
 
 export function CloudLinks({ wide }: { wide: boolean }) {
@@ -67,6 +69,8 @@ export function CloudLinks({ wide }: { wide: boolean }) {
       {notif && wide ? <span className={css.note}>{notif}</span> : null}
       <a className={css.link} href="/profile" title="Business" aria-label="Business">{BIZ}{wide ? <span>Business</span> : null}</a>
       <a className={css.link} href="/routines" title="Routines" aria-label="Routines">{CLOCK}{wide ? <span>Routines</span> : null}</a>
+      <a className={css.link} href="/memory" title="What Desk remembers" aria-label="Memory">{NOTES}{wide ? <span>Memory</span> : null}</a>
+      <a className={css.link} href="/activity" title="What Desk asked you, and what you answered" aria-label="Activity">{SHIELD}{wide ? <span>Activity</span> : null}</a>
       <a className={css.link} href="/connections" title="Connections" aria-label="Connections">{PLUG}{wide ? <span>Connections</span> : null}</a>
       <a className={css.link} href="/browser" title="Browser — watch Desk or take the mouse" aria-label="Browser">{BROWSER}{wide ? <span>Browser</span> : null}</a>
       <a className={css.link} href="/files" title="Files" aria-label="Files">{FILES}{wide ? <span>Files</span> : null}</a>

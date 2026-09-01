@@ -53,6 +53,12 @@
 	handle /routines* {
 		reverse_proxy 127.0.0.1:8090
 	}
+	handle /memory* {
+		reverse_proxy 127.0.0.1:8090
+	}
+	handle /activity {
+		reverse_proxy 127.0.0.1:8090
+	}
 	handle /browser {
 		reverse_proxy 127.0.0.1:8090
 	}

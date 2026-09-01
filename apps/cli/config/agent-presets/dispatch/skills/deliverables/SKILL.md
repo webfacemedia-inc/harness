@@ -12,5 +12,5 @@ Every file is made with the kit tools and comes out on the business's own letter
 - Spreadsheet → `mcp__kit__make_sheet`: columns + rows; put numbers as numbers; ask for totals on money columns.
 - Plain file → `mcp__kit__make_text` (name with extension).
 - Social post / header / Open Graph card in the brand → `mcp__kit__brand_image`. A picture from a description → `mcp__kit__make_image` (say so plainly if it is not switched on).
-- Each tool returns a link: repeat it in the reply so the owner can open or download the file from their phone; the file is also under Files → deliverables.
+- Each tool returns a line starting with 📄 and a link: copy that line into your reply exactly. Do not paste the document's contents into the chat — a short summary plus the link is the deliverable.
 - If `mcp__kit__brand_get` shows no brand, offer to set it up with the `brand-kit` skill before producing customer-facing documents.

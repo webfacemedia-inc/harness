@@ -37,6 +37,7 @@
     }
   },
   "dependencies": {
+    "@webface/dsh-desk-activity": "workspace:^",
     "@webface/dsh-desk-notify": "workspace:^",
     "@webface/dsh-desk-routines": "workspace:^",
     "@deepseek-ai/dsh-agent-presets": "workspace:^",

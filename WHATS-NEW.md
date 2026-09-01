@@ -3,6 +3,12 @@
 Newest first. One line per change, in the words an owner would use — this file is what the
 update notice and the `/whats-new` page show, so no jargon and no version numbers.
 
+## 1 September 2026
+
+Desk remembers. What you decide, promise, quote or ask for is written down as it happens — Desk tells you in one line when it notes something — and it's there in your next conversation, so you don't repeat yourself. See and remove any of it on the Memory page.
+
+The Activity page shows every time Desk asked your say-so: what it wanted to do, and what you answered.
+
 ## 29 August 2026
 Updates now arrive without interrupting you: Desk tells you when a new version is ready, keeps your half-written message, and puts you back where you were.
 

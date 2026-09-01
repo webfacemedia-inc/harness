@@ -17,6 +17,8 @@ import * as files from './files.js'
 import * as connections from './connections.js'
 import * as profile from './profile.js'
 import * as routines from './routines.js'
+import * as memory from './memory.js'
+import * as activity from './activity.js'
 import * as wf from './webface-oauth.js'
 import { layout, esc, ICONS } from './ui.js'
 import { WORK } from './profile.js'
@@ -186,6 +188,7 @@ const server = createServer(async (req, res) => {
         || u.pathname === '/connections' || u.pathname.startsWith('/connections/')
         || ((u.pathname === '/files' || u.pathname.startsWith('/files/')) && req.method !== 'GET')
         || (u.pathname.startsWith('/routines/') && req.method !== 'GET')
+        || u.pathname === '/memory' || u.pathname.startsWith('/memory/') || u.pathname === '/activity'
         || u.pathname === '/deskd/google/client' || u.pathname.startsWith('/oauth/') || u.pathname === '/billing' || u.pathname === '/files/export'
       if (ownerOnly && sess?.r === 'phone') { res.writeHead(403, { 'content-type': 'text/html; charset=utf-8' }); return res.end(page('Owner only', `<p>Settings are changed from an owner sign-in, not a phone session. <a href="/logout">Sign out</a> and sign in again without ticking "phone".</p>`)) }
     }
@@ -251,6 +254,14 @@ try {
     if (u.pathname === '/routines' || u.pathname.startsWith('/routines/')) {
       if (!verifySession(cookieOf(req))) { res.writeHead(302, { location: '/login?next=/routines' }); return res.end() }
       if (await routines.handle(req, res, u, { business: businessName(), readBody, tz: process.env.DESK_TZ ?? 'America/Toronto' }) !== false) return
+    }
+    if (u.pathname === '/memory' || u.pathname.startsWith('/memory/')) {
+      if (!verifySession(cookieOf(req))) { res.writeHead(302, { location: '/login?next=/memory' }); return res.end() }
+      if (await memory.handle(req, res, u, { business: businessName(), readBody, tz: process.env.DESK_TZ ?? 'America/Toronto' }) !== false) return
+    }
+    if (u.pathname === '/activity') {
+      if (!verifySession(cookieOf(req))) { res.writeHead(302, { location: '/login?next=/activity' }); return res.end() }
+      if (await activity.handle(req, res, u, { business: businessName(), tz: process.env.DESK_TZ ?? 'America/Toronto' }) !== false) return
     }
     if (u.pathname === '/profile' || u.pathname.startsWith('/profile/')) {
       if (!verifySession(cookieOf(req))) { res.writeHead(302, { location: `/login?next=/profile` }); return res.end() }

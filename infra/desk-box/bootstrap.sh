@@ -173,6 +173,7 @@ ln -sfn $D/harness/packages/webface/desk-app $D/home/profiles/node_modules/@webf
 ln -sfn $D/harness/packages/client/ui-team $D/home/profiles/node_modules/@webface/dsh-client-ui-team
 ln -sfn $D/harness/packages/webface/desk-notify $D/home/profiles/node_modules/@webface/dsh-desk-notify
 ln -sfn $D/harness/packages/webface/desk-routines $D/home/profiles/node_modules/@webface/dsh-desk-routines
+ln -sfn $D/harness/packages/webface/desk-activity $D/home/profiles/node_modules/@webface/dsh-desk-activity
 chown -R desk:desk $D/home/profiles
 
 echo "==> workspace (the Desk folder shows up in the sidebar on first sign-in)"

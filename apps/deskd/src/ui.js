@@ -20,6 +20,7 @@ export const ICONS = {
   upload: svg('<path d="M12 16V4M6 10l6-6 6 6M4 20h16"/>'),
   back: svg('<path d="M19 12H5M12 19l-7-7 7-7"/>'),
   clock: svg('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
+  person: svg('<circle cx="12" cy="8" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/>'),
   ext: svg('<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>'),
 }
 export const CSS = `
@@ -36,7 +37,7 @@ main{max-width:760px;margin:0 auto;padding:24px 20px 72px;overflow-x:hidden}
 p{margin:0 0 12px}p.sub{color:var(--mute);margin:0 0 22px;font-size:16px}p.h{color:var(--mute);font-size:14px;margin:0 0 8px}
 section,.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;margin-bottom:18px}
 .ic{width:22px;height:22px;flex:none;color:var(--blue)}h2 .ic{width:24px;height:24px}
-.pill{font-size:12px;padding:3px 9px;border-radius:999px;background:var(--ok-bg);color:var(--ok);font-weight:600;white-space:nowrap;flex:none}.pill.off{background:rgba(91,107,122,.12);color:var(--mute)}
+.pill{font-size:12px;padding:3px 9px;border-radius:999px;background:var(--ok-bg);color:var(--ok);font-weight:600;white-space:nowrap;flex:none}.pill.off{background:rgba(91,107,122,.12);color:var(--mute)}.pill.no{background:var(--err-bg);color:var(--err)}
 label{display:block;font-weight:600;font-size:13px;margin:14px 0 6px}label small{font-weight:400;color:var(--mute)}
 input,textarea,select{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:transparent;color:inherit;font:inherit}
 input:focus,textarea:focus,select:focus{outline:2px solid var(--blue);outline-offset:1px;border-color:var(--blue)}textarea{resize:vertical}

@@ -90,6 +90,7 @@ const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
   'packages/webface/desk-app': { kind: 'none', reason: 'A profile patch composing other plugins; each composed plugin owns its model-visible behaviour.' },
   'packages/webface/desk-models': { kind: 'none', reason: 'Declares provider routes and a default model; request rendering belongs to the provider plugins.' },
   'packages/webface/desk-notify': { kind: 'none', reason: 'Reads session events and calls a loopback endpoint; nothing reaches a model request.' },
+  'packages/webface/desk-activity': { kind: 'none', reason: 'Mirrors approval audit events to a file; nothing reaches a model request.' },
   'packages/webface/desk-routines': { kind: 'none', reason: 'Mirrors schedule events to a file; nothing reaches a model request.' },
   'packages/client/ui-directory-picker-browse': { kind: 'none', reason: 'Browser-side directory-browsing surface; registers nothing model-facing.' },
   'packages/client/ui-directory-picker-native': { kind: 'none', reason: 'Browser-side surface driving the host OS chooser; registers nothing model-facing.' },

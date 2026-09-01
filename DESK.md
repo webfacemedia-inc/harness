@@ -12,9 +12,9 @@ webfacedesk.app (apex box, DO tor1 143.198.42.231 — also the demo Desk)
 ├─ static site  /srv/desk/site  ← apps/site/*.html (copied, not built)
 ├─ deskapi :8095  apps/deskapi   store: Stripe checkout → provision a box (DO API + Cloudflare DNS) → welcome; churn; snapshots; ops console /ops; Google sign-in relay
 └─ a Desk box (one per customer; the demo is demo.webfacedesk.app on the same droplet)
-   ├─ deskd :8090   apps/deskd    sign-in (owner/phone roles), Business page (→ AGENTS.md), Brand, Connections + wizards, Files + viewer, Routines page, Browser page (noVNC), push, billing, usage, heartbeat
+   ├─ deskd :8090   apps/deskd    sign-in (owner/phone roles), Business page (→ AGENTS.md), Brand, Connections + wizards, Files + viewer, Routines page, Memory page, Activity page, Browser page (noVNC), push, billing, usage, heartbeat
    ├─ desk-harness :3080  dsh with profile `desk` (bundles: base, web-app, desk-models, desk-app) — the chat, modes, tools
-   ├─ MCP servers spawned by the harness: apps/google-mcp (Gmail/Calendar/Drive/Contacts via the customer's own Google app), apps/wordpress-mcp, apps/desk-kit (deliverables), Playwright MCP over the shared Chrome (CDP :9222), webfaCeMEdia via deskd's loopback OAuth proxy /mcp/webface
+   ├─ MCP servers spawned by the harness: apps/google-mcp (Gmail/Calendar/Drive/Contacts via the customer's own Google app), apps/wordpress-mcp, apps/desk-kit (deliverables), apps/desk-memory (what the business has decided and promised), Playwright MCP over the shared Chrome (CDP :9222), webfaCeMEdia via deskd's loopback OAuth proxy /mcp/webface
    └─ desk-xvfb / desk-vnc / desk-novnc / desk-chrome — the Desk's own browser, streamed to /browser
 Desktop app: apps/desktop (Wails v2, vendored at apps/desktop/third_party/wails with a WKDownload delegate) — a window onto a Desk; releases via .github/workflows/desktop.yml + apps/desktop/scripts/release-mac.sh (sign + notarise + DMG).
 ```
@@ -23,9 +23,13 @@ Modes are dsh agent presets generated from [apps/cli/config/agent-presets/desk-t
 
 The business identity the model sees is `/srv/desk/work/AGENTS.md`, rendered by deskd from the Business page (`apps/deskd/src/profile.js`); personas in `desk-team.yml` defer to it. Brand (`profile.json → brand`, logo in `/srv/desk/brand/`) dresses every file the kit makes.
 
+**Memory** — what the business has decided, promised, quoted and asked for is recorded by the `remember` tool (`apps/desk-memory`) into `/srv/desk/memory.jsonl`, append-only because every conversation spawns its own copy of that server. Recall needs no new machinery: after each write the server rewrites **`$DSH_HOME/AGENTS.md`** with a *budgeted* view (pinned notes, then newest, capped by `DESK_MEMORY_BUDGET`, default 4000 characters), and `packages/context/agent-instructions` already loads that file first in every session — so the next conversation opens knowing it. The rest of the ledger stays on disk behind `recall`. Two different files, two different owners: `work/AGENTS.md` is who the business is (the Business page), `home/AGENTS.md` is what Desk remembers (the Memory page, `apps/deskd/src/memory.js`, which shares `apps/desk-memory/src/ledger.js` so there is one definition of what is remembered). Deleting a note appends a tombstone and rewrites the block, so it is gone from the very next conversation. Card numbers, security codes, passwords and SINs are refused before they are written.
+
+**Activity** — `packages/webface/desk-activity` follows the approval audit pair the harness already writes (`approval/asked` + `approval/decided` from `packages/interaction/user-approval`) into `/srv/desk/activity.json`, which deskd renders at `/activity` in owner language. Read-only: the page can never change a decision.
+
 ## Box layout (`/srv/desk`)
 
-`desk.env` (all env; 0600) · `auth.json` (owner accounts, scrypt) · `session.secret` · `profile.json` · `brand/logo.*` · `work/` (the Desk folder: AGENTS.md, price-list.md, uploads, `deliverables/<date>/`) · `home/` (DSH_HOME: sessions, storages, profiles/desk/cordis.patch.yml = the managed connections block) · `google/` (Google client JSON + tokens) · `push.json`, `routines.json`, `routines-actions.json`, `billing.json`, `webface-oauth.json` · `harness/` (this repo, branch `desk`) · `READY`.
+`desk.env` (all env; 0600) · `auth.json` (owner accounts, scrypt) · `session.secret` · `profile.json` · `brand/logo.*` · `work/` (the Desk folder: AGENTS.md, price-list.md, uploads, `deliverables/<date>/`) · `home/` (DSH_HOME: sessions, storages, profiles/desk/cordis.patch.yml = the managed connections block) · `google/` (Google client JSON + tokens) · `push.json`, `routines.json`, `routines-actions.json`, `memory.jsonl` (what Desk remembers; the budgeted view of it is `home/AGENTS.md`), `activity.json`, `billing.json`, `webface-oauth.json` · `harness/` (this repo, branch `desk`) · `READY`.
 
 Env keys and what reads them: `infra/desk-box/bootstrap.sh` writes `desk.env`; `apps/deskapi/src/provision.js` and `scripts/desk-box.mjs` decide the values. Store-side keys are listed in [infra/desk-box/STOREFRONT.md](infra/desk-box/STOREFRONT.md).
 
