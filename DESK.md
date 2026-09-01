@@ -29,7 +29,7 @@ The business identity the model sees is `/srv/desk/work/AGENTS.md`, rendered by 
 
 ## Box layout (`/srv/desk`)
 
-`desk.env` (all env; 0600) · `auth.json` (owner accounts, scrypt) · `session.secret` · `profile.json` · `brand/logo.*` · `work/` (the Desk folder: AGENTS.md, price-list.md, uploads, `deliverables/<date>/`) · `home/` (DSH_HOME: sessions, storages, profiles/desk/cordis.patch.yml = the managed connections block) · `google/` (Google client JSON + tokens) · `push.json`, `routines.json`, `routines-actions.json`, `memory.jsonl` (what Desk remembers; the budgeted view of it is `home/AGENTS.md`), `activity.json`, `billing.json`, `webface-oauth.json` · `harness/` (this repo, branch `desk`) · `READY`.
+`desk.env` (all env; 0600 — includes `DESK_MEMORY_FILE`, `DESK_MEMORY_BLOCK`, `DESK_ACTIVITY_FILE`, without which the server and the pages would disagree about where memory lives) · `auth.json` (owner accounts, scrypt) · `session.secret` · `profile.json` · `brand/logo.*` · `work/` (the Desk folder: AGENTS.md, price-list.md, uploads, `deliverables/<date>/`) · `home/` (DSH_HOME: sessions, storages, profiles/desk/cordis.patch.yml = the managed connections block) · `google/` (Google client JSON + tokens) · `push.json`, `routines.json`, `routines-actions.json`, `memory.jsonl` (what Desk remembers; the budgeted view of it is `home/AGENTS.md`), `activity.json`, `billing.json`, `webface-oauth.json` · `harness/` (this repo, branch `desk`) · `READY`.
 
 Env keys and what reads them: `infra/desk-box/bootstrap.sh` writes `desk.env`; `apps/deskapi/src/provision.js` and `scripts/desk-box.mjs` decide the values. Store-side keys are listed in [infra/desk-box/STOREFRONT.md](infra/desk-box/STOREFRONT.md).
 
