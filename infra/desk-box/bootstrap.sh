@@ -51,7 +51,7 @@ fi
 corepack enable && corepack prepare pnpm@11.7.0 --activate
 
 echo "==> hardening: fail2ban (ssh + Desk sign-in), unattended security upgrades"
-apt-get install -y -qq fail2ban unattended-upgrades >/dev/null
+apt-get install -y -qq fail2ban unattended-upgrades ffmpeg >/dev/null
 cat > /etc/fail2ban/filter.d/desk-login.conf <<'F2B'
 [Definition]
 failregex = login failed from <HOST>
@@ -161,6 +161,11 @@ DESK_BILLING_FILE=$D/billing.json
 DESK_MEMORY_FILE=$D/memory.jsonl
 DESK_MEMORY_BLOCK=$D/home/AGENTS.md
 DESK_ACTIVITY_FILE=$D/activity.json
+DESK_RECORDINGS_DIR=$D/recordings
+DESK_TZ=${DESK_TZ:-America/Toronto}
+DESK_CONTACT_EMAIL=${DESK_CONTACT_EMAIL:-tommy@webfacemedia.com}
+DESK_PUBLIC_ORIGIN=${DESK_HOST:+https://$DESK_HOST}
+DESK_DOWNLOAD_URL=${DESK_DOWNLOAD_URL:-https://webfacedesk.app/download}
 DESK_PROFILE_PATCH=$D/home/profiles/desk/cordis.patch.yml
 DESK_SIGNIN_CLIENT_ID=${DESK_SIGNIN_CLIENT_ID:-}
 DESK_SIGNIN_CLIENT_SECRET=${DESK_SIGNIN_CLIENT_SECRET:-}

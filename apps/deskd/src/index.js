@@ -19,6 +19,7 @@ import * as profile from './profile.js'
 import * as routines from './routines.js'
 import * as memory from './memory.js'
 import * as activity from './activity.js'
+import * as control from './control.js'
 import * as wf from './webface-oauth.js'
 import { layout, esc, ICONS } from './ui.js'
 import { WORK } from './profile.js'
@@ -191,6 +192,10 @@ const server = createServer(async (req, res) => {
         || u.pathname === '/memory' || u.pathname.startsWith('/memory/') || u.pathname === '/activity'
         || u.pathname === '/deskd/google/client' || u.pathname.startsWith('/oauth/') || u.pathname === '/billing' || u.pathname === '/files/export'
       if (ownerOnly && sess?.r === 'phone') { res.writeHead(403, { 'content-type': 'text/html; charset=utf-8' }); return res.end(page('Owner only', `<p>Settings are changed from an owner sign-in, not a phone session. <a href="/logout">Sign out</a> and sign in again without ticking "phone".</p>`)) }
+    }
+    // Control-plane channel (box token, never a cookie): config, seeding, recording.
+    if (u.pathname.startsWith('/deskd/config') || u.pathname === '/deskd/seed' || u.pathname.startsWith('/deskd/record')) {
+      if (await control.handle(req, res, u, { readBody, host: HOST }) !== false) return
     }
     if (u.pathname === '/whats-new') {
       if (!verifySession(cookieOf(req))) { res.writeHead(302, { location: '/login?next=/whats-new' }); return res.end() }

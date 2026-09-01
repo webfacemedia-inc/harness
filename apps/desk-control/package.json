@@ -1,0 +1,25 @@
+{
+  "name": "@webface/desk-control",
+  "description": "webfaCe Desk control plane: orders, Stripe, durable provisioning, demos, config push and the operator console, on Convex",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "convex dev",
+    "deploy": "convex deploy"
+  },
+  "dependencies": {
+    "@convex-dev/action-retrier": "^0.3.1",
+    "@convex-dev/crons": "^0.2.2",
+    "@convex-dev/rate-limiter": "^0.3.2",
+    "@convex-dev/workflow": "^0.4.6",
+    "convex": "^1.45.0"
+  },
+  "devDependencies": {
+    "@edge-runtime/vm": "^5.0.0",
+    "convex-test": "^0.0.56",
+    "typescript": "~5.9.3",
+    "vite": "^8.0.16",
+    "vitest": "^3.2.4"
+  }
+}
