@@ -8,7 +8,8 @@ import { mkdirSync, writeFileSync, readFileSync, existsSync, renameSync } from '
 import { join, dirname } from 'node:path'
 import { readBrand, PROFILE, WORK } from './brand.js'
 import { markdownToDocx } from './docx.js'
-import { letterhead, htmlToPdf } from './pdf.js'
+import { letterhead, deckLetterhead, htmlToPdf } from './pdf.js'
+import { tidyText } from './tidy.js'
 import { markdownToPptx } from './pptx.js'
 import { sheetsToXlsx } from './sheet.js'
 import { brandImage, generateImage } from './image.js'
@@ -29,7 +30,7 @@ server.registerTool('make_document', {
   inputSchema: { title: z.string(), markdown: z.string(), format: z.enum(['docx', 'pdf', 'both']).default('both') },
 }, async ({ title, markdown, format }) => {
   try {
-    const brand = readBrand(), dir = outDir(), base = slug(title), md = markdown.trim().startsWith('#') ? markdown : `# ${title}\n\n${markdown}`
+    const brand = readBrand(), dir = outDir(), base = slug(tidyText(title)), md = markdown.trim().startsWith('#') ? markdown : `# ${tidyText(title)}\n\n${markdown}`
     const files = []
     if (format !== 'pdf') { const p = unique(dir, base, '.docx'); writeFileSync(p, await markdownToDocx(md, brand)); files.push(p) }
     if (format !== 'docx') { const p = unique(dir, base, '.pdf'); htmlToPdf(letterhead(md, brand), p); files.push(p) }
@@ -40,18 +41,16 @@ server.registerTool('make_pdf', {
   description: 'A PDF on the business letterhead (logo, colours, address) from Markdown or HTML — invoices, quotes, letters, one-pagers.',
   inputSchema: { title: z.string(), content: z.string(), html: z.boolean().default(false).describe('true when content is ready HTML instead of Markdown') },
 }, async ({ title, content, html }) => {
-  try { const brand = readBrand(), p = unique(outDir(), slug(title), '.pdf'); htmlToPdf(letterhead(content, brand, { isHtml: html, title }), p); return done([p]) } catch (e) { return fail(e) }
+  try { const brand = readBrand(), p = unique(outDir(), slug(tidyText(title)), '.pdf'); htmlToPdf(letterhead(content, brand, { isHtml: html, title }), p); return done([p]) } catch (e) { return fail(e) }
 })
 server.registerTool('make_deck', {
   description: 'A PowerPoint deck (.pptx) plus a PDF preview from Markdown: # or ## starts a slide (first one is the title slide), - bullets, | tables.',
   inputSchema: { title: z.string(), markdown: z.string() },
 }, async ({ title, markdown }) => {
   try {
-    const brand = readBrand(), dir = outDir(), base = slug(title), md = markdown.trim().startsWith('#') ? markdown : `# ${title}\n\n${markdown}`
+    const brand = readBrand(), dir = outDir(), base = slug(tidyText(title)), md = markdown.trim().startsWith('#') ? markdown : `# ${tidyText(title)}\n\n${markdown}`
     const p = unique(dir, base, '.pptx'); writeFileSync(p, await markdownToPptx(md, brand))
-    const slides = md.split(/\n(?=#{1,4}\s)/).map(s => s.trim()).filter(Boolean)
-    const html = letterhead(slides.map(s => `<section style="page-break-after:always">${s.split('\n')[0].replace(/^#+\s*/, '<h2>')}</h2>${s.split('\n').slice(1).join('\n')}</section>`).join('\n'), brand, { isHtml: false, title })
-    const pdf = unique(dir, base, '.pdf'); htmlToPdf(html, pdf)
+    const pdf = unique(dir, base, '.pdf'); htmlToPdf(deckLetterhead(md, brand, title), pdf)
     return done([p, pdf])
   } catch (e) { return fail(e) }
 })
@@ -59,7 +58,7 @@ server.registerTool('make_sheet', {
   description: 'A spreadsheet (.xlsx, plus a CSV) with the header row in the brand colour. Numbers in cells become numbers; totals get SUM formulas.',
   inputSchema: { title: z.string(), sheets: z.array(z.object({ name: z.string().optional(), columns: z.array(z.string()), rows: z.array(z.array(z.union([z.string(), z.number(), z.null()]))), totals: z.object({ label: z.string().optional(), columns: z.array(z.number().int()) }).optional() })).min(1) },
 }, async ({ title, sheets }) => {
-  try { const brand = readBrand(), dir = outDir(), base = slug(title); const x = unique(dir, base, '.xlsx'); const { csv } = await sheetsToXlsx(sheets, brand, x); const c = unique(dir, base, '.csv'); writeFileSync(c, csv); return done([x, c]) } catch (e) { return fail(e) }
+  try { const brand = readBrand(), dir = outDir(), base = slug(tidyText(title)); const x = unique(dir, base, '.xlsx'); const { csv } = await sheetsToXlsx(sheets, brand, x); const c = unique(dir, base, '.csv'); writeFileSync(c, csv); return done([x, c]) } catch (e) { return fail(e) }
 })
 server.registerTool('make_text', {
   description: 'A plain file (.txt, .md, .csv, .html) with exactly the given content.',

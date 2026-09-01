@@ -3,6 +3,7 @@
 // the first H1 with the business name as the kicker, accent-header zebra tables.
 import { buildBlankDocx, parseDocx, saveDocx } from '../vendor/genoffice/docx-engine/src/index.ts'
 import { accentOf } from './brand.js'
+import { tidyMarkdown } from './tidy.js'
 
 const MONO = 'Courier New'
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -17,7 +18,7 @@ function runs(text, color, font) {
     const rest = text.slice(i); let m
     if ((m = /^\*\*([\s\S]+?)\*\*/.exec(rest))) { push(m[1], '<w:b/>'); i += m[0].length }
     else if ((m = /^`([^`]+)`/.exec(rest))) { push(m[1], `<w:rFonts w:ascii="${MONO}" w:hAnsi="${MONO}"/>`); i += m[0].length }
-    else if ((m = /^__([\s\S]+?)__/.exec(rest))) { push(m[1], '<w:i/>'); i += m[0].length }
+    else if ((m = /^__([\s\S]+?)__/.exec(rest))) { push(m[1], '<w:b/>'); i += m[0].length }
     else if ((m = /^\*([\s\S]+?)\*/.exec(rest)) || (m = /^_([\s\S]+?)_/.exec(rest))) { push(m[1], '<w:i/>'); i += m[0].length }
     else if ((m = /^\[([^\]]+)\]\(([^)]+)\)/.exec(rest))) { push(`${m[1]} (${m[2]})`); i += m[0].length }
     else { const idx = rest.search(/[`*_[]/); if (idx === -1) { push(rest); break } if (idx > 0) { push(rest.slice(0, idx)); i += idx } else { push(rest[0]); i += 1 } }
@@ -45,7 +46,7 @@ export async function markdownToDocx(md, brand) {
     return `<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/><w:tblBorders>${b}</w:tblBorders><w:tblLook w:val="04A0"/></w:tblPr>${hrow}${body.map((r, ri) => `<w:tr>${r.map(c => bcell(c, ri % 2 === 1)).join('')}</w:tr>`).join('')}</w:tbl><w:p/>`
   }
   const blank = await buildBlankDocx(); const parsed = await parseDocx(blank); const blocks = []
-  const src = (md ?? '').replace(/\r\n/g, '\n'); const lines = src.split('\n')
+  const src = tidyMarkdown(md); const lines = src.split('\n')
   const h1 = src.match(/^#\s+(.+)$/m); const today = new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' })
   const isRow = s => /^\s*\|.*\|\s*$/.test(s); const parseRow = s => s.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim())
   let firstH1 = false, i = 0

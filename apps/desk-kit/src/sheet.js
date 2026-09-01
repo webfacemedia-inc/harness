@@ -1,15 +1,16 @@
 // Tables → .xlsx (and .csv) with the header row in the brand colour.
 import ExcelJS from 'exceljs'
 import { accentOf } from './brand.js'
+import { decodeEntities, tidyText } from './tidy.js'
 
 /** sheets: [{ name, columns: [..], rows: [[..]], totals?: { label, columns: [colIndex..] } }] */
 export async function sheetsToXlsx(sheets, brand, outPath) {
   const wb = new ExcelJS.Workbook(); wb.creator = brand.business
   for (const s of sheets) {
-    const ws = wb.addWorksheet((s.name || 'Sheet').slice(0, 31))
-    ws.addRow(s.columns); const h = ws.getRow(1)
+    const ws = wb.addWorksheet((tidyText(s.name) || 'Sheet').slice(0, 31))
+    ws.addRow(s.columns.map(c => tidyText(c))); const h = ws.getRow(1)
     h.font = { bold: true, color: { argb: 'FFFFFFFF' } }; h.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + accentOf(brand) } }
-    for (const r of s.rows) ws.addRow(r.map(v => (typeof v === 'string' && /^-?\$?\d[\d,]*(\.\d+)?$/.test(v) ? Number(v.replace(/[$,]/g, '')) : v)))
+    for (const r of s.rows) ws.addRow(r.map(v => { if (typeof v !== 'string') return v; const t = decodeEntities(v); return /^-?\$?\d[\d,]*(\.\d+)?$/.test(t) ? Number(t.replace(/[$,]/g, '')) : t }))
     if (s.totals) {
       const row = ws.addRow([]); row.getCell(1).value = s.totals.label ?? 'Total'; row.font = { bold: true }
       for (const c of s.totals.columns ?? []) { const col = ws.getColumn(c + 1).letter; row.getCell(c + 1).value = { formula: `SUM(${col}2:${col}${ws.rowCount - 1})` } }

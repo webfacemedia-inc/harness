@@ -7,13 +7,14 @@ import { dirname, join } from 'node:path'
 // The package hides its files behind "exports", so load the CJS build by its path in this package's node_modules.
 const pptxgen = createRequire(import.meta.url)(join(dirname(fileURLToPath(import.meta.url)), '..', 'node_modules', 'pptxgenjs', 'dist', 'pptxgen.cjs.js'))
 import { accentOf } from './brand.js'
+import { tidyMarkdown } from './tidy.js'
 
 export async function markdownToPptx(md, brand) {
   const ACCENT = accentOf(brand), INK = brand.ink, MUTED = brand.muted, ZEBRA = brand.zebra, FONT = brand.font.deck
   const pptx = new pptxgen(); pptx.layout = 'LAYOUT_WIDE'; pptx.author = brand.business
   pptx.defineSlideMaster({ title: 'TITLE', background: { color: ACCENT } })
   pptx.defineSlideMaster({ title: 'CONTENT', background: { color: 'FFFFFF' }, objects: [{ text: { text: brand.business, options: { x: 0.5, y: 7.0, w: 8, fontSize: 9, color: MUTED, fontFace: FONT } } }], slideNumber: { x: 12.3, y: 7.0, color: MUTED, fontSize: 9, fontFace: FONT } })
-  const lines = (md ?? '').replace(/\r\n/g, '\n').split('\n'); const slides = []; let cur = null
+  const lines = tidyMarkdown(md).split('\n'); const slides = []; let cur = null
   const push = title => { cur = { title, rows: [], tables: [] }; slides.push(cur) }
   const isSep = r => r.length > 0 && r.every(c => /^:?-{1,}:?$/.test((c || '').trim()))
   let i = 0

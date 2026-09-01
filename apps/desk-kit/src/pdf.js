@@ -6,15 +6,16 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { marked } from 'marked'
 import { accentOf, logoDataUri } from './brand.js'
+import { tidyMarkdown, tidyText } from './tidy.js'
 
 const CHROME = process.env.DESK_CHROME ?? ['/usr/bin/google-chrome', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find(existsSync)
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 /** Wrap Markdown (or ready HTML when `isHtml`) in the letterhead: logo, business line, accent rules. */
 export function letterhead(content, brand, { isHtml = false, title = '' } = {}) {
-  const src = content ?? ''
+  const src = isHtml ? content ?? '' : tidyMarkdown(content)
   const h1 = !isHtml && src.match(/^#\s+(.+)$/m)
-  const heading = title || (h1 ? h1[1].trim() : '')
+  const heading = tidyText(title) || (h1 ? h1[1].trim() : '')
   const rest = h1 ? src.replace(/^#\s+.+\n?/, '') : src
   const body = isHtml ? src : marked.parse(rest, { async: false })
   const accent = '#' + accentOf(brand)
@@ -53,4 +54,29 @@ export function htmlToPdf(html, outPath) {
   rmSync(dir, { recursive: true, force: true })
   if (!existsSync(outPath)) throw new Error(`PDF render failed: ${String(r.stderr ?? '').slice(0, 200)}`)
   return outPath
+}
+
+/**
+ * The deck's PDF preview: one page per slide. Each slide's body is rendered
+ * through marked on its own — markdown left inside a raw <section> block is
+ * not markdown to marked, which is how a deck once printed its bullets and
+ * tables as literal pipes and dashes.
+ */
+export function deckLetterhead(md, brand, title) {
+  const slides = tidyMarkdown(md).split(/\n(?=#{1,4}\s)/).map(s => s.trim()).filter(Boolean)
+  const esc2 = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const heading = tidyText(title) || (slides[0] ?? '').split('\n')[0].replace(/^#+\s*/, '')
+  const html = slides.map((s, i) => {
+    const [first, ...rest] = s.split('\n')
+    const body = rest.join('\n').replace(/^\s*---\s*$/gm, '')
+    const slideTitle = first.replace(/^#+\s*/, '')
+    // The first slide is the deck's title: the letterhead already prints it as the
+    // document heading, so repeating it as a section would say the same thing twice.
+    const h2 = i === 0 && slideTitle === heading ? '' : `<h2>${esc2(slideTitle)}</h2>`
+    if (h2 === '' && !body.trim()) return ''
+    // No page break after the last slide, or the closing line gets a page to itself.
+    const brk = i === slides.length - 1 ? '' : 'page-break-after:always'
+    return `<section style="${brk}">${h2}${marked.parse(body, { async: false })}</section>`
+  }).filter(Boolean).join('\n')
+  return letterhead(html, brand, { isHtml: true, title: heading })
 }
