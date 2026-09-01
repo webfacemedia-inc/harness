@@ -200,6 +200,17 @@ http.route({ path: '/auth/google/callback', method: 'GET', handler: httpAction(a
   return new Response(null, { status: 302, headers: { location: `https://${st.box}/auth/google/finish?ticket=${body}.${await hmacHex(token, body)}&next=${encodeURIComponent(String(st.next ?? '/'))}` } })
 }) })
 
+// One-time migration: the apex box posts its own orders.json here, so
+// passwords and box tokens never leave it. Admin token, idempotent.
+http.route({ path: '/api/admin/import-orders', method: 'POST', handler: httpAction(async (ctx, req) => {
+  const token = (req.headers.get('authorization') ?? '').replace(/^Bearer /, '')
+  if (!equalSecret(token, process.env.DESKAPI_ADMIN_TOKEN ?? '')) return json(401, { error: 'no' })
+  let records: unknown
+  try { records = JSON.parse(await req.text()) } catch { return json(400, { error: 'orders.json?' }) }
+  const out = await ctx.runMutation(internal.migrate.importOrders, { records })
+  return json(200, out)
+}) })
+
 http.route({ path: '/api/health', method: 'GET', handler: httpAction(async (ctx) => {
   const { orders } = await ctx.runQuery(internal.ops.healthCounts, {})
   return json(200, {

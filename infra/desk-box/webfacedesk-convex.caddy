@@ -1,0 +1,31 @@
+# The apex site AFTER cut-over to the Convex control plane: same public URLs,
+# the store routes proxied to the desk-control prod deployment instead of the
+# local deskapi, and /ops sent to the console. To cut over, copy this file over
+# /etc/caddy/conf.d/webfacedesk.caddy (keep a .prev), validate with the box env
+# loaded, reload caddy, then `systemctl stop deskapi`. Rollback: restore .prev,
+# reload, `systemctl start deskapi`. Checklist: STOREFRONT.md §Control plane.
+webfacedesk.app, www.webfacedesk.app {
+	encode zstd gzip
+	header {
+		X-Frame-Options SAMEORIGIN
+		Referrer-Policy strict-origin-when-cross-origin
+		X-Content-Type-Options nosniff
+	}
+	# Store + relay, now served by Convex (project desk-control, prod).
+	@api path /api/* /checkout /welcome /auth/*
+	handle @api {
+		reverse_proxy https://dynamic-stork-829.convex.site {
+			header_up Host dynamic-stork-829.convex.site
+		}
+	}
+	# The ops console moved to the operator domain.
+	redir /ops https://desk.webfacemedia.com 302
+	redir /ops/* https://desk.webfacemedia.com 302
+	# Download links never show the repository name.
+	redir /dl/mac https://github.com/webfacemedia-inc/harness/releases/latest/download/webfaCe-Desk-macOS.dmg 302
+	redir /dl/windows https://github.com/webfacemedia-inc/harness/releases/latest/download/webfaCe-Desk-Windows.zip 302
+	redir /dl/linux https://github.com/webfacemedia-inc/harness/releases/latest/download/webfaCe-Desk-Linux.zip 302
+	root * /srv/desk/site
+	try_files {path} {path}.html
+	file_server
+}

@@ -15,6 +15,7 @@ import type * as core from "../core.js";
 import type * as demos from "../demos.js";
 import type * as http from "../http.js";
 import type * as lib from "../lib.js";
+import type * as migrate from "../migrate.js";
 import type * as ops from "../ops.js";
 import type * as orders from "../orders.js";
 import type * as provision from "../provision.js";
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   demos: typeof demos;
   http: typeof http;
   lib: typeof lib;
+  migrate: typeof migrate;
   ops: typeof ops;
   orders: typeof orders;
   provision: typeof provision;
