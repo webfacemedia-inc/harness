@@ -89,14 +89,21 @@ function startRecording() {
   return { started: file }
 }
 
-function stopRecording() {
+async function stopRecording() {
   const pid = recorderPid()
   if (!pid) return { error: 'not recording' }
   try { process.kill(pid, 'SIGINT') } catch { /* it may have hit the time cap */ }
   try { unlinkSync(PIDFILE) } catch {}
+  // ffmpeg finalises the mp4 on SIGINT; answering before it exits reports a
+  // half-written file (seen live: 48 bytes that became 16 KB a moment later).
+  for (let i = 0; i < 50; i++) {
+    try { process.kill(pid, 0) } catch { break }
+    await new Promise(r => setTimeout(r, 100))
+  }
   let file = null
   try { file = readFileSync(join(RECORDINGS, '.current'), 'utf8').trim() } catch {}
-  return { stopped: file }
+  const stat = file && existsSync(join(RECORDINGS, file)) ? statSync(join(RECORDINGS, file)) : null
+  return { stopped: file, bytes: stat?.size ?? 0 }
 }
 
 const listRecordings = () => {
@@ -193,7 +200,7 @@ export async function handle(req, res, u, { readBody, host }) {
     try { b = JSON.parse((await readBody(req)).toString() || '{}') } catch { res.writeHead(400); return res.end('json?') }
     let out
     if (b.op === 'start') out = startRecording()
-    else if (b.op === 'stop') out = stopRecording()
+    else if (b.op === 'stop') out = await stopRecording()
     else if (b.op === 'list') out = { recordings: listRecordings(), recording: Boolean(recorderPid()) }
     else if (b.op === 'link') {
       const f = normalize(String(b.file ?? '')).replace(/^([./\\])+/, '')
