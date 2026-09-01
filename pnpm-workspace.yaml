@@ -73,3 +73,7 @@ minimumReleaseAgeExclude:
 
 patchedDependencies:
   node-pty@1.2.0-beta.15: patches/node-pty@1.2.0-beta.15.patch
+
+# Build scripts we deliberately do not run (telemetry/postinstall notices only).
+ignoredBuiltDependencies:
+  - '@clerk/shared'
