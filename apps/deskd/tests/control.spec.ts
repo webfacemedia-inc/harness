@@ -214,6 +214,8 @@ describe('recordings', () => {
     expect(ok).toBe(true)
     expect(dl.res.status).toBe(200)
 
+    // Let the download stream drain before afterEach removes the temp dir.
+    await new Promise(r => setTimeout(r, 120))
     url.searchParams.set('f', '2026-09-02T00-00-00-000Z.mp4')
     url.searchParams.set('exp', String(Date.now() - 1000))
     const stale = fakeReq('GET', '/deskd/record/dl')
@@ -226,6 +228,6 @@ describe('recordings', () => {
     const control = await load(scratch())
     const { req, res, u } = fakeReq('POST', '/deskd/record', { token: 'tok_test', body: { op: 'list' } })
     await control.handle(req, res, u, { readBody, host: 'box.example' })
-    expect(res.json).toEqual({ recordings: [], recording: false })
+    expect(res.json).toEqual({ recordings: [], recording: false, since: null })
   })
 })
