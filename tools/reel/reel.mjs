@@ -132,14 +132,25 @@ async function cmdRender() {
   for (const f of Object.values(state.scenes ?? {})) {
     if (f && existsSync(f)) copyFileSync(f, join(pub, basename(f)))
   }
-  const staged = { ...props, assetBase: state.slug }
+  // Stills go in as data URIs (robust); videos stay as staged public files.
+  const { readFileSync: rf } = await import('node:fs')
+  const dataUri = (f) => {
+    const abs = (state.scenes ?? {}); const src = Object.values(abs).find(v => v && basename(v) === f)
+    if (!src || !existsSync(src)) return f
+    return `data:image/png;base64,${rf(src).toString('base64')}`
+  }
+  const beats = props.beats.map(b => b.kind === 'beforeAfter'
+    ? { ...b, before: dataUri(b.before), after: dataUri(b.after) }
+    : b)
+  const staged = { ...props, beats, assetBase: state.slug }
   const stagedJson = join(dir, 'reel.staged.json')
   writeFileSync(stagedJson, JSON.stringify(staged))
   const out = join(dir, `${state.pageName}.mp4`)
   const entry = join(ROOT, 'video', 'src', 'index.ts')
-  run('npx', ['remotion', 'render', entry, 'Reel', out, `--props=${stagedJson}`, '--codec=h264'], join(ROOT, 'video'))
+  const publicDir = join(ROOT, 'video', 'public')
+  run('npx', ['remotion', 'render', entry, 'Reel', out, `--props=${stagedJson}`, `--public-dir=${publicDir}`, '--codec=h264'], join(ROOT, 'video'))
   const poster = join(dir, `${state.pageName}-poster.jpg`)
-  run('npx', ['remotion', 'still', entry, 'Reel', poster, `--props=${stagedJson}`, `--frame=${props.posterFrame ?? 30}`], join(ROOT, 'video'))
+  run('npx', ['remotion', 'still', entry, 'Reel', poster, `--props=${stagedJson}`, `--public-dir=${publicDir}`, `--frame=${props.posterFrame ?? 30}`], join(ROOT, 'video'))
   const music = flag('music')
   if (music) {
     const mixed = join(dir, `${state.pageName}-music.mp4`)

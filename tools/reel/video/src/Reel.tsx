@@ -22,7 +22,11 @@ const SERIF = "Fraunces, Georgia, 'Times New Roman', serif"
 const SANS = "'Inter Tight', -apple-system, 'Segoe UI', sans-serif"
 const INK = '#111111'
 const MUTE = '#6b6b6b'
-const asset = (base: string, f: string) => staticFile(base ? `${base}/${f}` : f)
+// Videos load from the staged public dir; stills arrive inlined as data URIs
+// (Remotion's public-dir resolution is unreliable under `render`, and images
+// are small enough to embed).
+const asset = (base: string, f: string) =>
+  /^(data:|https?:)/.test(f) ? f : staticFile(base ? `${base}/${f}` : f)
 
 /** The one caption: a dark pill, bottom centre, in and out on springs. */
 const Caption: React.FC<{ line: string; frames: number }> = ({ line, frames }) => {
