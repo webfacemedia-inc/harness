@@ -21,6 +21,31 @@ const brand = v.object({
   tagline: v.optional(v.string()),
 })
 
+/** A demo template's payload — the table adds updatedAt; the ops demo route reuses this as its inline-template validator. */
+export const demoTemplateInput = {
+  name: v.string(),
+  profile: v.object({
+    business: v.string(),
+    does: v.optional(v.string()),
+    address: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    email: v.optional(v.string()),
+    website: v.optional(v.string()),
+    hours: v.optional(v.string()),
+    voice: v.optional(v.string()),
+    rules: v.optional(v.string()),
+  }),
+  brand: v.optional(brand),
+  priceListMd: v.optional(v.string()),
+  seedFiles: v.optional(v.array(v.object({ path: v.string(), content: v.string() }))),
+  memorySeeds: v.optional(v.array(v.object({
+    kind: v.union(v.literal('fact'), v.literal('decision'), v.literal('commitment'), v.literal('preference')),
+    about: v.optional(v.string()),
+    text: v.string(),
+    pinned: v.optional(v.boolean()),
+  }))),
+}
+
 const usage = v.object({
   monthTokens: v.optional(v.number()),
   totalTokens: v.optional(v.number()),
@@ -91,6 +116,7 @@ export default defineSchema({
     boxToken: v.string(),
     password: v.optional(v.string()),
     passwordShownAt: v.optional(v.string()),
+    opsRevealedAt: v.optional(v.string()),
   }).index('by_orderId', ['orderId']),
 
   // Latest heartbeat per box — history is not kept for paid boxes (matches today).
@@ -149,30 +175,7 @@ export default defineSchema({
   }).index('by_slug', ['slug']),
 
   // The rehearsed starting state a demo Desk is born with.
-  demoTemplates: defineTable({
-    name: v.string(),
-    profile: v.object({
-      business: v.string(),
-      does: v.optional(v.string()),
-      address: v.optional(v.string()),
-      phone: v.optional(v.string()),
-      email: v.optional(v.string()),
-      website: v.optional(v.string()),
-      hours: v.optional(v.string()),
-      voice: v.optional(v.string()),
-      rules: v.optional(v.string()),
-    }),
-    brand: v.optional(brand),
-    priceListMd: v.optional(v.string()),
-    seedFiles: v.optional(v.array(v.object({ path: v.string(), content: v.string() }))),
-    memorySeeds: v.optional(v.array(v.object({
-      kind: v.union(v.literal('fact'), v.literal('decision'), v.literal('commitment'), v.literal('preference')),
-      about: v.optional(v.string()),
-      text: v.string(),
-      pinned: v.optional(v.boolean()),
-    }))),
-    updatedAt: v.string(),
-  }),
+  demoTemplates: defineTable({ ...demoTemplateInput, updatedAt: v.string() }),
 
   // Deploy-time payloads too big for env vars: the box bootstrap script
   // (pushed by scripts/push-bootstrap.mjs on every deploy) and similar.

@@ -13,6 +13,7 @@ import type * as boxes from "../boxes.js";
 import type * as config from "../config.js";
 import type * as core from "../core.js";
 import type * as demos from "../demos.js";
+import type * as email from "../email.js";
 import type * as http from "../http.js";
 import type * as lib from "../lib.js";
 import type * as migrate from "../migrate.js";
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   config: typeof config;
   core: typeof core;
   demos: typeof demos;
+  email: typeof email;
   http: typeof http;
   lib: typeof lib;
   migrate: typeof migrate;

@@ -237,12 +237,23 @@ export async function handle(req, res, u, { readBody, host }) {
       const exp = String(Date.now() + 10 * 60 * 1000)
       out = { url: `https://${host}/deskd/record/dl?f=${encodeURIComponent(f)}&exp=${exp}&sig=${sign(`${f}.${exp}`)}` }
     } else if (b.op === 'open-desk') {
-      // Point the box's own Chrome at this Desk so a recording shows the chat, not a blank page.
+      // Point the box's own Chrome at one page — this Desk by default, or any
+      // https url (a recording of the assistant working on a prospect's site
+      // starts by aiming the browser there). CDP's HTTP surface cannot
+      // navigate an existing tab, so: open the target in a new tab, then close
+      // every other page tab. Net effect is a navigation; repeated calls no
+      // longer stack tabs.
+      const target = typeof b.url === 'string' && /^https:\/\/[^\s]+$/.test(b.url) ? b.url : `https://${host}/`
       try {
-        const tabs = await fetch(`${CDP}/json`).then(r => r.json())
-        const page = tabs.find(t => t.type === 'page')
-        if (page) await fetch(`${CDP}/json/new?https://${host}/`, { method: 'PUT' }).catch(() => fetch(`${CDP}/json/new?https://${host}/`))
-        out = { ok: true }
+        const before = await fetch(`${CDP}/json`).then(r => r.json())
+        const opened = await fetch(`${CDP}/json/new?${target}`, { method: 'PUT' }).catch(() => fetch(`${CDP}/json/new?${target}`))
+        const openedId = (await opened.json().catch(() => ({})))?.id
+        if (openedId) {
+          for (const t of before) {
+            if (t.type === 'page' && t.id !== openedId) await fetch(`${CDP}/json/close/${t.id}`).catch(() => {})
+          }
+        }
+        out = { ok: true, url: target }
       } catch (e) { out = { error: `browser not reachable: ${e.message}` } }
     } else { res.writeHead(400); return res.end('op?') }
     // Errors ride in the body at 200: the control plane relays { error } to the

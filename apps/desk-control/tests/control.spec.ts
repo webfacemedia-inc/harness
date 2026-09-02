@@ -166,6 +166,56 @@ describe('heartbeats', () => {
   })
 })
 
+describe('ops credentials and demo status (the reel rig surface)', () => {
+  it('opsReveal hands over token + password without consuming the welcome one-shot', async () => {
+    const tx = t()
+    await makeOrder(tx, { kind: 'demo', demo: { prospect: 'Dana', expiresAt: '2026-09-09T00:00:00.000Z', extendedCount: 0 } })
+    await tx.mutation(internal.secrets.mint, { orderId: 'ord_test1', boxToken: 'tok_abc', password: 'pw_first' })
+    const creds = await tx.mutation(internal.secrets.opsReveal, { orderId: 'ord_test1' })
+    expect(creds).toEqual({ boxToken: 'tok_abc', password: 'pw_first' })
+    await tx.run(async (ctx) => {
+      const row = (await ctx.db.query('boxSecrets').collect())[0]
+      expect(row.opsRevealedAt).toBeTruthy()      // the read is on the record
+      expect(row.passwordShownAt).toBeUndefined() // the customer's one shot survives
+    })
+    // The welcome page still gets its one look afterwards.
+    const shown = await tx.mutation(internal.secrets.revealPassword, { orderId: 'ord_test1' })
+    expect(shown).toBe('pw_first')
+  })
+
+  it('opsReveal returns null for a box we hold nothing for', async () => {
+    const tx = t()
+    expect(await tx.mutation(internal.secrets.opsReveal, { orderId: 'ord_ghost' })).toBeNull()
+  })
+
+  it('opsStatus reports the demo clock and activity, and refuses non-demos', async () => {
+    const tx = t()
+    await makeOrder(tx, {
+      kind: 'demo',
+      demo: { prospect: 'Dana', expiresAt: '2026-09-09T00:00:00.000Z', extendedCount: 1 },
+    })
+    await tx.run(async (ctx) => {
+      const order = (await ctx.db.query('orders').collect())[0]
+      await ctx.db.patch(order._id, { status: 'ready', host: 'demo-maple.webfacedesk.app' })
+    })
+    await tx.mutation(internal.boxes.heartbeat, {
+      orderId: 'ord_test1',
+      body: { ready: true, harness: true, google: 0, push: 0, usage: { monthTokens: 5, totalTokens: 5, sessions: 2, turns: 9 } },
+    })
+    const s = await tx.query(internal.demos.opsStatus, { orderId: 'ord_test1' })
+    expect(s?.host).toBe('demo-maple.webfacedesk.app')
+    expect(s?.expiresAt).toBe('2026-09-09T00:00:00.000Z')
+    expect(s?.extendedCount).toBe(1)
+    expect(s?.lastSeen).toBeTruthy()
+    expect(s?.activity.length).toBeGreaterThan(0)  // demo heartbeats feed usageDaily
+    // A paid order is invisible to this surface.
+    await tx.mutation(internal.orders.create, {
+      orderId: 'ord_paid', kind: 'paid', plan: 'business', business: 'Paid Co', email: 'x@y.com', slug: 'paid-co',
+    } as never)
+    expect(await tx.query(internal.demos.opsStatus, { orderId: 'ord_paid' })).toBeNull()
+  })
+})
+
 describe('demo bookkeeping', () => {
   it('extending moves the clock forward and clears the warning', async () => {
     const tx = t()

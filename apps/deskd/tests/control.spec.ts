@@ -231,3 +231,58 @@ describe('recordings', () => {
     expect(res.json).toEqual({ recordings: [], recording: false, since: null })
   })
 })
+
+describe('open-desk drives the one browser tab', () => {
+  it('opens the given https url and closes every other page tab', async () => {
+    const { createServer } = await import('node:http')
+    const closed: string[] = []
+    let openedUrl = ''
+    const cdp = createServer((req, res) => {
+      const u = new URL(req.url ?? '/', 'http://x')
+      res.setHeader('content-type', 'application/json')
+      if (u.pathname === '/json') {
+        return res.end(JSON.stringify([
+          { id: 'old1', type: 'page', url: 'about:blank' },
+          { id: 'old2', type: 'page', url: 'https://elsewhere.example/' },
+          { id: 'svc', type: 'service_worker', url: 'chrome://x' },
+        ]))
+      }
+      if (u.pathname === '/json/new') { openedUrl = (req.url ?? '').slice('/json/new?'.length); return res.end(JSON.stringify({ id: 'new1', type: 'page' })) }
+      if (u.pathname.startsWith('/json/close/')) { closed.push(u.pathname.slice('/json/close/'.length)); return res.end('ok') }
+      res.statusCode = 404; res.end('?')
+    })
+    await new Promise<void>(r => cdp.listen(0, '127.0.0.1', r))
+    const port = (cdp.address() as { port: number }).port
+    vi.stubEnv('DESK_BROWSER_CDP', `http://127.0.0.1:${port}`)
+    try {
+      const control = await load(scratch())
+      const { req, res, u } = fakeReq('POST', '/deskd/record', { token: 'tok_test', body: { op: 'open-desk', url: 'https://prospect.example/about' } })
+      await control.handle(req, res, u, { readBody, host: 'box.example' })
+      expect(res.json).toEqual({ ok: true, url: 'https://prospect.example/about' })
+      expect(openedUrl).toBe('https://prospect.example/about')
+      expect(closed.sort()).toEqual(['old1', 'old2'])  // pages only — the service worker stays
+    } finally { cdp.close() }
+  })
+
+  it('refuses a non-https url and falls back to the Desk itself', async () => {
+    const { createServer } = await import('node:http')
+    let openedUrl = ''
+    const cdp = createServer((req, res) => {
+      const u = new URL(req.url ?? '/', 'http://x')
+      res.setHeader('content-type', 'application/json')
+      if (u.pathname === '/json') return res.end('[]')
+      if (u.pathname === '/json/new') { openedUrl = (req.url ?? '').slice('/json/new?'.length); return res.end(JSON.stringify({ id: 'new1' })) }
+      res.end('ok')
+    })
+    await new Promise<void>(r => cdp.listen(0, '127.0.0.1', r))
+    const port = (cdp.address() as { port: number }).port
+    vi.stubEnv('DESK_BROWSER_CDP', `http://127.0.0.1:${port}`)
+    try {
+      const control = await load(scratch())
+      const { req, res, u } = fakeReq('POST', '/deskd/record', { token: 'tok_test', body: { op: 'open-desk', url: 'javascript:alert(1)' } })
+      await control.handle(req, res, u, { readBody, host: 'box.example' })
+      expect(res.json.url).toBe('https://box.example/')
+      expect(openedUrl).toBe('https://box.example/')
+    } finally { cdp.close() }
+  })
+})

@@ -42,6 +42,28 @@ export const revealPassword = internalMutation({
   },
 })
 
+/**
+ * The ops key's look at a box's credentials — the HTTP route restricts it to
+ * demo/internal boxes. Unlike revealPassword this does NOT consume the welcome
+ * page's one shot: it stamps opsRevealedAt so the read is on the record, and
+ * the customer path stays intact.
+ */
+export const opsReveal = internalMutation({
+  args: { orderId: v.string() },
+  handler: async (ctx, { orderId }) => {
+    const row = await ctx.db.query('boxSecrets').withIndex('by_orderId', q => q.eq('orderId', orderId)).unique()
+    if (row) {
+      await ctx.db.patch(row._id, { opsRevealedAt: nowIso() })
+      return { boxToken: row.boxToken, password: row.password ?? null }
+    }
+    if (orderId.startsWith('static_')) {
+      const fixed = await ctx.db.query('staticBoxes').withIndex('by_slug', q => q.eq('slug', orderId.slice(7))).unique()
+      if (fixed) return { boxToken: fixed.boxToken, password: null }
+    }
+    return null
+  },
+})
+
 /** Once shown (or on destroy), the password has no business persisting. */
 export const clearPassword = internalMutation({
   args: { orderId: v.string() },

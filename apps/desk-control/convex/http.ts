@@ -157,6 +157,49 @@ http.route({ path: '/api/ops/action', method: 'POST', handler: httpAction(async 
   return json(200, { ok: true })
 }) })
 
+// Demos over the ops key — the reel rig creates seeded demo Desks headlessly,
+// polls them to ready, and reads their activity for follow-up timing.
+http.route({ path: '/api/ops/demos', method: 'POST', handler: httpAction(async (ctx, req) => {
+  if (!opsKeyOk(req)) return json(401, { error: 'no' })
+  const b = await req.json().catch(() => ({}))
+  if (!b.prospect || !b.business) return json(400, { error: 'prospect and business are needed' })
+  try {
+    const out = await ctx.runMutation(internal.demos.opsCreateDemo, {
+      prospect: String(b.prospect), business: String(b.business),
+      contactEmail: b.contactEmail ? String(b.contactEmail) : undefined,
+      days: typeof b.days === 'number' ? b.days : undefined,
+      slug: b.slug ? String(b.slug) : undefined,
+      template: b.template ?? undefined,
+    })
+    return json(202, { id: out.orderId, slug: out.slug })
+  } catch (e) {
+    return json(400, { error: e instanceof Error ? e.message : String(e) })
+  }
+}) })
+
+http.route({ pathPrefix: '/api/ops/demos/', method: 'GET', handler: httpAction(async (ctx, req) => {
+  if (!opsKeyOk(req)) return json(401, { error: 'no' })
+  const orderId = new URL(req.url).pathname.split('/')[4] ?? ''
+  const out = await ctx.runQuery(internal.demos.opsStatus, { orderId })
+  return out ? json(200, out) : json(404, { error: 'no such demo' })
+}) })
+
+// Credentials for boxes we own the relationship with (demo/internal only), so
+// the rig can sign in as owner and drive /deskd directly. Audited; the welcome
+// page's one-shot password reveal is untouched.
+http.route({ pathPrefix: '/api/ops/boxes/', method: 'POST', handler: httpAction(async (ctx, req) => {
+  if (!opsKeyOk(req)) return json(401, { error: 'no' })
+  const parts = new URL(req.url).pathname.split('/')
+  const orderId = parts[4] ?? ''
+  if (parts[5] !== 'credentials') return json(404, { error: 'not found' })
+  const order = await ctx.runQuery(internal.orders.byOrderId, { orderId })
+  if (!order || (order.kind !== 'demo' && order.kind !== 'internal')) return json(404, { error: 'no such box' })
+  const creds = await ctx.runMutation(internal.secrets.opsReveal, { orderId })
+  if (!creds) return json(404, { error: 'no credentials held' })
+  await ctx.runMutation(internal.orders.log, { actor: 'ops', action: 'credentials-read', orderId, detail: 'ops key' })
+  return json(200, { host: order.host ?? null, username: 'owner', password: creds.password, boxToken: creds.boxToken })
+}) })
+
 // Google sign-in relay: one OAuth client for the whole fleet; the ticket back
 // to the box is signed with that box's own token, which only it can verify.
 // Nothing about the sign-in is stored.

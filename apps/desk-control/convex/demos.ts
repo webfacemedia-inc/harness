@@ -2,10 +2,12 @@
 // warns 24 h before expiry, then tears down (final snapshot kept); Extend
 // moves the clock; Convert keeps the very same box and only changes billing.
 import { v } from 'convex/values'
-import { action, internalAction, internalMutation, internalQuery, mutation, query } from './_generated/server'
+import { action, internalAction, internalMutation, internalQuery, mutation, query, type MutationCtx } from './_generated/server'
 import { internal } from './_generated/api'
+import type { Id } from './_generated/dataModel'
 import { workflow, retrier, requireOperator, requireOperatorAction, audit, brevoSend } from './lib'
 import { cleanName, nowIso, randomId, slugify } from './core'
+import { demoTemplateInput } from './schema'
 import { renderEmail, esc, p, btn } from './email'
 
 const DAY = 86_400_000
@@ -40,6 +42,37 @@ export const saveTemplate = mutation({
   },
 })
 
+/** The one demo-creation path — the console (Clerk) and the ops key both land here. */
+async function createDemoCore(
+  ctx: MutationCtx,
+  args: { prospect: string; business: string; contactEmail?: string; templateId?: Id<'demoTemplates'>; days?: number; slug?: string },
+  actor: string,
+): Promise<{ orderId: string; slug: string }> {
+  const business = cleanName(args.business)
+  const slug = slugify(args.slug ?? `demo-${business}`)
+  if (!slug) throw new Error('the business name makes an empty slug — give one explicitly')
+  const existing = await ctx.db.query('orders').withIndex('by_slug', q => q.eq('slug', slug)).unique()
+  if (existing && existing.status !== 'destroyed') throw new Error(`${slug} is already in use by ${existing.orderId}`)
+  const days = Math.min(Math.max(args.days ?? 7, 1), 60)
+  const orderId = randomId('ord')
+  const at = nowIso()
+  await ctx.runMutation(internal.orders.create, {
+    orderId, kind: 'demo', plan: 'business', business, email: args.contactEmail ?? '', slug,
+    sandbox: true, source: 'console',
+    demo: {
+      prospect: cleanName(args.prospect),
+      contactEmail: args.contactEmail,
+      templateId: args.templateId,
+      expiresAt: new Date(Date.parse(at) + days * DAY).toISOString(),
+      extendedCount: 0,
+    },
+  })
+  await ctx.runMutation(internal.orders.patch, { orderId, status: 'paid' })  // no money changes hands for a demo
+  await audit(ctx, 'ops', 'demo-created', orderId, `${actor}: ${business}, ${days}d`)
+  await workflow.start(ctx, internal.provision.provisionBox, { orderId })
+  return { orderId, slug }
+}
+
 /** "New demo": a real Desk for a prospect, on a clock. */
 export const createDemo = mutation({
   args: {
@@ -52,29 +85,41 @@ export const createDemo = mutation({
   },
   handler: async (ctx, args) => {
     const email = await requireOperator(ctx)
-    const business = cleanName(args.business)
-    const slug = slugify(args.slug ?? `demo-${business}`)
-    if (!slug) throw new Error('the business name makes an empty slug — give one explicitly')
-    const existing = await ctx.db.query('orders').withIndex('by_slug', q => q.eq('slug', slug)).unique()
-    if (existing && existing.status !== 'destroyed') throw new Error(`${slug} is already in use by ${existing.orderId}`)
-    const days = Math.min(Math.max(args.days ?? 7, 1), 60)
-    const orderId = randomId('ord')
-    const at = nowIso()
-    await ctx.runMutation(internal.orders.create, {
-      orderId, kind: 'demo', plan: 'business', business, email: args.contactEmail ?? '', slug,
-      sandbox: true, source: 'console',
-      demo: {
-        prospect: cleanName(args.prospect),
-        contactEmail: args.contactEmail,
-        templateId: args.templateId,
-        expiresAt: new Date(Date.parse(at) + days * DAY).toISOString(),
-        extendedCount: 0,
-      },
-    })
-    await ctx.runMutation(internal.orders.patch, { orderId, status: 'paid' })  // no money changes hands for a demo
-    await audit(ctx, 'ops', 'demo-created', orderId, `${email}: ${business}, ${days}d`)
-    await workflow.start(ctx, internal.provision.provisionBox, { orderId })
-    return { orderId, slug }
+    return await createDemoCore(ctx, args, email)
+  },
+})
+
+/** The ops-key path (the reel rig): create a demo headlessly, template inline. */
+export const opsCreateDemo = internalMutation({
+  args: {
+    prospect: v.string(),
+    business: v.string(),
+    contactEmail: v.optional(v.string()),
+    days: v.optional(v.number()),
+    slug: v.optional(v.string()),
+    template: v.optional(v.object(demoTemplateInput)),
+  },
+  handler: async (ctx, { template, ...args }) => {
+    const templateId = template ? await ctx.db.insert('demoTemplates', { ...template, updatedAt: nowIso() }) : undefined
+    return await createDemoCore(ctx, { ...args, templateId }, 'ops-key')
+  },
+})
+
+/** What the ops key may know about a demo: state, clock, activity — never secrets. */
+export const opsStatus = internalQuery({
+  args: { orderId: v.string() },
+  handler: async (ctx, { orderId }) => {
+    const order = await ctx.db.query('orders').withIndex('by_orderId', q => q.eq('orderId', orderId)).unique()
+    if (!order?.demo) return null
+    const beat = await ctx.db.query('heartbeats').withIndex('by_orderId', q => q.eq('orderId', orderId)).unique()
+    const daily = await ctx.db.query('usageDaily').withIndex('by_orderId_day', q => q.eq('orderId', orderId)).collect()
+    return {
+      id: order.orderId, status: order.status, detail: order.detail ?? '', host: order.host ?? null,
+      prospect: order.demo.prospect, expiresAt: order.demo.expiresAt,
+      warnedAt: order.demo.warnedAt ?? null, extendedCount: order.demo.extendedCount,
+      lastSeen: beat?.at ?? null, usage: beat?.usage ?? null,
+      activity: daily.map(d => ({ day: d.day, sessions: d.sessions, turns: d.turns, tokens: d.tokens })),
+    }
   },
 })
 
