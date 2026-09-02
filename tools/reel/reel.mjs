@@ -16,7 +16,7 @@ import { execFileSync } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { createDemo, demoStatus, credentials, boxAction, waitReady } from './lib/api.mjs'
 import { templateFromBrief, enquiryFor, browserTaskFor } from './lib/template.mjs'
-import { captureStills, siteScene, deskScene, agentScene } from './lib/scenes.mjs'
+import { captureStills, siteScene, deskScene, agentScene, prepareAuth } from './lib/scenes.mjs'
 import { renderPage } from './lib/page.mjs'
 
 const ROOT = dirname(fileURLToPath(import.meta.url))
@@ -55,16 +55,34 @@ async function cmdCreate() {
     template,
   })
   console.log(`demo ${created.id} (${created.slug}) provisioning — this takes ~25 minutes`)
-  const ready = await waitReady(created.id, { onTick: s => console.log(`  ${new Date().toISOString().slice(11, 19)} ${s.status}${s.detail ? ` — ${s.detail}` : ''}`) })
-  const creds = await credentials(created.id)
+  await finishCreate(created.id, created.slug, brief, email)
+}
+
+// The tail of create, callable on its own: if create's poll was interrupted,
+// `adopt --order <id> --brief ... --email ...` picks the same demo back up.
+async function cmdAdopt() {
+  const briefPath = flag('brief')
+  const email = flag('email')
+  const orderId = flag('order')
+  if (!briefPath || !email || !orderId) throw new Error('adopt needs --order, --brief and --email')
+  const brief = JSON.parse(readFileSync(resolve(briefPath), 'utf8'))
+  const s = await demoStatus(orderId)
+  await finishCreate(orderId, s.id && s.host ? s.host.split('.')[0] : (flag('slug') ?? ''), brief, email)
+}
+
+async function finishCreate(orderId, slug, brief, email) {
+  const business = brief.business?.name ?? brief.name
+  const prospect = flag('prospect') ?? brief.prospect ?? business
+  const ready = await waitReady(orderId, { onTick: s => console.log(`  ${new Date().toISOString().slice(11, 19)} ${s.status}${s.detail ? ` — ${s.detail}` : ''}`) })
+  const creds = await credentials(orderId)
   const state = {
-    orderId: created.id, slug: created.slug, business, prospect, email,
+    orderId, slug: slug || ready.host.split('.')[0], business, prospect, email,
     host: ready.host, expiresAt: ready.expiresAt,
     username: creds.username, password: creds.password, boxToken: creds.boxToken,
     siteUrl: brief.business?.website ?? undefined,
     previewUrl: flag('preview') ?? undefined,
     category: brief.business?.category ?? undefined,
-    pageName: `${created.slug}-${randomBytes(4).toString('hex')}`,
+    pageName: `${slug || ready.host.split('.')[0]}-${randomBytes(4).toString('hex')}`,
     hook: (brief.topGaps?.[0]?.talkingPoint ?? brief.topGaps?.[0]?.title) || undefined,
   }
   saveState(state)
@@ -82,14 +100,14 @@ async function cmdScenes() {
   const stills = await captureStills(state, join(dir, 'stills'))
   console.log('scene: site preview…')
   const site = await siteScene(state, dir)
-  console.log('scene: desk + agent browser…')
-  let desk, agent = null
+  console.log('warming a chat session (once)…')
+  const auth = await prepareAuth(state)
+  console.log('scene: desk answers the enquiry…')
+  const desk = await deskScene(state, dir, { enquiry, auth })
+  let agent = null
   if (browserTask && !has('skip-agent')) {
-    agent = await agentScene(state, dir, async () => {
-      desk = await deskScene(state, dir, { enquiry, browserTask })
-    })
-  } else {
-    desk = await deskScene(state, dir, { enquiry })
+    console.log('scene: the assistant works their site (box recorder)…')
+    agent = await agentScene(state, dir, { browserTask, auth })
   }
   Object.assign(state, { scenes: { site, desk, agent, ...stills }, enquiry })
   saveState(state)
@@ -184,7 +202,7 @@ function run(bin, a, cwd) {
   execFileSync(bin, a, { stdio: 'inherit', ...(cwd ? { cwd } : {}) })
 }
 
-const commands = { create: cmdCreate, scenes: cmdScenes, render: cmdRender, publish: cmdPublish, status: cmdStatus, destroy: cmdDestroy }
+const commands = { create: cmdCreate, adopt: cmdAdopt, scenes: cmdScenes, render: cmdRender, publish: cmdPublish, status: cmdStatus, destroy: cmdDestroy }
 const fn = commands[cmd]
 if (!fn) { console.error(`usage: reel <${Object.keys(commands).join('|')}> [flags]`); process.exit(2) }
 fn().catch(e => { console.error(String(e.message ?? e)); process.exit(1) })

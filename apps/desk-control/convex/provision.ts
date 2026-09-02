@@ -69,7 +69,11 @@ export const createDroplet = internalAction({
         OPENROUTER_API_KEY: env('OPENROUTER_API_KEY'),
         DESK_OWNER_USER: 'owner', DESK_OWNER_EMAIL: '', DESK_OWNER_PASSWORD: a.password,
         DESK_HARNESS_REF: process.env.DESK_HARNESS_REF ?? 'desk',
-        DESK_SANDBOX: a.sandbox ? '1' : '',
+        // Bootstrap uses DESK_SANDBOX verbatim as the sandbox-policy mode, so it
+        // must be a valid mode string, never a flag: a sandboxed box (demos) runs
+        // workspace-write — it drafts and files, but nothing danger-full — and an
+        // unsandboxed box falls through to bootstrap's read-only default.
+        DESK_SANDBOX: a.sandbox ? 'workspace-write' : '',
         DESK_DEFAULT_PRESET: 'team',
         DESK_PLAN: a.plan,
         FAL_KEY: process.env.FAL_KEY ?? '',
