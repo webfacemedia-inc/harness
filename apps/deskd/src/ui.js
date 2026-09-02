@@ -24,8 +24,8 @@ export const ICONS = {
   ext: svg('<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>'),
 }
 export const CSS = `
-:root{color-scheme:light dark;--bg:#f5f8fb;--card:#ffffff;--ink:#152029;--mute:#5a6a78;--line:#dfe6ec;--blue:#3499cc;--deep:#1f6f99;--tint:#eef6fb;--ok:#1f8a5b;--err:#b42318;--ok-bg:rgba(31,138,91,.10);--err-bg:rgba(180,35,24,.08)}
-@media(prefers-color-scheme:dark){:root{--bg:#0e141a;--card:#151d25;--ink:#eef3f7;--mute:#9db0c0;--line:#26323d;--tint:#14232d}}
+:root{color-scheme:light dark;--bg:#fafafa;--card:#ffffff;--ink:#111111;--mute:#6b6b6b;--line:#e4e4e4;--blue:#3499cc;--deep:#1f6f99;--tint:#eef6fb;--ok:#1f8a5b;--err:#b42318;--ok-bg:rgba(31,138,91,.10);--err-bg:rgba(180,35,24,.08)}
+@media(prefers-color-scheme:dark){:root{--bg:#070707;--card:#141414;--ink:#f2f2f2;--mute:#a3a3a3;--line:#282828;--tint:#0f1d26}}
 *{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font:15.5px/1.55 "Inter Tight",-apple-system,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 h1,h2{font-family:Fraunces,Georgia,serif;font-weight:600;letter-spacing:-.01em;text-wrap:balance;margin:0}
