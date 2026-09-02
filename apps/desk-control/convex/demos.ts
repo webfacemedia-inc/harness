@@ -6,6 +6,7 @@ import { action, internalAction, internalMutation, internalQuery, mutation, quer
 import { internal } from './_generated/api'
 import { workflow, retrier, requireOperator, requireOperatorAction, audit, brevoSend } from './lib'
 import { cleanName, nowIso, randomId, slugify } from './core'
+import { renderEmail, esc, p, btn } from './email'
 
 const DAY = 86_400_000
 
@@ -137,7 +138,14 @@ export const warnExpirySend = internalAction({
     await brevoSend({
       to: process.env.DESKAPI_ALERT_EMAIL ?? 'tommy@webfacemedia.com',
       subject: `Demo Desk for ${order.demo.prospect} expires ${when}`,
-      html: `<p>The demo Desk for ${order.demo.prospect} (${order.business}, ${order.slug}) tears itself down at ${when} Toronto time. Extend it from the console if the conversation is still warm; a final snapshot is kept either way.</p>`,
+      html: renderEmail({
+        title: 'A demo Desk is winding down',
+        preheader: `${order.demo.prospect} — tears down ${when} Toronto time.`,
+        body:
+          p(`The demo Desk for <strong>${esc(order.demo.prospect)}</strong> (${esc(order.business)}, ${esc(order.slug)}) tears itself down at <strong>${esc(when)}</strong> Toronto time.`) +
+          btn('https://desk.webfacemedia.com', 'Open the console') +
+          p('Extend it from the console if the conversation is still warm — a final snapshot is kept either way.'),
+      }),
     })
     await ctx.runMutation(internal.demos.markWarned, { orderId })
   },

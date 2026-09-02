@@ -6,6 +6,7 @@ import { internalAction, internalMutation } from './_generated/server'
 import { internal } from './_generated/api'
 import { retrier, brevoSend } from './lib'
 import { nowIso } from './core'
+import { renderEmail, esc, p, btn } from './email'
 
 export const heartbeat = internalMutation({
   args: { orderId: v.string(), body: v.any() },
@@ -60,7 +61,13 @@ export const usageAlertAction = internalAction({
     await brevoSend({
       to: process.env.DESKAPI_ALERT_EMAIL ?? 'tommy@webfacemedia.com',
       subject: `Desk ${order.slug} passed ${Math.round(cap / 1e6)}M tokens this month`,
-      html: `<p>${order.business} (${order.slug}) has used ${Math.round(monthTokens / 1e6)}M tokens in ${month}. Plan: ${order.plan}.</p>`,
+      html: renderEmail({
+        title: 'A Desk is running hot',
+        preheader: `${order.business} — ${Math.round(monthTokens / 1e6)}M tokens in ${month}.`,
+        body:
+          p(`<strong>${esc(order.business)}</strong> (${esc(order.slug)}) has used <strong>${Math.round(monthTokens / 1e6)}M tokens</strong> in ${esc(month)}, past the ${Math.round(cap / 1e6)}M mark. Plan: ${esc(order.plan)}.`) +
+          btn('https://desk.webfacemedia.com', 'Open the console'),
+      }),
     })
     // Only a send Brevo accepted silences the month — a throw above retries instead.
     await ctx.runMutation(internal.boxes.markUsageAlerted, { orderId, month })

@@ -9,6 +9,7 @@ import { internalAction, internalMutation, internalQuery } from './_generated/se
 import { internal } from './_generated/api'
 import { workflow, retrier, doApi, cfDnsUpsert, cfDnsDelete, brevoSend, env } from './lib'
 import { buildUserData, nowIso, randomSecret } from './core'
+import { renderEmail, esc, p, btn, link, panel, muted, restyleParagraphs } from './email'
 
 const DOMAIN = () => process.env.DESK_DOMAIN ?? 'webfacedesk.app'
 
@@ -118,11 +119,22 @@ export const welcomeEmail = internalAction({
   handler: async (ctx, { orderId }) => {
     const order = await ctx.runQuery(internal.orders.byOrderId, { orderId })
     if (!order) throw new Error(`no order ${orderId}`)
-    const url = `${process.env.DESK_PUBLIC_URL ?? 'https://webfacedesk.app'}/welcome?order=${orderId}`
+    const base = process.env.DESK_PUBLIC_URL ?? 'https://webfacedesk.app'
+    const url = `${base}/welcome?order=${orderId}`
     await brevoSend({
       to: order.email,
       subject: `Your Desk is ready — ${order.host}`,
-      html: `<p>Hello,</p><p>Your webfaCe Desk for ${order.business} is ready.</p><p><a href="${url}">Open your welcome page</a> — it shows your sign-in details once, so have a password manager handy.</p><p>Your Desk lives at <a href="https://${order.host}/">${order.host}</a>, any time, from any device.</p><p>webfaCeMEdia</p>`,
+      html: renderEmail({
+        title: 'Your Desk is ready',
+        preheader: `${order.business} is set up at ${order.host}. Your sign-in details are one click away.`,
+        body:
+          p(`The Desk for <strong>${esc(order.business)}</strong> is set up and waiting.`) +
+          btn(url, 'See your sign-in details') +
+          p(`The welcome page shows your password <strong>once</strong>, so have a password manager handy. If your Google address is ${esc(order.email)}, <strong>Sign in with Google</strong> works too.`) +
+          panel(p(`Your Desk lives at ${link(`https://${order.host}/`, esc(order.host))} — any time, from any device. On your computer you can also ${link(`${base}/download`, 'get the desktop app')}.`).replace(/margin:0 0 14px/, 'margin:0')) +
+          p(`${link('https://book.webface.cloud/book/tommyadeniyi', 'Book your set-up call')} — 30 minutes, together on screen. Or just sign in: your Desk opens the Business page and asks about the business.`) +
+          muted('Your subscription, invoices and card live under Billing in your Desk&rsquo;s sidebar — you can cancel there at any time.'),
+      }),
     })
   },
 })
@@ -130,7 +142,11 @@ export const welcomeEmail = internalAction({
 export const opsAlert = internalAction({
   args: { subject: v.string(), html: v.string() },
   handler: async (_ctx, { subject, html }) => {
-    await brevoSend({ to: process.env.DESKAPI_ALERT_EMAIL ?? 'tommy@webfacemedia.com', subject, html })
+    await brevoSend({
+      to: process.env.DESKAPI_ALERT_EMAIL ?? 'tommy@webfacemedia.com',
+      subject,
+      html: renderEmail({ title: subject, body: restyleParagraphs(html) }),
+    })
   },
 })
 

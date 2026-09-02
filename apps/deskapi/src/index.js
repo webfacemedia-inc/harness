@@ -16,6 +16,7 @@ import { join } from 'node:path'
 import { provision } from './provision.js'
 import { billingStateFor, cleanName, equalSecret, resumableOrders, verifyStripeSignature, IN_FLIGHT, MAX_ATTEMPTS } from './core.js'
 import * as ops from './ops.js'
+import { renderEmail, esc as em, p as ep, btn as ebtn, link as elink, panel as epanel, muted as emuted } from './email.js'
 
 const PORT = Number(process.env.DESKAPI_PORT ?? 8095)
 const PUBLIC = process.env.DESK_PUBLIC_URL ?? 'https://webfacedesk.app'
@@ -177,7 +178,7 @@ function usageWatch(o) {
   // instead of being silently marked as delivered for the rest of the month.
   o.usageAlerting = true
   const to = process.env.DESKAPI_ALERT_EMAIL ?? 'tommy@webfacemedia.com'
-  fetch('https://api.brevo.com/v3/smtp/email', { method: 'POST', headers: { 'api-key': process.env.BREVO_API_KEY ?? '', 'content-type': 'application/json' }, body: JSON.stringify({ sender: { name: 'webfaCe Desk', email: 'desk@webfacedesk.app' }, to: [{ email: to }], subject: `Desk ${o.slug} passed ${Math.round(cap / 1e6)}M tokens this month`, htmlContent: `<p>${esc(o.business ?? o.slug)} (${esc(o.slug)}) has used ${Math.round(o.usage.monthTokens / 1e6)}M tokens in ${month}. Plan: ${esc(o.plan ?? '')}.</p>` }) }).then(r => { o.usageAlerting = false; if (!r.ok) throw new Error(`brevo ${r.status}`); o.usageAlerted = month; save() })
+  fetch('https://api.brevo.com/v3/smtp/email', { method: 'POST', headers: { 'api-key': process.env.BREVO_API_KEY ?? '', 'content-type': 'application/json' }, body: JSON.stringify({ sender: { name: 'webfaCe Desk', email: 'desk@webfacedesk.app' }, to: [{ email: to }], subject: `Desk ${o.slug} passed ${Math.round(cap / 1e6)}M tokens this month`, htmlContent: renderEmail({ title: 'A Desk is running hot', preheader: `${o.business ?? o.slug} — ${Math.round(o.usage.monthTokens / 1e6)}M tokens in ${month}.`, body: ep(`<strong>${em(o.business ?? o.slug)}</strong> (${em(o.slug)}) has used <strong>${Math.round(o.usage.monthTokens / 1e6)}M tokens</strong> in ${em(month)}, past the ${Math.round(cap / 1e6)}M mark. Plan: ${em(o.plan ?? '')}.`) }) }) }).then(r => { o.usageAlerting = false; if (!r.ok) throw new Error(`brevo ${r.status}`); o.usageAlerted = month; save() })
     .catch(e => { o.usageAlerting = false; note(o, 'usage-alert', e) })
 }
 /** Terms: 14 days read-only after a failed payment, then the Desk stops; a closed Desk's snapshot goes after 90 days. */
@@ -220,7 +221,17 @@ async function email(o) {
   if (!process.env.BREVO_API_KEY) return
   const r = await fetch('https://api.brevo.com/v3/smtp/email', { method: 'POST', headers: { 'api-key': process.env.BREVO_API_KEY, 'content-type': 'application/json' }, body: JSON.stringify({
     sender: { name: 'webfaCe Desk', email: process.env.DESK_FROM_EMAIL ?? 'desk@webfacemedia.com' }, to: [{ email: o.email }], subject: `${o.business}: your Desk is ready`,
-    htmlContent: `<p>Your Desk is ready.</p><p><a href="https://${o.host}/">Open your Desk</a> — username <b>owner</b> (or this email address), password <b>${o.password}</b>. You can also use <b>Sign in with Google</b> if your Google address is ${o.email}.</p><p>Your subscription, invoices and card are under <b>Billing</b> in the Desk sidebar; you can cancel there at any time.</p><p><a href="https://book.webface.cloud/book/tommyadeniyi">Book your set-up call</a> (30 minutes, together on screen) — or sign in now: Desk opens the Business page and asks about the business. On your computer you can also <a href="${process.env.DESK_PUBLIC_URL ?? 'https://webfacedesk.app'}/download">download the desktop app</a>. Reply to this email if anything is unclear.</p><p>— webfaCeMEdia, Toronto</p>`,
+    htmlContent: renderEmail({
+      title: 'Your Desk is ready',
+      preheader: `${o.business} is set up at ${o.host}. Your sign-in details are inside.`,
+      body:
+        ep(`The Desk for <strong>${em(o.business)}</strong> is set up and waiting.`) +
+        ebtn(`https://${o.host}/`, 'Open your Desk') +
+        epanel(ep(`Username <strong>owner</strong> (or this email address)<br>Password <strong>${em(o.password)}</strong>`).replace('margin:0 0 14px', 'margin:0')) +
+        ep(`If your Google address is ${em(o.email)}, <strong>Sign in with Google</strong> works too.`) +
+        ep(`${elink('https://book.webface.cloud/book/tommyadeniyi', 'Book your set-up call')} — 30 minutes, together on screen. Or just sign in: your Desk opens the Business page and asks about the business. On your computer you can also ${elink(`${process.env.DESK_PUBLIC_URL ?? 'https://webfacedesk.app'}/download`, 'get the desktop app')}.`) +
+        emuted('Your subscription, invoices and card live under Billing in your Desk&rsquo;s sidebar — you can cancel there at any time.'),
+    }),
   }) })
   if (!r.ok) throw new Error(`brevo ${r.status}: ${await r.text()}`)
   console.log('welcome email sent to', o.email, 'for', o.slug)
