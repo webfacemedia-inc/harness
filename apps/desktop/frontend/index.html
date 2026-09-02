@@ -19,7 +19,7 @@ button{width:100%;margin-top:18px;padding:12px;border:0;border-radius:10px;backg
 <label for="h">Desk address</label><input id="h" placeholder="yourname.webfacedesk.app" autocomplete="off" spellcheck="false" aria-describedby="e">
 <button type="submit">Open my Desk</button><div class="err" id="e" role="alert"></div>
 </form></div>
-<div id="app"><div id="bar"><a id="update" href="https://webfacedesk.app/download" target="_blank" rel="noreferrer" style="display:none">Update available</a></div></div>
+<div id="app"><div id="bar"><a id="update" href="https://webfacedesk.app/download" target="_blank" rel="noreferrer" style="display:none">Update</a></div></div>
 <div id="note"></div>
 <script>
 const KEY = 'desk.host'
@@ -40,14 +40,43 @@ f.addEventListener('submit', async ev => {
 const change = () => { localStorage.removeItem(KEY); location.reload() }
 window.runtime?.EventsOn?.('desk:change', change)
 window.runtime?.EventsOn?.('desk:translocated', () => { const n = document.getElementById('note'); n.textContent = 'Move webfaCe Desk to your Applications folder, then open it from there — that stops macOS asking about it every time.'; n.style.display = 'block' })
+// Update check: the GitHub release tag against this build's version.
+const updateCheck = (async () => { try { const mine = await window.go?.main?.App?.Version?.(); if (!mine || mine === 'dev') return false
+  const r = await fetch('https://api.github.com/repos/webfacemedia-inc/harness/releases/latest', { headers: { accept: 'application/vnd.github+json' } }); const latest = String((await r.json()).tag_name || '').replace(/^desktop-v/, '')
+  if (latest && latest !== mine) { document.getElementById('update').style.display = 'inline-block'; return true }
+  return false } catch { return false } })()
 const saved = localStorage.getItem(KEY)
 ;(async () => {
   const changing = await (window.go?.main?.App?.ChangeRequested?.() ?? Promise.resolve(false))
-  if (saved) { h.value = saved; if (!changing) probe(saved).then(ok => { if (ok) show(saved); else fail(saved) }) }
+  if (!saved) return
+  h.value = saved
+  if (changing) return
+  // An available update holds the auto-open for one launch: otherwise the
+  // Desk takes over instantly and the Update chip is never reachable. The
+  // check gets 1.5s; offline or on-time, the Desk opens as always.
+  const holdForUpdate = await Promise.race([updateCheck, new Promise(res => setTimeout(() => res(false), 1500))])
+  probe(saved).then(ok => { if (!ok) fail(saved); else if (!holdForUpdate) show(saved)
+    else tell('A new version of the app is ready — Update (top right) installs it and restarts. Or just Open my Desk to carry on.') })
 })()
-// Update check: the GitHub release tag against this build's version.
-;(async () => { try { const mine = await window.go?.main?.App?.Version?.(); if (!mine || mine === 'dev') return
-  const r = await fetch('https://api.github.com/repos/webfacemedia-inc/harness/releases/latest', { headers: { accept: 'application/vnd.github+json' } }); const latest = String((await r.json()).tag_name || '').replace(/^desktop-v/, '')
-  if (latest && latest !== mine) document.getElementById('update').style.display = 'inline-block' } catch {} })()
+// Self-update: the chip runs it in place — download, verify, swap, relaunch.
+// The link only navigates as a fallback, when the app says an in-place update
+// can't work here (dev build, running from Downloads, unwritable folder).
+const up = document.getElementById('update'), note = document.getElementById('note')
+const tell = msg => { note.textContent = msg; note.style.display = msg ? 'block' : 'none' }
+window.runtime?.EventsOn?.('desk:update', s => { up.textContent = { checking: 'Checking…', downloading: 'Downloading…', verifying: 'Verifying…', installing: 'Installing…', restarting: 'Restarting…' }[s] || s })
+up.addEventListener('click', async ev => {
+  if (up.dataset.manual) return // fall through to the download page
+  ev.preventDefault()
+  if (up.dataset.busy) return
+  up.dataset.busy = '1'; tell('')
+  const done = await (window.go?.main?.App?.Update?.() ?? Promise.resolve('manual'))
+  delete up.dataset.busy
+  if (done === 'restarting') return // the new build takes it from here
+  up.textContent = 'Update'
+  if (done === 'current') { up.style.display = 'none'; return }
+  up.dataset.manual = '1'
+  if (done === 'manual') tell('This copy can’t update itself in place — the Update button now opens the download page. (If the app is running from Downloads, move it to Applications first.)')
+  else tell(done + ' — the Update button now opens the download page instead.')
+})
 </script>
 </body></html>

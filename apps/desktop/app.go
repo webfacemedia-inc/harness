@@ -23,6 +23,7 @@ func NewApp() *App {
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	go func() {
+		cleanupAfterUpdate()
 		if translocated := clearQuarantine(); translocated {
 			runtime.EventsEmit(ctx, "desk:translocated")
 		}
