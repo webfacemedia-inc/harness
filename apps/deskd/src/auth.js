@@ -55,8 +55,8 @@ export function loginPage({ business, error = '', google = false, next = '/' }) 
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in · webfaCe Desk</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{color-scheme:light dark;--bg:#f5f7fa;--card:#fff;--ink:#16212b;--mute:#5b6b7a;--line:#dde4ea;--blue:#3499cc;--blue-ink:#22729c;--err:#b42318}
-@media(prefers-color-scheme:dark){:root{--bg:#0f151b;--card:#161e26;--ink:#eef3f7;--mute:#9db0c0;--line:#25313c}}
+:root{color-scheme:light dark;--bg:#fafafa;--card:#fff;--ink:#111111;--mute:#6b6b6b;--line:#e4e4e4;--blue:#3499cc;--blue-ink:#22729c;--err:#b42318}
+@media(prefers-color-scheme:dark){:root{--bg:#070707;--card:#141414;--ink:#f2f2f2;--mute:#a3a3a3;--line:#282828}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,"Segoe UI",Inter,system-ui,sans-serif;min-height:100vh;display:grid;place-items:center;padding:24px}
 .card{width:100%;max-width:400px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:32px}
 .brand{display:flex;align-items:center;gap:10px;margin-bottom:6px;font-weight:600;font-size:20px}h2{font-family:Fraunces,Georgia,serif;font-weight:600}.brand .wm em{font-style:normal;font-family:Fraunces,Georgia,serif;font-weight:600;font-size:1.1em;color:var(--blue-deep,#1f6f99);margin-left:.22em}
