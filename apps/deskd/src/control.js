@@ -75,6 +75,11 @@ function recorderPid() {
 }
 
 function startRecording() {
+  // Boxes bootstrapped before recording shipped never installed ffmpeg — say
+  // so instead of reporting a start that dies instantly (seen on the demo box).
+  if (!['/usr/bin/ffmpeg', '/usr/local/bin/ffmpeg'].some(p => existsSync(p))) {
+    return { error: 'ffmpeg is not installed on this Desk yet — run: apt-get install -y ffmpeg' }
+  }
   mkdirSync(RECORDINGS, { recursive: true, mode: 0o700 })
   recordingsHousekeeping()
   if (recorderPid()) return { error: 'already recording' }
@@ -83,7 +88,9 @@ function startRecording() {
     '-loglevel', 'error', '-f', 'x11grab', '-framerate', '15', '-i', process.env.DISPLAY ?? ':1',
     '-t', String(MAX_RECORD_MS / 1000), '-pix_fmt', 'yuv420p', '-preset', 'veryfast', join(RECORDINGS, file),
   ], { stdio: 'ignore', detached: true })
+  child.on('error', () => { try { unlinkSync(PIDFILE) } catch {} })  // a spawn failure must never crash deskd
   child.unref()
+  if (typeof child.pid !== 'number') return { error: 'the recorder could not start' }
   writeFileSync(PIDFILE, String(child.pid), { mode: 0o600 })
   writeFileSync(join(RECORDINGS, '.current'), file, { mode: 0o600 })
   return { started: file }
@@ -233,7 +240,9 @@ export async function handle(req, res, u, { readBody, host }) {
         out = { ok: true }
       } catch (e) { out = { error: `browser not reachable: ${e.message}` } }
     } else { res.writeHead(400); return res.end('op?') }
-    res.writeHead(out.error ? 409 : 200, { 'content-type': 'application/json' })
+    // Errors ride in the body at 200: the control plane relays { error } to the
+    // console verbatim, where a bare 409 would surface as "box said 409".
+    res.writeHead(200, { 'content-type': 'application/json' })
     return res.end(JSON.stringify(out))
   }
 

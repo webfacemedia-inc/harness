@@ -301,7 +301,7 @@ function ConfigEditor({ orderId }: { orderId: string }) {
         <div className="acts">
           <button className="btn" type="submit">Push to the box</button>
           <label className="ghost" style={{ margin: 0, display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
-          Upload logo…
+            Upload logo…
             <input type="file" accept=".png,.jpg,.jpeg,.svg,.webp" style={{ display: 'none' }} onChange={async (e) => {
               const file = e.target.files?.[0]
               if (!file) return
@@ -333,13 +333,28 @@ function Recorder({ orderId }: { orderId: string }) {
   return <section>
     <h2>Screen recording</h2>
     <p className="sub" style={{ marginBottom: 6 }}>Records the Desk's own screen (its browser) — for a chat walkthrough, open the Desk in it first. Files stay on the box 30 days; Download fetches the mp4 here.</p>
-    {msg && <div className="msg err">{msg}</div>}
+    {msg && <div className={`msg ${/not|could|error|said|failed/i.test(msg) ? 'err' : 'ok'}`}>{msg}</div>}
     <div className="acts">
-      <button className="ghost" onClick={() => { void record({ orderId, op: 'open-desk' }).then(refresh).catch(e => setMsg(String(e))) }}>Open the Desk on its screen</button>
+      <button className="ghost" onClick={() => {
+        setMsg('Opening the Desk on its screen…')
+        void record({ orderId, op: 'open-desk' })
+          .then((out) => { setMsg((out as { error?: string }).error ?? 'The Desk is open on its screen — Record captures it now (watch live on the box\u2019s /browser page).'); return refresh() })
+          .catch(e => setMsg(e instanceof Error ? e.message : String(e)))
+      }}>Open the Desk on its screen</button>
       {state?.recording
-        ? <button className="quiet" onClick={() => { void record({ orderId, op: 'stop' }).then(refresh).catch(e => setMsg(String(e))) }}>■ Stop recording</button>
-        : <button className="btn" onClick={() => { void record({ orderId, op: 'start' }).then(refresh).catch(e => setMsg(String(e))) }}>● Record</button>}
-      <button className="ghost" onClick={() => void refresh()}>Refresh list</button>
+        ? <button className="quiet" onClick={() => {
+          setMsg('Stopping — the file finalises…')
+          void record({ orderId, op: 'stop' })
+            .then((out) => { const o = out as { stopped?: string; bytes?: number; error?: string }; setMsg(o.error ?? `Saved ${o.stopped} (${Math.max(1, Math.round((o.bytes ?? 0) / 1024))} KB) — it is in the list below.`); return refresh() })
+            .catch(e => setMsg(e instanceof Error ? e.message : String(e)))
+        }}>■ Stop recording</button>
+        : <button className="btn" onClick={() => {
+          setMsg('Starting the recorder…')
+          void record({ orderId, op: 'start' })
+            .then((out) => { const o = out as { started?: string; error?: string }; setMsg(o.error ?? `Recording ${o.started} — up to 30 minutes; Stop when done.`); return refresh() })
+            .catch(e => setMsg(e instanceof Error ? e.message : String(e)))
+        }}>● Record</button>}
+      <button className="ghost" onClick={() => { setMsg(''); void refresh() }}>Refresh list</button>
     </div>
     {state && state.recordings.length === 0 && <p className="sub" style={{ margin: '10px 0 0' }}>No recordings on this box yet.</p>}
     {state && state.recordings.length > 0 && <div style={{ marginTop: 10 }}>
