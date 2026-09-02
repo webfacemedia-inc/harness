@@ -225,7 +225,12 @@ export async function handle(req, res, u, { readBody, host }) {
     let out
     if (b.op === 'start') out = startRecording()
     else if (b.op === 'stop') out = await stopRecording()
-    else if (b.op === 'list') out = { recordings: listRecordings(), recording: Boolean(recorderPid()) }
+    else if (b.op === 'list') {
+      const pid = recorderPid()
+      let since = null
+      if (pid) { try { since = statSync(PIDFILE).mtime.toISOString() } catch {} }
+      out = { recordings: listRecordings(), recording: Boolean(pid), since }
+    }
     else if (b.op === 'link') {
       const f = normalize(String(b.file ?? '')).replace(/^([./\\])+/, '')
       if (!/^[A-Za-z0-9-]+\.mp4$/.test(f) || !existsSync(join(RECORDINGS, f))) { res.writeHead(404); return res.end('gone') }

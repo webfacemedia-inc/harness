@@ -167,7 +167,7 @@ function BoxDetail({ orderId, back }: { orderId: string; back: () => void }) {
     {box.demo && <DemoCard orderId={orderId} demo={box.demo} usageDaily={box.usageDaily} />}
     {box.status === 'ready' && <TemplateTools orderId={orderId} business={box.business} />}
     <ConfigEditor orderId={orderId} />
-    {box.status === 'ready' && <Recorder orderId={orderId} />}
+    {box.status === 'ready' && <Recorder orderId={orderId} host={box.host ?? null} />}
   </>
 }
 
@@ -321,40 +321,60 @@ function ConfigEditor({ orderId }: { orderId: string }) {
   </>
 }
 
-function Recorder({ orderId }: { orderId: string }) {
+type RecState = { recording: boolean; since?: string | null; recordings: Array<{ file: string; bytes: number; at: string }> }
+
+function Recorder({ orderId, host }: { orderId: string; host: string | null }) {
   const record = useAction(api.push.record)
   const recordingUrl = useAction(api.push.recordingUrl)
-  const [state, setState] = useState<{ recording: boolean; recordings: Array<{ file: string; bytes: number; at: string }> } | null>(null)
+  const [state, setState] = useState<RecState | null>(null)
   const [msg, setMsg] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [, setTick] = useState(0)
   const refresh = async () => {
     try { setState(await record({ orderId, op: 'list' }) as never) } catch (e) { setMsg(e instanceof Error ? e.message : String(e)) }
   }
   useEffect(() => { void refresh() }, [orderId])  // eslint-disable-line react-hooks/exhaustive-deps -- one load per box
+  // While recording: a ticking timer, and the truth re-checked every few seconds.
+  useEffect(() => {
+    if (!state?.recording) return
+    const t = setInterval(() => setTick(x => x + 1), 1000)
+    const p = setInterval(() => { void refresh() }, 5000)
+    return () => { clearInterval(t); clearInterval(p) }
+  }, [state?.recording])  // eslint-disable-line react-hooks/exhaustive-deps -- refresh is recreated per render on purpose
+  const elapsed = state?.recording && state.since ? Math.max(0, Math.floor((Date.now() - Date.parse(state.since)) / 1000)) : 0
+  const mmss = `${String(Math.floor(elapsed / 60)).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')}`
   return <section>
-    <h2>Screen recording</h2>
-    <p className="sub" style={{ marginBottom: 6 }}>Records the Desk's own screen (its browser) — for a chat walkthrough, open the Desk in it first. Files stay on the box 30 days; Download fetches the mp4 here.</p>
+    <h2>Screen recording {state?.recording ? <span className="pill no">● REC {mmss}</span> : null}</h2>
+    <p className="sub" style={{ marginBottom: 6 }}>
+      This records the <strong>Desk's own screen</strong>, not this page — the walkthrough has to happen on that screen.
+      {host ? <> Open it, press Record, then drive the demo at <a href={`https://${host}/browser`} target="_blank" rel="noreferrer">{host}/browser</a> — what you do there is what the video shows.</> : null}
+      {' '}Files stay on the box 30 days; Download fetches the mp4 here.
+    </p>
     {msg && <div className={`msg ${/not|could|error|said|failed/i.test(msg) ? 'err' : 'ok'}`}>{msg}</div>}
     <div className="acts">
-      <button className="ghost" onClick={() => {
-        setMsg('Opening the Desk on its screen…')
+      <button className="ghost" disabled={busy} onClick={() => {
+        setBusy(true); setMsg('Opening the Desk on its screen…')
         void record({ orderId, op: 'open-desk' })
-          .then((out) => { setMsg((out as { error?: string }).error ?? 'The Desk is open on its screen — Record captures it now (watch live on the box\u2019s /browser page).'); return refresh() })
+          .then((out) => { setMsg((out as { error?: string }).error ?? `The Desk is on the screen. Press Record, then drive it at ${host ?? 'the box'}/browser.`); return refresh() })
           .catch(e => setMsg(e instanceof Error ? e.message : String(e)))
+          .finally(() => setBusy(false))
       }}>Open the Desk on its screen</button>
       {state?.recording
-        ? <button className="quiet" onClick={() => {
-          setMsg('Stopping — the file finalises…')
+        ? <button className="quiet" disabled={busy} onClick={() => {
+          setBusy(true); setMsg('Stopping — the file finalises…')
           void record({ orderId, op: 'stop' })
             .then((out) => { const o = out as { stopped?: string; bytes?: number; error?: string }; setMsg(o.error ?? `Saved ${o.stopped} (${Math.max(1, Math.round((o.bytes ?? 0) / 1024))} KB) — it is in the list below.`); return refresh() })
             .catch(e => setMsg(e instanceof Error ? e.message : String(e)))
+            .finally(() => setBusy(false))
         }}>■ Stop recording</button>
-        : <button className="btn" onClick={() => {
-          setMsg('Starting the recorder…')
+        : <button className="btn" disabled={busy} onClick={() => {
+          setBusy(true); setMsg('Starting the recorder…')
           void record({ orderId, op: 'start' })
-            .then((out) => { const o = out as { started?: string; error?: string }; setMsg(o.error ?? `Recording ${o.started} — up to 30 minutes; Stop when done.`); return refresh() })
+            .then((out) => { const o = out as { started?: string; error?: string }; setMsg(o.error ?? 'Recording — the timer above is live. Drive the walkthrough on the box screen, then Stop.'); return refresh() })
             .catch(e => setMsg(e instanceof Error ? e.message : String(e)))
+            .finally(() => setBusy(false))
         }}>● Record</button>}
-      <button className="ghost" onClick={() => { setMsg(''); void refresh() }}>Refresh list</button>
+      <button className="ghost" disabled={busy} onClick={() => { setMsg(''); void refresh() }}>Refresh list</button>
     </div>
     {state && state.recordings.length === 0 && <p className="sub" style={{ margin: '10px 0 0' }}>No recordings on this box yet.</p>}
     {state && state.recordings.length > 0 && <div style={{ marginTop: 10 }}>

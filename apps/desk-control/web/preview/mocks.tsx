@@ -76,7 +76,7 @@ export const useAction = (ref: unknown) => async () => {
       { kind: 'decision', text: 'No jobs outside the GTA', pinned: true },
     ],
   }
-  return { recording: false, recordings: [{ file: '2026-09-01T22-22-45-613Z.mp4', bytes: 14334, at: iso(600000) }] }
+  return { recording: true, since: iso(83000), recordings: [{ file: '2026-09-01T22-22-45-613Z.mp4', bytes: 14334, at: iso(600000) }] }
 }
 export const Authenticated = ({ children }: { children: ReactNode }) => <>{children}</>
 export const Unauthenticated = () => null
