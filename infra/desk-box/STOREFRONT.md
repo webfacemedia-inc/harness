@@ -28,7 +28,7 @@ Deploy:
 1. `cd apps/desk-control && npx convex deploy --yes`
 2. `node scripts/push-bootstrap.mjs --prod` (whenever `infra/desk-box/bootstrap.sh` changed)
 3. First deploy only: `npx convex run --prod schedule:init` (registers the 07:30 UTC nightly and the hourly demo sweep)
-4. Console: `cd web && vercel pull --yes --environment=production && vercel build --prod && vercel deploy --prebuilt --prod` (local build on purpose — the remote build cannot see `../convex`)
+4. Console: deploys itself — the Vercel project `desk-control` is git-connected to `webfacemedia-inc/harness`, root directory `apps/desk-control/web`, "source files outside the root directory" on, production branch `desk`. Every push to `desk` that touches the console builds and takes over `desk.webfacemedia.com` on success (a failed build never replaces the live deployment). Watch it: `vercel ls desk-control` or the Vercel dashboard. Never `vercel deploy --prebuilt` again — it bypasses git and leaves the project's deployment history lying.
 
 Env on the prod deployment (set 2026-09-01 from the apex box's deskapi.env, values never printed): DIGITALOCEAN_TOKEN, OPENROUTER_API_KEY, FAL_KEY, BREVO_API_KEY, DESK_FROM_EMAIL, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_{BUSINESS,OPERATORS}_{SETUP,MONTHLY}, CLOUDFLARE_API_TOKEN, DESK_SIGNIN_CLIENT_ID/SECRET, DESKAPI_OPS_KEY, DESKAPI_ADMIN_TOKEN, DESK_PUBLIC_URL, OPERATOR_EMAILS. Defaults in code cover CLOUDFLARE_ZONE_ID, DESKAPI_MONTHLY_TOKEN_CAP, DESKAPI_ALERT_EMAIL, DESK_DOMAIN, DESK_HARNESS_REF. The static demo box is registered in `staticBoxes` (droplet 595724007).
 
